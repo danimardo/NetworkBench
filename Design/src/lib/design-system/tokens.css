@@ -1,0 +1,460 @@
+/*
+  NetworkBench — Design tokens (v1, dos temas)
+  ================================================================
+  Dirección visual: "Graphite Violet" — grafito frío / azul noche con
+  iluminación ambiental violeta, lavanda y malva. El violeta es SIEMPRE
+  acento de marca, nunca el color dominante (proporción orientativa:
+  65% grafito/perla neutro, 20% gris-violeta, 10% lavanda/malva
+  ambiental, 5% violeta intenso).
+
+    Oscuro → "Graphite Violet Dark": grafito + azul noche + violeta.
+    Claro  → "Pearl Lavender Light": blanco perla + gris lavanda + violeta.
+
+  Ambos temas deben reconocerse como LA MISMA aplicación: mismo violeta,
+  mismo rosa/malva, mismos radios, mismas cards, mismo fondo abstracto.
+  Lo que cambia es luminosidad, opacidad y contraste — nunca la paleta.
+
+  --------------------------------------------------------------
+  CÓMO ESTÁ ORGANIZADO ESTE FICHERO
+  --------------------------------------------------------------
+  1. Tokens de tema (colores, gradientes, sombras, bordes): definidos en
+     `:root` para OSCURO (que es el tema por defecto de la app) y
+     sobrescritos en `:root[data-theme="light"]` para CLARO.
+  2. Tokens invariantes por tema (tipografía, espaciado, radios, blur,
+     motion): una sola vez, fuera de los bloques de tema, porque no
+     cambian entre claro y oscuro.
+
+  --------------------------------------------------------------
+  REGLA DE ORO PARA QUIEN IMPLEMENTE COMPONENTES NUEVOS
+  --------------------------------------------------------------
+  Ningún componente debe escribir un color, una opacidad de color, un
+  gradiente o una sombra coloreada como literal en su <style>. SIEMPRE
+  un var(--token-de-este-fichero). Si el valor que necesitas no existe
+  todavía como token, añádelo aquí (con su pareja claro/oscuro) antes de
+  usarlo en el componente — así el cambio de tema sigue funcionando solo
+  con el atributo `data-theme`, sin tocar ni un componente. Esto es
+  verificable por CI igual que pide la Especificación (§16.10): un script
+  puede grepear los ficheros .svelte buscando `#`, `rgb(`, `rgba(` fuera
+  de este fichero y fallar si aparece alguno.
+
+  --------------------------------------------------------------
+  CÓMO SE ACTIVA EL TEMA
+  --------------------------------------------------------------
+  `theme.svelte.ts` escribe `data-theme="light"` o `data-theme="dark"` en
+  <html>. Sin ese atributo (o con "dark"), rige el bloque de :root
+  (oscuro). Ver ese fichero para "Sistema / Claro / Oscuro" (§23) y
+  `ThemeToggle.svelte` para el control de Ajustes.
+*/
+
+:root {
+  /* ============================================================
+     TEMA OSCURO — "Graphite Violet Dark" (por defecto)
+     ============================================================ */
+
+  /* --- Fondos base --- */
+  --color-bg-base: #14172A;
+  --color-bg-main: #191C30;
+  --color-bg-elevated: #202237;
+
+  /* --- Texto --- */
+  --color-text-primary: #F6F2FB;
+  --color-text-secondary: #C5BED4;
+  --color-text-tertiary: #A49DB8;
+  --color-text-muted: #8F8AA2;
+  --color-text-disabled: #696579;
+
+  /* --- Acento de marca (violeta) — tokens de ROL, no de escala.
+     Úsalos siempre así; no hay "accent-300/400/…" porque el número de
+     paso no se traduce 1:1 entre temas y es una fuente de errores. --- */
+  --color-accent: #BF7AFD;
+  --color-accent-hover: #CD94FF;
+  --color-accent-active: #A85BEF;
+  --color-lavender: #B7A4E5;
+  --color-mauve: #C995B6;
+
+  /* --- Bordes --- */
+  --border-subtle: rgba(203, 192, 236, 0.10);
+  --border-default: rgba(203, 192, 236, 0.16);
+  --border-hover: rgba(203, 192, 236, 0.28);
+  --border-accent-strong: rgba(191, 122, 253, 0.90);
+
+  /* --- Semánticos — independientes del violeta de marca. "Disponible"
+     nunca debe volverse violeta: el verde es lo que permite reconocer
+     de un vistazo que es un ESTADO y no una acción. --- */
+  --color-success: #78E6A7;
+  --color-success-soft: rgba(120, 230, 167, 0.14);
+  --color-warning: #F6C85F;
+  --color-warning-soft: rgba(246, 200, 95, 0.14);
+  --color-danger: #FF7C8D;
+  --color-danger-soft: rgba(255, 124, 141, 0.14);
+  --color-info: #8EA7FF;
+  --color-info-soft: rgba(142, 167, 255, 0.14);
+
+  /* --- Fondo ambiental de la app (AppBackground.svelte) --- */
+  --gradient-app-bg:
+    radial-gradient(55% 65% at 92% 100%, rgba(67, 38, 190, 0.55) 0%, rgba(57, 31, 145, 0.30) 35%, transparent 72%),
+    radial-gradient(58% 42% at 38% 108%, rgba(200, 142, 181, 0.45) 0%, rgba(142, 85, 143, 0.24) 38%, transparent 73%),
+    radial-gradient(45% 55% at 105% 5%, rgba(151, 89, 167, 0.22) 0%, transparent 70%),
+    radial-gradient(45% 50% at 45% 40%, rgba(91, 86, 135, 0.16) 0%, transparent 72%),
+    linear-gradient(135deg, #121528 0%, #191C30 42%, #292540 72%, #312846 100%);
+  --gradient-blob-1: linear-gradient(135deg, rgba(108, 57, 138, 0.85), rgba(208, 145, 180, 0.55));
+  --blob-1-opacity: 0.65;
+  --gradient-blob-2: radial-gradient(circle at 35% 20%, #B9A7DD 0%, #6E55C4 34%, #38249D 67%, #241467 100%);
+  --blob-2-opacity: 0.85;
+  --shadow-blob-2: inset 0 2px 0 rgba(255, 255, 255, 0.14), 0 -10px 60px rgba(73, 46, 177, 0.22);
+
+  /* --- Barra de título (TitleBar.svelte) --- */
+  --gradient-titlebar: linear-gradient(90deg, #151A2D 0%, #262841 50%, #4A315A 100%);
+  --titlebar-border: rgba(255, 255, 255, 0.05);
+  --gradient-brand-mark: radial-gradient(circle at 35% 30%, #D7AEFF, #8341CB);
+  --color-winctrl-icon: var(--color-accent-hover);
+  --winctrl-hover-bg: rgba(191, 122, 253, 0.16);
+  --winctrl-close-hover-bg: var(--color-danger);
+  --winctrl-close-hover-text: #2A0F14;
+
+  /* --- Barra lateral (Sidebar.svelte) --- */
+  --sidebar-bg: rgba(16, 19, 36, 0.78);
+  --sidebar-border: rgba(205, 196, 231, 0.09);
+  --hover-tint: rgba(255, 255, 255, 0.045);
+  --gradient-nav-active: linear-gradient(135deg, rgba(137, 70, 211, 0.80), rgba(100, 62, 177, 0.72));
+  --shadow-nav-active: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --color-nav-active-text: #F2E9FF;
+
+  /* --- Botón primario (Button.svelte) — el único con color intenso --- */
+  --gradient-button-primary: linear-gradient(135deg, #D69AFF 0%, #BF7AFD 50%, #AD63F1 100%);
+  --gradient-button-primary-hover: linear-gradient(135deg, #E0B0FF, #CD8AFF, #B66AF5);
+  --color-button-primary-text: #24152F;
+  --border-button-primary: rgba(255, 255, 255, 0.14);
+  --shadow-button-primary: 0 10px 28px rgba(180, 92, 242, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --shadow-button-primary-hover: 0 14px 36px rgba(180, 92, 242, 0.38);
+  --shadow-button-primary-active: 0 5px 16px rgba(180, 92, 242, 0.24);
+
+  /* --- Superficies "cristal" secundarias (Button secondary, chips, StatusPill pill, inputs) --- */
+  --surface-secondary: rgba(38, 39, 61, 0.58);
+  --surface-secondary-hover: rgba(56, 53, 82, 0.72);
+  --pill-bg: rgba(68, 63, 91, 0.58);
+  --pill-border: rgba(218, 204, 241, 0.15);
+  --icon-chip-bg: rgba(255, 255, 255, 0.07);
+
+  /* --- Cards (Card.svelte) --- */
+  --gradient-card-default: linear-gradient(135deg, rgba(39, 41, 64, 0.86), rgba(57, 55, 83, 0.74));
+  --gradient-card-default-hover: linear-gradient(135deg, rgba(46, 47, 75, 0.94), rgba(71, 65, 102, 0.82));
+  --shadow-card-default: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  --gradient-card-selected: linear-gradient(135deg, rgba(44, 42, 76, 0.92), rgba(66, 57, 104, 0.82));
+  --shadow-card-selected: 0 0 0 1px rgba(191, 122, 253, 0.10), 0 12px 30px rgba(71, 40, 121, 0.20);
+
+  --gradient-card-hero: linear-gradient(115deg, rgba(27, 30, 50, 0.92) 0%, rgba(51, 51, 82, 0.82) 48%, rgba(78, 70, 118, 0.70) 100%);
+  --border-card-hero: rgba(205, 188, 243, 0.16);
+  --shadow-card-hero: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 20px 50px rgba(0, 0, 0, 0.28);
+
+  /* --- Foco / accesibilidad --- */
+  --color-focus-ring: var(--color-accent);
+
+  /* --- Marco de ventana --- */
+  --window-border: var(--border-subtle);
+
+  /* --- Diálogos y overlay (glass-overlay, §16.10) — Dialog.svelte, Toast.svelte --- */
+  --overlay-scrim: rgba(10, 8, 20, 0.55);
+  --gradient-dialog: linear-gradient(160deg, rgba(42, 40, 68, 0.94), rgba(30, 29, 51, 0.96));
+  --border-dialog: rgba(210, 198, 240, 0.14);
+  --shadow-dialog: 0 30px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* --- Campos de formulario y validación — TextField.svelte, CodeInput.svelte ---
+     Comparten superficie con `--surface-secondary` pero con su propio
+     estado focus/error, que un chip o un botón secundario no necesitan. */
+  --surface-field: rgba(28, 29, 48, 0.62);
+  --surface-field-hover: rgba(36, 37, 60, 0.72);
+  --surface-field-disabled: rgba(28, 29, 48, 0.32);
+  --border-field: rgba(203, 192, 236, 0.18);
+  --border-field-hover: rgba(203, 192, 236, 0.30);
+  --border-field-focus: var(--color-accent);
+  --border-field-error: var(--color-danger);
+  --color-field-placeholder: var(--color-text-muted);
+  --shadow-field-focus: 0 0 0 3px rgba(191, 122, 253, 0.18);
+  --shadow-field-error: 0 0 0 3px rgba(255, 124, 141, 0.16);
+
+  /* --- Los tres materiales de cristal de §16.10, con nombre de token
+     explícito por si en implementación se generan como mixins/clases
+     `.glass-chrome` / `.glass-card` / `.glass-overlay`. El blur/saturación
+     ya usan `--blur-*` (existían); aquí solo lo que faltaba: saturación y
+     el respaldo opaco obligatorio (`@supports not (backdrop-filter)`).
+     NOTA: el respaldo opaco es H3 en la Especificación (§26), pero se deja
+     ya resuelto en tokens para no tener que rediseñarlo entonces. --- */
+  --material-saturate: 150%;
+  /* glass-chrome → TitleBar/Sidebar. Con backdrop-filter: fondo semitransparente
+     de --sidebar-bg/--gradient-titlebar (ya existen). Sin soporte: */
+  --surface-solid-chrome: var(--color-bg-base);
+  /* glass-card → Card default/hero (ya usan --gradient-card-*). Sin soporte: */
+  --surface-solid-card: var(--color-bg-elevated);
+  /* glass-overlay → Dialog/paneles laterales. Sin soporte: */
+  --surface-solid-overlay: #232037;
+  /* StatusPill (§16.10, C01 auditoría v3) no es ninguno de los tres
+     materiales con nombre — es un cuarto tratamiento translúcido propio
+     (`--pill-bg`, no comparte gradiente con Card ni Sidebar), así que
+     necesita su propio respaldo en vez de reutilizar uno de los tres de
+     arriba. Calculado por mezcla alfa de `--pill-bg` sobre
+     `--color-bg-main` (mismo método de cálculo directo que el resto de
+     ajustes de contraste de esta ronda, no un valor a ojo). */
+  --surface-solid-pill: #322F49;
+
+  /* --- Gráficas (§16.7) — colores de serie con tokens propios, nunca el
+     violeta de marca (que es una acción, no un dato) ni solo semánticos
+     (A→B / B→A no son "bueno/malo"). Distinguibles también por trazo:
+     A→B línea continua, B→A discontinua (definido en el propio SVG). --- */
+  --color-chart-a-b: #6FD6E0;
+  --color-chart-b-a: #F0A868;
+  --color-chart-grid: rgba(203, 192, 236, 0.09);
+  --color-chart-axis-label: var(--color-text-muted);
+  --color-chart-warmup-zone: rgba(255, 255, 255, 0.035);
+  --color-chart-cooldown-zone: rgba(255, 255, 255, 0.02);
+  --color-chart-gap: var(--color-text-disabled);
+}
+
+:root[data-theme="light"] {
+  /* ============================================================
+     TEMA CLARO — "Pearl Lavender Light"
+     Blanco perla + gris lavanda + cristal blanco + violeta medio.
+     NUNCA blanco puro sólido en superficies: siempre cristal
+     translúcido sobre el fondo ambiental (igual que en oscuro, pero
+     con menos transparencia — el blanco pierde contraste si se abusa
+     de él, ver tabla de opacidades en DESIGN_TOKENS.md).
+     ============================================================ */
+
+  --color-bg-base: #F4F3F8;
+  --color-bg-main: #F8F7FB;
+  --color-bg-elevated: #FFFFFF;
+
+  --color-text-primary: #252331;
+  --color-text-secondary: #5F596C;
+  --color-text-tertiary: #756E82;
+  /* Revisión H1 (apdo. 21 pto. 7 del correo): #817A8D daba 3.86:1 sobre
+     --color-bg-main (#F8F7FB), por debajo de AA (4.5:1) para texto normal.
+     Oscurecido a #6B6478 (~5.3:1) — mismo tono, sin cambiar el matiz. */
+  --color-text-muted: #6B6478;
+  --color-text-disabled: #A9A3B2;
+
+  --color-accent: #8756C7;
+  --color-accent-hover: #7545B8;
+  --color-accent-active: #6936A9;
+  --color-lavender: #A68BD8;
+  --color-mauve: #D4A8C0;
+
+  --border-subtle: rgba(80, 62, 110, 0.06);
+  --border-default: rgba(80, 62, 110, 0.10);
+  --border-hover: rgba(80, 62, 110, 0.20);
+  --border-accent-strong: rgba(135, 86, 199, 0.65);
+
+  /* Semánticos más saturados/oscuros que en dark: un verde o ámbar
+     pastel pierde casi todo el contraste sobre fondo claro.
+     Revisión H1 (apdo. 21 pto. 7 del correo): #238E5B daba 3.87:1 y
+     #A87400 daba 3.81:1 sobre --color-bg-main — ambos por debajo de AA.
+     Oscurecidos a ~5.3:1 sin cambiar el matiz. */
+  --color-success: #1B7549;
+  --color-success-soft: rgba(27, 117, 73, 0.12);
+  --color-warning: #8A5E00;
+  --color-warning-soft: rgba(138, 94, 0, 0.12);
+  /* Hallazgo adicional durante esta revisión (no estaba en la lista de 3
+     del correo, pero el mismo cálculo de contraste que se aplicó a esos
+     3 lo detecta aquí también): #D84D62 daba 3.82:1 y #506FCC 4.39:1,
+     ambos por debajo de AA. Mismo criterio, mismo tipo de corrección. */
+  --color-danger: #C23A50;
+  --color-danger-soft: rgba(194, 58, 80, 0.12);
+  --color-info: #4661B8;
+  --color-info-soft: rgba(70, 97, 184, 0.12);
+
+  --gradient-app-bg:
+    radial-gradient(55% 65% at 92% 100%, rgba(118, 86, 205, 0.22) 0%, rgba(145, 119, 209, 0.12) 38%, transparent 72%),
+    radial-gradient(58% 42% at 38% 108%, rgba(217, 162, 194, 0.36) 0%, rgba(221, 184, 205, 0.18) 40%, transparent 74%),
+    radial-gradient(45% 55% at 105% 5%, rgba(184, 149, 214, 0.22) 0%, transparent 70%),
+    linear-gradient(135deg, #F9F8FC 0%, #F3F1F8 45%, #EEEAF5 72%, #F5EFF5 100%);
+  --gradient-blob-1: linear-gradient(135deg, rgba(209, 174, 203, 0.55), rgba(234, 195, 215, 0.70));
+  --blob-1-opacity: 0.55;
+  --gradient-blob-2: radial-gradient(circle at 35% 20%, #E2D9F3 0%, #C7B5E8 36%, #9D80D2 68%, #7552B7 100%);
+  --blob-2-opacity: 0.42;
+  --shadow-blob-2: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 -10px 40px rgba(117, 82, 183, 0.14);
+
+  --gradient-titlebar: linear-gradient(90deg, #FFFFFF 0%, #F7F4FB 55%, #F0E9F8 100%);
+  --titlebar-border: rgba(80, 62, 110, 0.06);
+  --gradient-brand-mark: radial-gradient(circle at 35% 30%, #B79BE0, #6936A9);
+  /* En claro los controles de ventana son neutros en reposo (como en
+     WinUI) y solo se tiñen de violeta al hover — en oscuro sí llevan
+     violeta también en reposo porque ahí aporta la única nota de color
+     de la barra de título. */
+  --color-winctrl-icon: var(--color-text-secondary);
+  --winctrl-hover-bg: rgba(135, 86, 199, 0.12);
+  --winctrl-close-hover-bg: var(--color-danger);
+  --winctrl-close-hover-text: #FFFFFF;
+
+  --sidebar-bg: rgba(248, 247, 251, 0.76);
+  --sidebar-border: rgba(69, 57, 89, 0.08);
+  --hover-tint: rgba(80, 62, 110, 0.05);
+  /* Auditoría v3 (C02): #9565D0 daba 4.16:1 con texto blanco — por
+     debajo de AA. Reutiliza --color-accent/-active, que sí cumplen. */
+  --gradient-nav-active: linear-gradient(135deg, #8756C7, #6936A9);
+  --shadow-nav-active: 0 6px 18px rgba(105, 72, 154, 0.18);
+  --color-nav-active-text: #FFFFFF;
+
+  /* Auditoría v3 (C02): el extremo claro del degradado (#9D72D3, 3.63:1)
+     y todo el degradado de hover (#A97FDC 3.11:1, #9565D0 4.16:1) daban
+     por debajo de AA con texto blanco — verificado por extremo, no solo
+     por el fondo medio. Recompuestos para que los tres stops de ambos
+     degradados cumplan 4.5:1 en cualquier punto. El hover pasa de
+     aclarar a oscurecer (dirección distinta a la del tema oscuro,
+     donde no hay problema de contraste) — el aviso de hover lo sigue
+     dando el mismo translateY(-1px) + sombra que ya existía. */
+  --gradient-button-primary: linear-gradient(135deg, #8A5EC0 0%, #7F51B8 50%, #6D3CA6 100%);
+  --gradient-button-primary-hover: linear-gradient(135deg, #7F51B8 0%, #7440B5 50%, #5F3391 100%);
+  --color-button-primary-text: #FFFFFF;
+  --border-button-primary: rgba(255, 255, 255, 0.30);
+  --shadow-button-primary: 0 10px 26px rgba(117, 69, 184, 0.28);
+  --shadow-button-primary-hover: 0 14px 32px rgba(117, 69, 184, 0.34);
+  --shadow-button-primary-active: 0 5px 14px rgba(117, 69, 184, 0.22);
+
+  --surface-secondary: rgba(255, 255, 255, 0.62);
+  --surface-secondary-hover: rgba(255, 255, 255, 0.82);
+  --pill-bg: rgba(255, 255, 255, 0.70);
+  --pill-border: rgba(80, 62, 110, 0.12);
+  --icon-chip-bg: rgba(80, 62, 110, 0.07);
+
+  --gradient-card-default: linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(248, 245, 252, 0.64));
+  --gradient-card-default-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(250, 247, 253, 0.78));
+  --shadow-card-default: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 12px 30px rgba(61, 46, 86, 0.08);
+
+  --gradient-card-selected: linear-gradient(135deg, rgba(245, 239, 253, 0.94), rgba(235, 224, 250, 0.82));
+  --shadow-card-selected: 0 8px 28px rgba(108, 74, 157, 0.12);
+
+  --gradient-card-hero: linear-gradient(115deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 244, 252, 0.86) 48%, rgba(238, 230, 248, 0.80) 100%);
+  --border-card-hero: rgba(80, 62, 110, 0.12);
+  --shadow-card-hero: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 20px 50px rgba(61, 46, 86, 0.10);
+
+  --color-focus-ring: var(--color-accent);
+  --window-border: var(--border-subtle);
+
+  /* --- Diálogos y overlay --- */
+  --overlay-scrim: rgba(40, 32, 58, 0.38);
+  --gradient-dialog: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 245, 252, 0.98));
+  --border-dialog: rgba(80, 62, 110, 0.10);
+  --shadow-dialog: 0 30px 70px rgba(61, 46, 86, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* --- Campos de formulario y validación --- */
+  --surface-field: rgba(255, 255, 255, 0.68);
+  --surface-field-hover: rgba(255, 255, 255, 0.86);
+  --surface-field-disabled: rgba(80, 62, 110, 0.05);
+  --border-field: rgba(80, 62, 110, 0.16);
+  --border-field-hover: rgba(80, 62, 110, 0.26);
+  --border-field-focus: var(--color-accent);
+  --border-field-error: var(--color-danger);
+  --color-field-placeholder: var(--color-text-muted);
+  --shadow-field-focus: 0 0 0 3px rgba(135, 86, 199, 0.16);
+  --shadow-field-error: 0 0 0 3px rgba(216, 77, 98, 0.14);
+
+  /* --- Materiales — respaldo opaco en claro --- */
+  --material-saturate: 130%;
+  --surface-solid-chrome: var(--color-bg-base);
+  --surface-solid-card: var(--color-bg-elevated);
+  --surface-solid-overlay: #FFFFFF;
+  /* StatusPill, cuarto tratamiento translúcido propio (ver comentario en
+     el bloque oscuro) — mezcla alfa de `--pill-bg` sobre `--color-bg-main`. */
+  --surface-solid-pill: #FDFDFE;
+
+  /* --- Gráficas — más saturadas/oscuras que en oscuro para mantener
+     contraste sobre el fondo perla (mismo criterio que los semánticos). --- */
+  --color-chart-a-b: #0E8E98;
+  --color-chart-b-a: #C3670E;
+  --color-chart-grid: rgba(80, 62, 110, 0.08);
+  --color-chart-axis-label: var(--color-text-muted);
+  --color-chart-warmup-zone: rgba(80, 62, 110, 0.03);
+  --color-chart-cooldown-zone: rgba(80, 62, 110, 0.02);
+  --color-chart-gap: var(--color-text-disabled);
+}
+
+/* ================================================================
+   TOKENS INVARIANTES — no cambian entre temas
+   ================================================================ */
+:root {
+  /* --- Tipografía: fuente nativa de Windows primero; nada de webfonts
+     descargadas para la UI (§16.14, §24.3: todo local). --- */
+  --font-ui: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 28px;
+
+  --font-weight-body: 450;
+  --font-weight-control: 550;
+  --font-weight-subtitle: 600;
+  --font-weight-title: 700;
+
+  /* --- Espaciado — escala de 4px --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* --- Radios — redondeado moderno, nunca caricaturesco --- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* --- Sombras neutras (sin color de marca) --- */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.24);
+  --shadow-lg: 0 22px 60px rgba(0, 0, 0, 0.32);
+
+  /* --- Blur — tres niveles de cristal; la opacidad ya cambia con el
+     tema (arriba), el blur en px se mantiene igual en los dos. --- */
+  --blur-pill: 10px;
+  --blur-card: 14px;
+  --blur-hero: 18px;
+  --blur-sidebar: 24px;
+  --blur-modal: 26px;
+
+  /* --- Motion — sutil; nada de desplazamientos > 1px en hover. --- */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration-base: 160ms;
+  --duration-slow: 220ms;
+  /* C03 (auditoría v3): las cuatro de abajo son duraciones "sueltas" que
+     existían como literales en Tooltip/ChecklistItem/ProgressBar.svelte
+     (y sus equivalentes en la maqueta, algunos desincronizados — ver
+     comentario junto a cada uso). No son variantes de fast/base/slow: son
+     temporizaciones propias de una animación concreta, no de una
+     transición de hover/press/foco, así que tienen su propio token en vez
+     de forzarlas a encajar en las tres de arriba. */
+  --duration-tooltip-delay: 250ms;
+  --duration-emphasis-pulse: 900ms;
+  --duration-spinner: 0.8s;
+  --duration-progress-indeterminate: 1.3s;
+
+  /* --- Marco de ventana --- */
+  --titlebar-height: 32px;
+  --sidebar-width: 76px;
+
+  /* --- Medidas de diálogo (C03, auditoría v3) — Dialog.svelte las tenía
+     como literales (`.nb-dialog-sm/-md/-lg`); la maqueta tenía un único
+     ancho fijo (430px) sin distinguir tamaño, un tercer valor que no
+     coincidía con ninguno de los dos que sí importaba distinguir. Ver
+     comentario junto a `.nb-dialog` en la maqueta. */
+  --dialog-width-sm: 380px;
+  --dialog-width-md: 460px;
+  --dialog-width-lg: 620px;
+
+  /* --- Tamaño de fuente suelto (C03, auditoría v3) — 11.5px aparecía
+     repetido sin token en DeviceCard/TextField/Tooltip.svelte y en varios
+     sitios de la maqueta; está entre --font-size-xs (12px) y ningún
+     tamaño menor definido hasta ahora. */
+  --font-size-2xs: 11.5px;
+}

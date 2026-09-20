@@ -1,0 +1,3007 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetworkBench — maqueta navegable</title>
+<style>
+  /* ================================================================
+     Mismos tokens que src/lib/design-system/tokens.css del entregable
+     de desarrollo. Este fichero es una maqueta HTML/CSS/JS autocontenida
+     SOLO para enseñar y aprobar el diseño — el código que se integra en
+     la app real son los componentes Svelte del otro paquete, no este
+     fichero.
+     ================================================================ */
+  :root {
+    --color-bg-base: #14172A;
+    --color-bg-main: #191C30;
+    --color-bg-elevated: #202237;
+    --color-text-primary: #F6F2FB;
+    --color-text-secondary: #C5BED4;
+    --color-text-tertiary: #A49DB8;
+    --color-text-muted: #8F8AA2;
+    --color-accent: #BF7AFD;
+    --color-accent-hover: #CD94FF;
+    --color-accent-active: #A85BEF;
+    --border-subtle: rgba(203, 192, 236, 0.10);
+    --border-default: rgba(203, 192, 236, 0.16);
+    --border-hover: rgba(203, 192, 236, 0.28);
+    --border-accent-strong: rgba(191, 122, 253, 0.90);
+    --color-success: #78E6A7;
+    --color-success-soft: rgba(120, 230, 167, 0.14);
+    --color-warning: #F6C85F;
+    --color-danger: #FF7C8D;
+    --gradient-app-bg:
+      radial-gradient(55% 65% at 92% 100%, rgba(67, 38, 190, 0.55) 0%, rgba(57, 31, 145, 0.30) 35%, transparent 72%),
+      radial-gradient(58% 42% at 38% 108%, rgba(200, 142, 181, 0.45) 0%, rgba(142, 85, 143, 0.24) 38%, transparent 73%),
+      radial-gradient(45% 55% at 105% 5%, rgba(151, 89, 167, 0.22) 0%, transparent 70%),
+      radial-gradient(45% 50% at 45% 40%, rgba(91, 86, 135, 0.16) 0%, transparent 72%),
+      linear-gradient(135deg, #121528 0%, #191C30 42%, #292540 72%, #312846 100%);
+    --gradient-blob-1: linear-gradient(135deg, rgba(108, 57, 138, 0.85), rgba(208, 145, 180, 0.55));
+    --blob-1-opacity: 0.65;
+    --gradient-blob-2: radial-gradient(circle at 35% 20%, #B9A7DD 0%, #6E55C4 34%, #38249D 67%, #241467 100%);
+    --blob-2-opacity: 0.85;
+    --shadow-blob-2: inset 0 2px 0 rgba(255, 255, 255, 0.14), 0 -10px 60px rgba(73, 46, 177, 0.22);
+    --gradient-titlebar: linear-gradient(90deg, #151A2D 0%, #262841 50%, #4A315A 100%);
+    --titlebar-border: rgba(255, 255, 255, 0.05);
+    --gradient-brand-mark: radial-gradient(circle at 35% 30%, #D7AEFF, #8341CB);
+    --color-winctrl-icon: var(--color-accent-hover);
+    --winctrl-hover-bg: rgba(191, 122, 253, 0.16);
+    --winctrl-close-hover-bg: var(--color-danger);
+    --winctrl-close-hover-text: #2A0F14;
+    --sidebar-bg: rgba(16, 19, 36, 0.78);
+    --sidebar-border: rgba(205, 196, 231, 0.09);
+    --hover-tint: rgba(255, 255, 255, 0.045);
+    --gradient-nav-active: linear-gradient(135deg, rgba(137, 70, 211, 0.80), rgba(100, 62, 177, 0.72));
+    --shadow-nav-active: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --color-nav-active-text: #F2E9FF;
+    --gradient-button-primary: linear-gradient(135deg, #D69AFF 0%, #BF7AFD 50%, #AD63F1 100%);
+    --gradient-button-primary-hover: linear-gradient(135deg, #E0B0FF, #CD8AFF, #B66AF5);
+    --color-button-primary-text: #24152F;
+    --border-button-primary: rgba(255, 255, 255, 0.14);
+    --shadow-button-primary: 0 10px 28px rgba(180, 92, 242, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    --shadow-button-primary-hover: 0 14px 36px rgba(180, 92, 242, 0.38);
+    --surface-secondary: rgba(38, 39, 61, 0.58);
+    --surface-secondary-hover: rgba(56, 53, 82, 0.72);
+    --pill-bg: rgba(68, 63, 91, 0.58);
+    --pill-border: rgba(218, 204, 241, 0.15);
+    --icon-chip-bg: rgba(255, 255, 255, 0.07);
+    --gradient-card-default: linear-gradient(135deg, rgba(39, 41, 64, 0.86), rgba(57, 55, 83, 0.74));
+    --gradient-card-default-hover: linear-gradient(135deg, rgba(46, 47, 75, 0.94), rgba(71, 65, 102, 0.82));
+    --shadow-card-default: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 8px 24px rgba(0, 0, 0, 0.12);
+    --gradient-card-selected: linear-gradient(135deg, rgba(44, 42, 76, 0.92), rgba(66, 57, 104, 0.82));
+    --shadow-card-selected: 0 0 0 1px rgba(191, 122, 253, 0.10), 0 12px 30px rgba(71, 40, 121, 0.20);
+    --gradient-card-hero: linear-gradient(115deg, rgba(27, 30, 50, 0.92) 0%, rgba(51, 51, 82, 0.82) 48%, rgba(78, 70, 118, 0.70) 100%);
+    --border-card-hero: rgba(205, 188, 243, 0.16);
+    --shadow-card-hero: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 20px 50px rgba(0, 0, 0, 0.28);
+    --color-focus-ring: var(--color-accent);
+    --window-border: var(--border-subtle);
+
+    /* --- Diálogos/overlay, campos, materiales y gráficas (H1, ampliación) --- */
+    --overlay-scrim: rgba(10, 8, 20, 0.55);
+    --gradient-dialog: linear-gradient(160deg, rgba(42, 40, 68, 0.94), rgba(30, 29, 51, 0.96));
+    --border-dialog: rgba(210, 198, 240, 0.14);
+    --shadow-dialog: 0 30px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --surface-field: rgba(28, 29, 48, 0.62);
+    --surface-field-hover: rgba(36, 37, 60, 0.72);
+    --surface-field-disabled: rgba(28, 29, 48, 0.32);
+    --border-field: rgba(203, 192, 236, 0.18);
+    --border-field-hover: rgba(203, 192, 236, 0.30);
+    --border-field-focus: var(--color-accent);
+    --border-field-error: var(--color-danger);
+    --color-field-placeholder: var(--color-text-muted);
+    --shadow-field-focus: 0 0 0 3px rgba(191, 122, 253, 0.18);
+    --shadow-field-error: 0 0 0 3px rgba(255, 124, 141, 0.16);
+    --material-saturate: 150%;
+    --surface-solid-overlay: #232037;
+    /* C01 (auditoría v3): faltaban estos dos — la maqueta solo tenía
+       --surface-solid-overlay copiado de tokens.css, no los otros dos de
+       los "tres materiales con nombre" (§16.10). Mismos valores que
+       tokens.css (var(--color-bg-base)/var(--color-bg-elevated), ya
+       definidos arriba en este mismo bloque). */
+    --surface-solid-chrome: var(--color-bg-base);
+    --surface-solid-card: var(--color-bg-elevated);
+    --surface-solid-pill: #322F49;
+    --color-text-disabled: #696579;
+    --color-chart-a-b: #6FD6E0;
+    --color-chart-b-a: #F0A868;
+    --color-chart-grid: rgba(203, 192, 236, 0.09);
+    --color-chart-gap: var(--color-text-disabled);
+    /* Auditoría v3 (C03): no coincidía con tokens.css (0.05 vs 0.035) y
+       faltaba -cooldown-zone del todo. Sincronizado. */
+    --color-chart-warmup-zone: rgba(255, 255, 255, 0.035);
+    --color-chart-cooldown-zone: rgba(255, 255, 255, 0.02);
+
+    --font-ui: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+    --font-size-xs: 12px; --font-size-sm: 13px; --font-size-md: 14px; --font-size-lg: 16px; --font-size-xl: 20px; --font-size-2xl: 28px;
+    --font-weight-body: 450; --font-weight-control: 550; --font-weight-subtitle: 600; --font-weight-title: 700;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+    --radius-xs: 6px; --radius-sm: 10px; --radius-md: 14px; --radius-lg: 18px; --radius-xl: 24px; --radius-pill: 999px;
+    --blur-pill: 10px; --blur-card: 14px; --blur-hero: 18px; --blur-sidebar: 24px; --blur-modal: 26px;
+    --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.24);
+    --ease-standard: cubic-bezier(.2,0,0,1); --duration-fast: 120ms; --duration-base: 160ms; --duration-slow: 220ms;
+    /* C03 (auditoría v3): mismos valores que tokens.css — ver el
+       comentario junto a su propia definición para por qué cada una
+       tiene su propio token en vez de reutilizar fast/base/slow. */
+    --duration-tooltip-delay: 250ms; --duration-emphasis-pulse: 900ms; --duration-spinner: 0.8s; --duration-progress-indeterminate: 1.3s;
+    --dialog-width-sm: 380px; --dialog-width-md: 460px; --dialog-width-lg: 620px;
+    --font-size-2xs: 11.5px;
+    --titlebar-height: 32px; --sidebar-width: 76px;
+  }
+
+  :root[data-theme="light"] {
+    --color-bg-base: #F4F3F8;
+    --color-bg-main: #F8F7FB;
+    --color-bg-elevated: #FFFFFF;
+    --color-text-primary: #252331;
+    --color-text-secondary: #5F596C;
+    --color-text-tertiary: #756E82;
+    /* Revisión H1 (apdo. 21 pto. 7): #817A8D daba 3.86:1, por debajo de
+       AA — oscurecido a ~5.3:1, mismo valor que tokens.css. */
+    --color-text-muted: #6B6478;
+    --color-accent: #8756C7;
+    --color-accent-hover: #7545B8;
+    --color-accent-active: #6936A9;
+    --border-subtle: rgba(80, 62, 110, 0.06);
+    --border-default: rgba(80, 62, 110, 0.10);
+    --border-hover: rgba(80, 62, 110, 0.20);
+    --border-accent-strong: rgba(135, 86, 199, 0.65);
+    /* Revisión H1 (apdo. 21 pto. 7): mismo ajuste de contraste que
+       tokens.css — #238E5B daba 3.87:1, #A87400 daba 3.81:1. */
+    --color-success: #1B7549;
+    --color-success-soft: rgba(27, 117, 73, 0.12);
+    --color-warning: #8A5E00;
+    /* Hallazgo adicional (no estaba en los 3 del correo, mismo cálculo de
+       contraste): #D84D62 daba 3.82:1, por debajo de AA. */
+    --color-danger: #C23A50;
+    --gradient-app-bg:
+      radial-gradient(55% 65% at 92% 100%, rgba(118, 86, 205, 0.22) 0%, rgba(145, 119, 209, 0.12) 38%, transparent 72%),
+      radial-gradient(58% 42% at 38% 108%, rgba(217, 162, 194, 0.36) 0%, rgba(221, 184, 205, 0.18) 40%, transparent 74%),
+      radial-gradient(45% 55% at 105% 5%, rgba(184, 149, 214, 0.22) 0%, transparent 70%),
+      linear-gradient(135deg, #F9F8FC 0%, #F3F1F8 45%, #EEEAF5 72%, #F5EFF5 100%);
+    --gradient-blob-1: linear-gradient(135deg, rgba(209, 174, 203, 0.55), rgba(234, 195, 215, 0.70));
+    --blob-1-opacity: 0.55;
+    --gradient-blob-2: radial-gradient(circle at 35% 20%, #E2D9F3 0%, #C7B5E8 36%, #9D80D2 68%, #7552B7 100%);
+    --blob-2-opacity: 0.42;
+    --shadow-blob-2: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 -10px 40px rgba(117, 82, 183, 0.14);
+    --gradient-titlebar: linear-gradient(90deg, #FFFFFF 0%, #F7F4FB 55%, #F0E9F8 100%);
+    --titlebar-border: rgba(80, 62, 110, 0.06);
+    --gradient-brand-mark: radial-gradient(circle at 35% 30%, #B79BE0, #6936A9);
+    --color-winctrl-icon: var(--color-text-secondary);
+    --winctrl-hover-bg: rgba(135, 86, 199, 0.12);
+    --winctrl-close-hover-text: #FFFFFF;
+    --sidebar-bg: rgba(248, 247, 251, 0.76);
+    --sidebar-border: rgba(69, 57, 89, 0.08);
+    --hover-tint: rgba(80, 62, 110, 0.05);
+    /* Auditoría v3 (C02): #9565D0 daba 4.16:1 con texto blanco. */
+    --gradient-nav-active: linear-gradient(135deg, #8756C7, #6936A9);
+    --shadow-nav-active: 0 6px 18px rgba(105, 72, 154, 0.18);
+    --color-nav-active-text: #FFFFFF;
+    /* Auditoría v3 (C02): extremo claro y degradado de hover daban por
+       debajo de 4.5:1 con texto blanco. El hover pasa a oscurecer en
+       vez de aclarar — el aviso de hover lo da el translateY+sombra. */
+    --gradient-button-primary: linear-gradient(135deg, #8A5EC0 0%, #7F51B8 50%, #6D3CA6 100%);
+    --gradient-button-primary-hover: linear-gradient(135deg, #7F51B8 0%, #7440B5 50%, #5F3391 100%);
+    --color-button-primary-text: #FFFFFF;
+    --border-button-primary: rgba(255, 255, 255, 0.30);
+    --shadow-button-primary: 0 10px 26px rgba(117, 69, 184, 0.28);
+    --shadow-button-primary-hover: 0 14px 32px rgba(117, 69, 184, 0.34);
+    --surface-secondary: rgba(255, 255, 255, 0.62);
+    --surface-secondary-hover: rgba(255, 255, 255, 0.82);
+    --pill-bg: rgba(255, 255, 255, 0.70);
+    --pill-border: rgba(80, 62, 110, 0.12);
+    --icon-chip-bg: rgba(80, 62, 110, 0.07);
+    --gradient-card-default: linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(248, 245, 252, 0.64));
+    --gradient-card-default-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(250, 247, 253, 0.78));
+    --shadow-card-default: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 12px 30px rgba(61, 46, 86, 0.08);
+    --gradient-card-selected: linear-gradient(135deg, rgba(245, 239, 253, 0.94), rgba(235, 224, 250, 0.82));
+    --shadow-card-selected: 0 8px 28px rgba(108, 74, 157, 0.12);
+    --gradient-card-hero: linear-gradient(115deg, rgba(255, 255, 255, 0.90) 0%, rgba(248, 244, 252, 0.86) 48%, rgba(238, 230, 248, 0.80) 100%);
+    --border-card-hero: rgba(80, 62, 110, 0.12);
+    --shadow-card-hero: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 20px 50px rgba(61, 46, 86, 0.10);
+
+    --overlay-scrim: rgba(40, 32, 58, 0.38);
+    --gradient-dialog: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 245, 252, 0.98));
+    --border-dialog: rgba(80, 62, 110, 0.10);
+    --shadow-dialog: 0 30px 70px rgba(61, 46, 86, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    --surface-field: rgba(255, 255, 255, 0.68);
+    --surface-field-hover: rgba(255, 255, 255, 0.86);
+    --surface-field-disabled: rgba(80, 62, 110, 0.05);
+    --border-field: rgba(80, 62, 110, 0.16);
+    --border-field-hover: rgba(80, 62, 110, 0.26);
+    --border-field-focus: var(--color-accent);
+    --border-field-error: var(--color-danger);
+    --color-field-placeholder: var(--color-text-muted);
+    --shadow-field-focus: 0 0 0 3px rgba(135, 86, 199, 0.16);
+    --shadow-field-error: 0 0 0 3px rgba(216, 77, 98, 0.14);
+    --material-saturate: 130%;
+    --surface-solid-overlay: #FFFFFF;
+    --surface-solid-chrome: var(--color-bg-base);
+    --surface-solid-card: var(--color-bg-elevated);
+    --surface-solid-pill: #FDFDFE;
+    --color-text-disabled: #A9A3B2;
+    --color-chart-a-b: #0E8E98;
+    --color-chart-b-a: #C3670E;
+    --color-chart-grid: rgba(80, 62, 110, 0.08);
+    --color-chart-gap: var(--color-text-disabled);
+    --color-chart-warmup-zone: rgba(80, 62, 110, 0.03);
+    --color-chart-cooldown-zone: rgba(80, 62, 110, 0.02);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #0c0d18;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: var(--font-ui);
+    padding: 24px;
+  }
+  :root[data-theme="light"] ~ body,
+  body:has(+ * ) {} /* no-op, evita warnings de linters CSS estrictos */
+
+  a { color: var(--color-accent); text-decoration: none; }
+  button { font-family: inherit; border: none; background: none; padding: 0; margin: 0; color: inherit; }
+  button { cursor: default; }
+  button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; border-radius: 6px; }
+
+  /* Tooltip propio (equivalente estático de Tooltip.svelte) — sustituye el
+     `title=` nativo del navegador en toda la maqueta (revisión H1 apdo. 21,
+     punto 5: "sustituir las dependencias de tooltips nativos por el patrón
+     diseñado"). Uso: <button data-tt="Texto del tooltip">. */
+  [data-tt] { position: relative; }
+  [data-tt]::after {
+    content: attr(data-tt);
+    position: absolute;
+    bottom: calc(100% + 7px);
+    left: 50%;
+    z-index: 45;
+    padding: 6px 10px;
+    border-radius: var(--radius-xs);
+    background: var(--gradient-dialog);
+    border: 1px solid var(--border-dialog);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(var(--blur-card)) saturate(var(--material-saturate));
+    color: var(--color-text-primary);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 2px) scale(0.98);
+    transition: opacity var(--duration-fast) ease, transform var(--duration-fast) ease;
+  }
+  [data-tt]:hover::after,
+  [data-tt]:focus-visible::after {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    transition-delay: var(--duration-tooltip-delay);
+  }
+  [data-tt-below]::after {
+    bottom: auto;
+    top: calc(100% + 7px);
+    transform: translate(-50%, -2px) scale(0.98);
+  }
+  [data-tt-below]:hover::after,
+  [data-tt-below]:focus-visible::after {
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .demo-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .demo-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    color: #E9E6F2;
+    font-size: 12.5px;
+  }
+  .demo-toolbar strong { font-weight: 700; color: #fff; }
+  .demo-theme-toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.10);
+  }
+  .demo-theme-toggle button {
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #C9C4DA;
+    cursor: default;
+    transition: background var(--duration-base) ease, color var(--duration-base) ease;
+  }
+  .demo-theme-toggle button.is-active {
+    background: linear-gradient(135deg, #9565D0, #774AB8);
+    color: #fff;
+  }
+
+  .nb-window {
+    width: 1160px;
+    max-width: calc(100vw - 48px);
+    height: 720px;
+    max-height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-main);
+    border-radius: 12px;
+    border: 1px solid var(--window-border);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(0,0,0,.45);
+    position: relative; /* ancla el overlay de sesión (.nb-overlay) */
+  }
+
+  .titlebar {
+    height: var(--titlebar-height);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: var(--space-4);
+    background: var(--gradient-titlebar);
+    /* §16.13: "sin línea de separación" — antes había border-bottom, eliminado
+       (mismo ajuste que TitleBar.svelte, revisión H1 apdo. 21). */
+    user-select: none;
+  }
+  .titlebar-brand { display: flex; align-items: center; gap: var(--space-2); }
+  .titlebar-mark { width: 17px; height: 17px; border-radius: 50%; background: var(--gradient-brand-mark); }
+  .titlebar-name { font-size: var(--font-size-xs); font-weight: var(--font-weight-body); color: var(--color-text-tertiary); letter-spacing: .2px; }
+  .titlebar-controls { display: flex; align-items: center; height: 100%; }
+  .winctrl { width: 48px; height: var(--titlebar-height); display: flex; align-items: center; justify-content: center; color: var(--color-winctrl-icon); transition: background var(--duration-fast) ease, color var(--duration-fast) ease; }
+  .winctrl:hover { background: var(--winctrl-hover-bg); }
+  .winctrl-close:hover { background: var(--color-danger); color: var(--winctrl-close-hover-text); }
+
+  .nb-body { flex: 1; min-height: 0; display: flex; flex-direction: row; position: relative; }
+
+  .app-background {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+    background: var(--gradient-app-bg);
+  }
+  .app-background::before {
+    content: ""; position: absolute; width: 520px; height: 260px; left: 4%; bottom: -160px;
+    border-radius: 50%; background: var(--gradient-blob-1); filter: blur(34px); opacity: var(--blob-1-opacity);
+  }
+  .app-background::after {
+    content: ""; position: absolute; width: 600px; height: 340px; right: -160px; bottom: -160px;
+    border-radius: 50%; background: var(--gradient-blob-2); box-shadow: var(--shadow-blob-2); filter: blur(6px); opacity: var(--blob-2-opacity);
+  }
+
+  .nb-sidebar {
+    width: var(--sidebar-width); flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+    gap: 6px; padding-top: var(--space-5); background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border);
+    backdrop-filter: blur(var(--blur-sidebar)); position: relative; z-index: 1;
+  }
+  .nb-navitem {
+    width: 58px; height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; border-radius: var(--radius-md); color: var(--color-text-tertiary);
+    transition: background var(--duration-base) ease, color var(--duration-base) ease;
+  }
+  .nb-navitem:hover:not(.is-active) { background: var(--hover-tint); }
+  .nb-navitem.is-active { color: var(--color-nav-active-text); background: var(--gradient-nav-active); box-shadow: var(--shadow-nav-active); }
+  .nb-navitem svg { width: 18px; height: 18px; }
+  .nb-navitem span { font-size: 10.5px; font-weight: var(--font-weight-subtitle); }
+  /* Barra lateral deshabilitada durante una sesión activa (§16.1, FLUJOS.md
+     nota 3): de PREPARING a COMPLETED/FAILED/CANCELLED, ya resuelto en
+     Sidebar.svelte vía la prop `disabled` + Tooltip — aquí el equivalente
+     con <button disabled> + data-tt (ver <script>). */
+  .nb-navitem:disabled { opacity: .38; }
+
+  .nb-main { flex: 1; min-width: 0; padding: 28px 34px; position: relative; z-index: 1; overflow: auto; }
+  .nb-pane { display: none; flex-direction: column; gap: 24px; }
+  .nb-pane.is-active { display: flex; }
+
+  .nb-header { display: flex; align-items: flex-start; justify-content: space-between; }
+  .nb-header-id { display: flex; flex-direction: column; gap: 6px; }
+  .nb-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--color-text-muted); }
+  .nb-header-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .nb-header-name { font-size: var(--font-size-2xl); font-weight: 700; }
+  .nb-header-meta { font-size: 13px; color: var(--color-text-secondary); }
+  .nb-header-meta.mono { font-variant-numeric: tabular-nums; }
+  .nb-dim { font-size: 13px; color: var(--color-text-muted); }
+  .nb-pill { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: var(--pill-bg); border: 1px solid var(--pill-border); backdrop-filter: blur(var(--blur-pill)); font-size: 12.5px; color: var(--color-text-secondary); }
+  .nb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-success); box-shadow: 0 0 0 3px var(--color-success-soft); }
+  /* §16.2: rojo "Sin conexión de red" — distingue este caso (ningún
+     adaptador activo) del gris "Descubrimiento desactivado" (§7.1),
+     que sí tiene red pero no busca equipos. */
+  .nb-pill.is-offline .nb-dot { background: var(--color-danger); box-shadow: 0 0 0 3px var(--color-danger-soft); }
+  .nb-pill.is-offline { color: var(--color-danger); }
+
+  /* C03 (auditoría v3): saturate(125%) era literal, sin depender del tema
+     — igual que Card.svelte, corregido para usar --material-saturate
+     como cualquier otro material glass-card (ya documentado así en
+     DESIGN_TOKENS.md antes de esta corrección). */
+  .nb-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px; border-radius: var(--radius-xl); background: var(--gradient-card-hero); border: 1px solid var(--border-card-hero); backdrop-filter: blur(var(--blur-hero)) saturate(var(--material-saturate)); box-shadow: var(--shadow-card-hero); }
+  .nb-hero-text { display: flex; flex-direction: column; gap: 7px; }
+  .nb-hero-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--color-accent); }
+  .nb-hero-title { font-size: 18px; font-weight: 700; }
+  .nb-hero-sub { font-size: 13px; color: var(--color-text-secondary); }
+  .nb-hero-last { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 12.5px; color: var(--color-text-secondary); }
+  .nb-link-btn { font-size: 12.5px; font-weight: 700; color: var(--color-accent); transition: color var(--duration-base) ease; }
+  .nb-link-btn:hover { color: var(--color-accent-hover); }
+  .nb-btn-primary { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: var(--radius-lg); color: var(--color-button-primary-text); font-size: 14px; font-weight: 700; background: var(--gradient-button-primary); border: 1px solid var(--border-button-primary); box-shadow: var(--shadow-button-primary); white-space: nowrap; transition: background var(--duration-base) ease, box-shadow var(--duration-base) ease, transform var(--duration-base) ease; }
+  .nb-btn-primary:hover { background: var(--gradient-button-primary-hover); box-shadow: var(--shadow-button-primary-hover); transform: translateY(-1px); }
+  .nb-btn-primary:active { transform: translateY(0) scale(.985); }
+
+  /* El atributo [hidden] pierde contra cualquier regla de autor que fije
+     `display` con la misma especificidad (p. ej. `.nb-card { display:
+     flex }`) — sin esto, ocultar una tarjeta con `hidden` (A02, demo de
+     0/1/varios equipos) no habría hecho nada visible. */
+  [hidden] { display: none !important; }
+  .nb-section { display: flex; flex-direction: column; gap: 13px; }
+  .nb-section-head { display: flex; align-items: center; justify-content: space-between; }
+  /* A02 — aviso "elige uno de la lista" y estado vacío de "Equipos
+     disponibles" cuando "Analizar conexión" no puede decidir por ti. */
+  .nb-devices-hint { margin: 0; font-size: 12.5px; color: var(--color-accent); font-weight: 600; }
+  .nb-devices-empty { padding: 24px; }
+  .nb-devices-empty h2 { font-size: 15px; }
+  .nb-devices-empty p { font-size: 12.5px; }
+  @keyframes nb-devices-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    30% { box-shadow: 0 0 0 4px var(--color-warning-soft); }
+  }
+  .nb-section.is-emphasized { animation: nb-devices-pulse var(--duration-emphasis-pulse) ease-out 2; border-radius: var(--radius-lg); }
+  @media (prefers-reduced-motion: reduce) {
+    .nb-section.is-emphasized { animation: none; }
+  }
+  .nb-section-title { display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; }
+  .nb-muted { font-size: 12.5px; color: var(--color-text-muted); font-weight: 400; }
+  .nb-btn-secondary { display: flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: var(--radius-sm); background: var(--surface-secondary); border: 1px solid var(--border-default); backdrop-filter: blur(var(--blur-card)); color: var(--color-text-secondary); font-size: 12.5px; font-weight: 600; transition: background var(--duration-base) ease, border-color var(--duration-base) ease; }
+  .nb-btn-secondary:hover { background: var(--surface-secondary-hover); border-color: var(--border-hover); }
+  .nb-btn-secondary:disabled { opacity: .42; }
+  .nb-btn-secondary:disabled:hover { background: var(--surface-secondary); border-color: var(--border-default); }
+
+  /* Auditoría v3 (A03): "muchos equipos descubiertos, no solo muchos
+     favoritos" — sin flex-wrap, más de 3-4 tarjetas se apretaban cada vez
+     más estrechas en una sola fila en vez de pasar a una fila nueva (el
+     único caso de "varios" que había maquetado, la tarjeta de
+     LAPTOP-INVENTARIO, se colocaba a mano en su propia fila con un
+     margin-top — no era una solución general). */
+  .nb-device-row { display: flex; flex-wrap: wrap; gap: 13px; }
+  .nb-card { flex: 1 1 220px; min-width: 220px; text-align: left; display: flex; flex-direction: column; gap: 11px; padding: 16px; border-radius: var(--radius-lg); background: var(--gradient-card-default); border: 1px solid var(--border-default); backdrop-filter: blur(var(--blur-card)); box-shadow: var(--shadow-card-default); transition: background var(--duration-base) ease, border-color var(--duration-base) ease, transform var(--duration-base) ease; }
+  .nb-card:hover { background: var(--gradient-card-default-hover); border-color: var(--border-hover); transform: translateY(-1px); }
+  .nb-card.is-selected { background: var(--gradient-card-selected); border-color: var(--border-accent-strong); box-shadow: var(--shadow-card-selected); }
+  .nb-card.is-selected:hover { transform: none; background: var(--gradient-card-selected); }
+  .nb-card.is-busy { opacity: .68; }
+  .nb-card.is-busy:hover { transform: none; background: var(--gradient-card-default); }
+  .nb-device-head { display: flex; align-items: center; gap: 10px; }
+  .nb-device-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--icon-chip-bg); display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); flex-shrink: 0; }
+  .nb-device-icon svg { width: 16px; height: 16px; }
+  .nb-device-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .nb-device-name-row { display: flex; align-items: center; gap: 6px; }
+  .nb-device-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0; }
+  .nb-device-ip { font-size: var(--font-size-2xs); font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+  .nb-device-foot { display: flex; align-items: center; justify-content: space-between; }
+  .nb-device-link { display: flex; align-items: center; gap: 5px; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+  .nb-device-link svg { width: 12px; height: 12px; }
+  .nb-device-status { display: flex; align-items: center; gap: 5px; font-size: var(--font-size-2xs); font-weight: 700; }
+  .nb-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tone-success { color: var(--color-success); }
+  .tone-warning { color: var(--color-warning); }
+  .tone-accent { color: var(--color-accent); }
+  .tone-danger { color: var(--color-danger); }
+
+  /* Confianza y favorito — dos ejes independientes (ver comentario en la
+     fila de tarjetas). El escudo NUNCA usa la estrella para no confundir
+     los dos conceptos entre sí. */
+  .nb-device-trust { display: inline-flex; position: relative; color: var(--color-text-muted); flex-shrink: 0; border-radius: var(--radius-xs); }
+  .nb-device-trust-full { color: var(--color-accent); }
+  /* C04 (auditoría v3, accesibilidad — sincronizado con DeviceCard.svelte):
+     "de confianza" no puede distinguirse SOLO por color (regla 6 del
+     README). `::after` en vez de un nuevo elemento, porque aquí (a
+     diferencia del componente real) el marcado es estático, no condicional
+     por JS — el resultado visual es el mismo punto. */
+  .nb-device-trust-full::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+  .nb-device-trust:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+  .nb-device-fav { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: auto; flex-shrink: 0; color: var(--color-text-muted); border-radius: var(--radius-xs); transition: color var(--duration-fast) ease, background var(--duration-fast) ease; }
+  .nb-device-fav:hover { background: var(--hover-tint); color: var(--color-accent); }
+  .nb-device-fav-on { color: var(--color-accent); }
+
+  .nb-chip-row { display: flex; gap: 9px; flex-wrap: wrap; }
+  .nb-chip { display: flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px solid var(--border-default); font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); transition: background var(--duration-base) ease, border-color var(--duration-base) ease; }
+  .nb-chip:hover { background: var(--surface-secondary-hover); border-color: var(--border-hover); }
+  .nb-chip.muted { color: var(--color-text-muted); }
+  .nb-chip svg { width: 11px; height: 11px; }
+
+  .nb-placeholder { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 40px; border-radius: var(--radius-xl); background: var(--gradient-card-hero); border: 1px solid var(--border-card-hero); backdrop-filter: blur(var(--blur-hero)); box-shadow: var(--shadow-card-hero); }
+  .nb-placeholder h2 { margin: 0; font-size: 18px; }
+  .nb-placeholder p { margin: 0; font-size: 13px; color: var(--color-text-secondary); max-width: 46ch; line-height: 1.5; }
+  .nb-placeholder .tag { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--color-accent); }
+
+  .nb-settings-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-radius: var(--radius-lg); background: var(--gradient-card-default); border: 1px solid var(--border-default); backdrop-filter: blur(var(--blur-card)); }
+  .nb-settings-label { display: flex; flex-direction: column; gap: 3px; }
+  .nb-settings-label strong { font-size: 13.5px; }
+  .nb-settings-label span { font-size: 12px; color: var(--color-text-muted); }
+  .nb-theme-toggle { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px solid var(--border-default); }
+  .nb-theme-toggle button { padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 550; color: var(--color-text-secondary); transition: background var(--duration-base) ease, color var(--duration-base) ease; }
+  .nb-theme-toggle button.is-active { background: var(--gradient-nav-active); color: var(--color-nav-active-text); }
+
+  @media (max-width: 1240px) {
+    .nb-window { width: 100%; }
+  }
+
+  /* ================================================================
+     A08, corregido tras revisión de código con Especificacion.md completo
+     (§16.9) — puntos de corte por ancho, **cita literal**, no una
+     interpretación: compacta <1000px, estándar 1000–1400px, amplia
+     >1400px. Documentado con ejemplos en RESPONSIVE-I18N.md (matriz de
+     pruebas, no una pantalla por combinación — así lo pide la propia
+     auditoría). Aquí la implementación de las reglas que sí se pueden
+     probar en esta maqueta de un único archivo — todas en **ancho de
+     viewport** como aproximación del ancho de ventana (ver
+     RESPONSIVE-I18N.md §1 para el porqué esa aproximación es válida en
+     esta ronda), con `.nb-window` pegada a `calc(100vw - 48px)` en el
+     tramo donde encoge (ver regla de `.nb-window` más arriba):
+       · ESTÁNDAR (1000–1400px de ventana) es el estado por defecto — sin
+         media query propia, es lo que queda cuando no aplica ni compacta
+         ni amplia.
+       · COMPACTA — ventana <1000px ⟺ viewport <1048px exactos (viewport −
+         48 = ancho de ventana en este tramo, así que el cruce con 1000 es
+         1048, no una aproximación) — las CUATRO cosas que pide §16.9:
+         sidebar solo-iconos, tarjetas de Inicio en una columna, gráfica a
+         200px de alto (más alta que los 130px por defecto — a menos ancho,
+         más alto para seguir siendo legible), direcciones de Ejecución
+         apiladas (antes esto solo pasaba por debajo de 640px, un umbral
+         que no venía de ningún sitio — corregido a 1048px, el que sí pide
+         la spec).
+       · AMPLIA — ventana >1400px ⟺ viewport >1448px (mismo cálculo:
+         viewport − 48 > 1400). Antes la ventana crecía de 1160 a 1400px
+         fijos a partir de 1450px de viewport y se quedaba ahí para
+         siempre — **nunca llegaba a superar 1400px**, así que "amplia" en
+         sentido estricto (>1400, no =1400) no existía. Corregido para que
+         siga creciendo con el viewport en vez de fijarse en un número; las
+         dos cosas que pide §16.9 para este tramo:
+         - A→B y B→A lado a lado: además del enlace con flecha única de
+           siempre (que sigue mostrando la dirección activa, ya que la
+           prueba sondea una dirección detrás de otra, nunca las dos a la
+           vez — §12), aparece debajo un indicador compacto con las DOS
+           direcciones visibles a la vez, la activa resaltada — ver
+           `#exec-both-directions`.
+         - Detalles técnicos como panel lateral: **no implementado aquí,
+           a propósito.** El contenido de Detalles técnicos es H2 (§16.6,
+           el botón sigue deshabilitado, ver tabla B04 del README) — un
+           panel lateral vacío sin ese contenido sería una cáscara sin
+           nada dentro, no una pantalla real. Queda anotado como
+           dependencia explícita para quien construya H2, no como algo
+           evitado (ver README.md tabla B, fila B04/B05). */
+  @media (min-width: 1450px) {
+    .nb-window { width: calc(100vw - 48px); max-width: 1800px; }
+    #exec-both-directions { display: flex; }
+  }
+  @media (max-width: 1048px) {
+    .nb-sidebar { width: 52px; }
+    .nb-navitem { width: 40px; height: 40px; gap: 0; }
+    .nb-navitem span { display: none; }
+    .nb-main { padding: 20px 20px; }
+    /* §16.9 compacta: tarjetas de Inicio en una columna — con flex-wrap
+       solo (A03) dos tarjetas todavía cabían lado a lado en este ancho;
+       flex-basis: 100% fuerza la columna única que pide la spec. */
+    .nb-device-row .nb-card { flex-basis: 100%; }
+    /* La altura de la gráfica (200px en compacta, §16.9) se fija junto a
+       `.nb-chart` más abajo, no aquí — de lo contrario la regla de base
+       (misma especificidad, declarada después en la hoja) ganaría por
+       orden de cascada sin importar que esta media query esté activa. */
+    /* §16.9 compacta: direcciones de Ejecución apiladas — antes esta regla
+       solo existía por debajo de 640px (ver el bloque @media (max-width:
+       640px) más abajo, que ya no la repite). */
+    .nb-exec-link { flex-direction: column; align-items: stretch; }
+    .nb-exec-node { width: 100%; }
+  }
+
+  /* ================================================================
+     H1 — ampliación tras el correo del programador. Todo lo de aquí
+     abajo cubre §4-§7 del correo: selector/conexión manual,
+     emparejamiento/aceptación, preparación, ejecución y resultado
+     básico. Ver FLUJOS.md para el mapa completo de estados.
+     ================================================================ */
+
+  /* --- Overlay de sesión: emparejamiento / aceptación / avisos (§9, §10.4) ---
+     Un único componente de diálogo sirve para los tres casos porque
+     comparten envolvente (scrim + caja "glass-overlay"); solo cambia el
+     contenido — igual que Dialog.svelte del paquete de desarrollo. Vive
+     dentro de .nb-window (ver position:relative arriba) y cubre nb-body,
+     no el titlebar, tal y como haría un diálogo modal de la app real. */
+  .nb-overlay {
+    position: absolute; inset: var(--titlebar-height) 0 0 0; z-index: 30;
+    display: none; align-items: center; justify-content: center;
+    background: var(--overlay-scrim);
+    backdrop-filter: blur(3px);
+    /* A01 añadió diálogos con bastante más contenido (resumen del
+       solicitante + aviso + código + casilla + nota de demo) que ya no
+       caben siempre en 720px de alto — sin esto, el contenido se
+       recortaba contra el borde de la ventana en vez de desplazarse. */
+    overflow-y: auto;
+    padding: 24px 0;
+  }
+  .nb-overlay.is-active { display: flex; }
+  /* C03 (auditoría v3): 430px era un literal propio de la maqueta, sin
+     relación con ninguno de los tres tamaños que sí tiene Dialog.svelte
+     (--dialog-width-sm/md/lg) — no coincidía con ninguno. Dialog.svelte
+     ya documentaba en su propio comentario "la mayoría son sm, el de
+     aceptación es md" — la maqueta usaba un único ancho para todos sus
+     diálogos, sin esa distinción. Corregido: sm por defecto, con md solo
+     para el diálogo de aceptación (más contenido: resumen + código +
+     casilla), igual que el componente real. */
+  .nb-dialog {
+    width: var(--dialog-width-sm); max-width: calc(100% - 48px);
+    max-height: 100%;
+    display: flex; flex-direction: column; gap: 16px;
+    padding: 26px 28px; border-radius: var(--radius-xl);
+    background: var(--gradient-dialog); border: 1px solid var(--border-dialog);
+    box-shadow: var(--shadow-dialog);
+    backdrop-filter: blur(var(--blur-modal)) saturate(var(--material-saturate));
+    -webkit-backdrop-filter: blur(var(--blur-modal)) saturate(var(--material-saturate));
+    color: var(--color-text-primary);
+  }
+  /* C03: el diálogo de aceptación (resumen del solicitante + aviso +
+     código + casilla de confianza + nota de demo) es el único con
+     bastante más contenido que un aviso simple — md en vez de sm, igual
+     que "el de aceptación es md" ya documentado en Dialog.svelte. */
+  [data-overlay="peer-accept"] .nb-dialog { width: var(--dialog-width-md); }
+  /* C04: `tabindex="-1"` en `.nb-dialog` es solo el respaldo de foco cuando
+     no hay ningún control dentro (ver <script>) — igual que Dialog.svelte,
+     no necesita su propio anillo porque el foco real va a su primer
+     control. */
+  .nb-dialog:focus-visible { outline: none; }
+  /* Cuerpo desplazable de un diálogo largo (p. ej. peer-accept, A01): el
+     icono/título/descripción de arriba y las acciones de abajo se
+     quedan siempre visibles — lo único que se desplaza es el bloque de
+     en medio. Sin esto, con contenido largo los botones de decisión
+     (¡el motivo de que el diálogo exista!) podían quedar fuera de la
+     zona visible sin ningún indicio de que hubiera más abajo. */
+  .nb-dialog-scroll { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; min-height: 0; margin: 0 -4px; padding: 0 4px; }
+  .nb-dialog-actions { flex-shrink: 0; }
+  @supports not (backdrop-filter: blur(1px)) {
+    .nb-dialog { background: var(--surface-solid-overlay); }
+  }
+  .nb-dialog-icon { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--icon-chip-bg); }
+  .nb-dialog-icon svg { width: 21px; height: 21px; }
+  .nb-dialog-icon.tone-accent { color: var(--color-accent); }
+  .nb-dialog-icon.tone-success { color: var(--color-success); }
+  .nb-dialog-icon.tone-warning { color: var(--color-warning); }
+  .nb-dialog-icon.tone-danger { color: var(--color-danger); }
+  .nb-dialog-title { margin: 0; font-size: 16px; font-weight: 700; }
+  .nb-dialog-desc { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-secondary); }
+  .nb-dialog-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-muted); }
+  /* A09: bloque de "Ver detalles" — expande dentro del propio diálogo de
+     aviso, nunca navega a una pantalla nueva (no existe tal pantalla en
+     H1; "Detalles técnicos" de Resultado es otra cosa, de la prueba ya
+     completada, pendiente H2 — no confundir los dos). */
+  .nb-dialog-detail { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: var(--hover-tint); font-size: 12px; line-height: 1.5; color: var(--color-text-secondary); font-family: var(--font-mono); white-space: pre-line; }
+  .nb-dialog-detail[hidden] { display: none; }
+  .nb-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+  .nb-btn-ghost { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
+  .nb-btn-ghost:hover { background: var(--hover-tint); color: var(--color-text-primary); }
+  .nb-btn-danger-outline { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 700; color: var(--color-danger); border: 1px solid rgba(255,124,141,0.4); }
+  .nb-btn-danger-outline:hover { background: rgba(255,124,141,0.1); }
+
+  /* Código de verificación — VerificationCode.svelte estático (§9.1.5) */
+  .nb-vcode { display: flex; gap: 8px; justify-content: center; margin: 2px 0; }
+  .nb-vcode span { width: 40px; padding: 10px 0; text-align: center; border-radius: var(--radius-sm); background: var(--surface-field); border: 1px solid var(--border-field); font-family: var(--font-mono); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Diálogo de aceptación del receptor (A01) — resumen del solicitante +
+     aviso de tráfico + casilla de confianza. */
+  .nb-peer-summary { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px solid var(--border-default); }
+  .nb-peer-summary-row { font-size: 12.5px; color: var(--color-text-secondary); }
+  .nb-peer-summary-row strong { font-size: 13.5px; color: var(--color-text-primary); }
+  .nb-peer-summary .nb-device-link { font-size: 12.5px; color: var(--color-text-secondary); }
+  .nb-peer-traffic-warning { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--color-warning); }
+  .nb-peer-traffic-warning svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+  .nb-check-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--color-text-primary); cursor: pointer; user-select: none; }
+  .nb-check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); cursor: pointer; }
+  .nb-back-to-iniciador { margin-left: auto; }
+  /* Banner de identidad cambiada (§9.4) — integrado en el propio diálogo
+     de emparejamiento, no como un aviso aparte (FLUJOS.md, camino
+     "Identidad cambiada"). */
+  .nb-peer-changed-banner { display: none; gap: 8px; padding: 11px 13px; border-radius: var(--radius-md); background: var(--color-warning-soft); border: 1px solid var(--color-warning); font-size: 12px; line-height: 1.5; color: var(--color-text-primary); }
+  .nb-peer-changed-banner svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--color-warning); }
+  [data-peer-variant="changed"] .nb-peer-changed-banner { display: flex; }
+  /* "Conocido": ya pasó el emparejamiento en una conexión anterior — sin
+     bloque de código (§9.2, §10.4). */
+  [data-peer-variant="known"] #peer-accept-code { display: none; }
+
+  /* Nota "esto es una demo": esta maqueta es UNA sola ventana que
+     representa los dos equipos (iniciador y receptor); cuando hace
+     falta mostrar qué vería el OTRO extremo, se anota así en vez de
+     fingir una segunda ventana (ver FLUJOS.md, nota de implementación 1). */
+  .nb-demo-note { display: flex; align-items: flex-start; gap: 9px; padding: 11px 13px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px dashed var(--border-hover); font-size: var(--font-size-2xs); line-height: 1.5; color: var(--color-text-secondary); }
+  .nb-demo-note strong { color: var(--color-text-primary); }
+  .nb-demo-branches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .nb-demo-branches button { padding: 7px 12px; border-radius: var(--radius-xs); font-size: var(--font-size-2xs); font-weight: 600; background: var(--surface-secondary); border: 1px dashed var(--border-hover); color: var(--color-text-secondary); }
+  .nb-demo-branches button:hover { color: var(--color-text-primary); border-color: var(--color-accent); }
+  .nb-demo-branches-label { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--color-text-muted); margin-top: 10px; }
+
+  /* --- Selector de equipo / conexión manual (§4) --- */
+  .nb-back { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
+  .nb-back:hover { color: var(--color-text-primary); }
+  .nb-back svg { width: 14px; height: 14px; }
+  .nb-summary-card { display: flex; align-items: center; gap: 16px; padding: 20px 22px; border-radius: var(--radius-xl); background: var(--gradient-card-hero); border: 1px solid var(--border-card-hero); backdrop-filter: blur(var(--blur-hero)); box-shadow: var(--shadow-card-hero); }
+  .nb-summary-icon { width: 46px; height: 46px; border-radius: var(--radius-md); background: var(--icon-chip-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-text-secondary); }
+  .nb-summary-icon svg { width: 22px; height: 22px; }
+  .nb-summary-text { display: flex; flex-direction: column; gap: 3px; }
+  .nb-summary-text strong { font-size: 15px; }
+  .nb-summary-text span { font-size: 12.5px; color: var(--color-text-muted); }
+  .nb-option-row { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; border-radius: var(--radius-md); background: var(--gradient-card-default); border: 1px solid var(--border-default); }
+  .nb-option-row strong { font-size: 13px; display: block; }
+  .nb-option-row span { font-size: 12px; color: var(--color-text-muted); }
+
+  /* Campo de texto — TextField.svelte estático (validación de IP manual) */
+  .nb-field { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
+  .nb-field label { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
+  .nb-field input { padding: 11px 13px; border-radius: var(--radius-sm); background: var(--surface-field); border: 1px solid var(--border-field); color: var(--color-text-primary); font-family: var(--font-mono); font-size: 13.5px; width: 100%; }
+  .nb-field input::placeholder { color: var(--color-field-placeholder); }
+  .nb-field input:focus-visible { outline: none; border-color: var(--border-field-focus); box-shadow: var(--shadow-field-focus); }
+  .nb-field-hint { font-size: var(--font-size-2xs); color: var(--color-text-muted); }
+  .nb-field-hint code, .nb-field-error code { font-family: var(--font-mono); background: var(--surface-field); padding: 1px 4px; border-radius: 4px; }
+  .nb-field-error { display: none; align-items: center; gap: 5px; font-size: var(--font-size-2xs); color: var(--color-danger); font-weight: 600; }
+  .nb-field-error svg { width: 12px; height: 12px; flex-shrink: 0; }
+  /* Dos estados de error distintos y mutuamente excluyentes (auditoría v3,
+     A04): "sintaxis inválida" (nunca ha pasado el formato) vs "nombre
+     válido que no resuelve" (pasa el formato, falla después). El atributo
+     data-error-kind en .nb-field decide todo: color de borde, qué <span>
+     de error se ve, y que se oculte la ayuda normal. */
+  .nb-field[data-error-kind] input { border-color: var(--border-field-error); box-shadow: var(--shadow-field-error); }
+  .nb-field[data-error-kind] .nb-field-hint { display: none; }
+  .nb-field[data-error-kind="syntax"] [data-error="syntax"] { display: flex; }
+  .nb-field[data-error-kind="unresolved"] [data-error="unresolved"] { display: flex; }
+
+  /* --- Preparación: checklist (§10.2 local + §10.5 conjunta) ---
+     Auditoría v3 (A05): "la checklist no corresponde a todos los pasos de
+     §10.2/§10.5" — antes era una única lista plana de 4 líneas que
+     mezclaba comprobaciones locales (§10.2: motor, adaptador, IP, versión,
+     disco — normalmente silenciosas, encadenan directo a
+     WAITING_FOR_ACCEPTANCE si pasan, FLUJOS.md fila 5) con la conjunta de
+     verdad (§10.5: puerto a través del firewall). Ahora son dos grupos
+     explícitos: el primero ya viene resuelto (es la confirmación, por
+     transparencia, de lo que ya pasó en silencio antes de llegar aquí) y
+     el segundo es el que de verdad avanza en esta pantalla. */
+  .nb-checklist-group { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+  .nb-checklist-group-label { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .4px; color: var(--color-text-muted); padding-left: 2px; }
+  .nb-checklist { display: flex; flex-direction: column; gap: 2px; padding: 8px 18px; border-radius: var(--radius-lg); background: var(--gradient-card-default); border: 1px solid var(--border-default); max-width: 520px; }
+  .nb-check-item { display: flex; align-items: flex-start; gap: 12px; padding: 11px 2px; }
+  .nb-check-icon { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; margin-top: 1px; }
+  .nb-check-item.pending .nb-check-icon { color: var(--color-text-disabled); }
+  .nb-check-item.running .nb-check-icon { color: var(--color-accent); }
+  .nb-check-item.done .nb-check-icon { color: var(--color-success); }
+  .nb-check-item.failed .nb-check-icon { color: var(--color-danger); }
+  .nb-check-item.action .nb-check-icon { color: var(--color-warning); }
+  .nb-check-dot-empty { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; }
+  .nb-check-spinner { width: 15px; height: 15px; border-radius: 50%; border: 2px solid var(--border-default); border-top-color: var(--color-accent); animation: nb-spin var(--duration-spinner) linear infinite; }
+  @keyframes nb-spin { to { transform: rotate(360deg); } }
+  .nb-check-text { display: flex; flex-direction: column; gap: 2px; padding-top: 1px; }
+  .nb-check-label { font-size: 13px; font-weight: 550; }
+  .nb-check-item.pending .nb-check-label { color: var(--color-text-muted); }
+  .nb-check-detail { font-size: 12px; color: var(--color-text-secondary); line-height: 1.4; }
+  .nb-check-item.failed .nb-check-detail { color: var(--color-danger); }
+  .nb-check-item.action .nb-check-detail { color: var(--color-warning); }
+  @media (prefers-reduced-motion: reduce) {
+    .nb-check-spinner { animation-duration: calc(var(--duration-spinner) * 2); }
+  }
+
+  /* --- Ejecución (§16.4) ---
+     Auditoría v3 (A05): "falta el elemento principal — dos tarjetas de
+     equipo (modelo de NIC, velocidad de enlace) unidas por una línea de
+     conexión con flecha de dirección A→B/B→A, sin invertir el significado
+     al cambiar de perspectiva local/remoto". Antes solo había velocidad +
+     barra + gráfica, sin representar los dos extremos como tal. */
+  .nb-exec-perspective { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-secondary); }
+  .nb-exec-perspective-buttons { display: inline-flex; gap: 4px; padding: 3px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px solid var(--border-default); }
+  .nb-exec-perspective-buttons button { padding: 5px 11px; border-radius: var(--radius-sm); font-size: var(--font-size-2xs); font-weight: 600; color: var(--color-text-secondary); }
+  .nb-exec-perspective-buttons button.is-active { background: var(--gradient-nav-active); color: var(--color-nav-active-text); }
+
+  /* Las dos tarjetas de equipo NUNCA cambian de lado (A siempre es "este
+     equipo", a la izquierda; B siempre es el equipo remoto, a la
+     derecha). El selector "Ver desde" de arriba solo mueve la etiqueta
+     "Este equipo" de una tarjeta a otra — nunca reordena las tarjetas ni
+     toca la flecha. Así el significado de A→B/B→A queda fijado a los
+     NOMBRES reales, no a la posición ni a la perspectiva: es justo la
+     inversión que pedía evitar la auditoría. */
+  .nb-exec-link { display: flex; align-items: center; gap: 14px; }
+  .nb-exec-node { display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0; padding: 14px 16px; border-radius: var(--radius-lg); background: var(--gradient-card-default); border: 1px solid var(--border-default); }
+  .nb-exec-node-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--icon-chip-bg); display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); flex-shrink: 0; }
+  .nb-exec-node-icon svg { width: 16px; height: 16px; }
+  .nb-exec-node-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .nb-exec-node-name { font-size: 13px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nb-exec-node-tag { font-size: 10.5px; font-weight: 650; color: var(--color-accent); text-transform: uppercase; letter-spacing: .3px; }
+  .nb-exec-node-nic { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nb-exec-node-nic svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .nb-exec-link-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; min-width: 96px; }
+  .nb-exec-arrow { width: 90px; height: 20px; transition: transform var(--duration-base) ease; }
+  /* B→A: espejo horizontal del propio SVG en vez de redibujar coordenadas
+     — la flecha apunta al revés sin que cambie ni un nodo de sitio. */
+  .nb-exec-link-mid[data-dir="ba"] .nb-exec-arrow { transform: scaleX(-1); }
+  .nb-exec-link-label { font-size: 10.5px; color: var(--color-text-muted); text-align: center; white-space: nowrap; }
+
+  /* §16.9 amplia (>1400px): "A→B y B→A lado a lado" — indicador compacto
+     con las dos direcciones visibles a la vez (la flecha única de arriba
+     sigue mostrando solo la activa, porque la prueba sondea una
+     dirección detrás de otra, nunca las dos en paralelo, §12). Oculto por
+     defecto; el `display: flex` que lo activa vive en la media query de
+     amplia, junto al resto de reglas de ese tramo. Distinción activa/
+     inactiva NUNCA solo por color (§16.10): también peso de fuente,
+     opacidad y el propio icono de dirección, que ya difiere entre los dos. */
+  .nb-exec-both { display: none; align-items: center; justify-content: center; gap: 14px; margin-top: -6px; }
+  .nb-exec-both-item { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--radius-pill); background: var(--surface-secondary); border: 1px solid var(--border-default); font-size: 11px; font-weight: 600; color: var(--color-text-muted); opacity: .68; transition: opacity var(--duration-base) ease, border-color var(--duration-base) ease, color var(--duration-base) ease; }
+  .nb-exec-both-item svg { width: 12px; height: 12px; flex-shrink: 0; }
+  .nb-exec-both-item[data-eb-dir="ba"] svg { transform: scaleX(-1); }
+  .nb-exec-both-item.is-active { opacity: 1; font-weight: 700; color: var(--color-text-primary); border-color: var(--border-accent-strong); }
+
+  /* Aviso de estado dentro de Ejecución (acción requerida / reconectando)
+     — nunca sustituye a "Cancelar prueba", que sigue siempre visible
+     debajo de esto (§16.4: "acciones siempre accesibles"). */
+  .nb-exec-state-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--radius-md); font-size: 12.5px; line-height: 1.4; }
+  .nb-exec-state-note svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+  .nb-exec-state-note.tone-warning { background: rgba(246, 200, 95, 0.12); color: var(--color-warning); }
+  .nb-exec-state-note.tone-danger { background: rgba(255, 124, 141, 0.12); color: var(--color-danger); }
+  .nb-exec-state-note-text { display: flex; flex-direction: column; gap: 6px; }
+  .nb-exec-state-note-text strong { color: var(--color-text-primary); font-weight: 650; }
+  .nb-exec-state-note button { align-self: flex-start; }
+
+  /* --- Ejecución: velocidad instantánea + gráfica (§6-§7) --- */
+  .nb-exec-phase { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 26px; border-radius: var(--radius-xl); background: var(--gradient-card-hero); border: 1px solid var(--border-card-hero); backdrop-filter: blur(var(--blur-hero)); box-shadow: var(--shadow-card-hero); transition: border-color var(--duration-base) ease; }
+  /* Reconexión / acción requerida (§16.4) — un aviso discreto de que el
+     tramo no avanza con normalidad, sin ser tan fuerte como un aviso
+     modal (la prueba puede seguir sola). El detalle está en
+     `.nb-exec-state-note` justo debajo, esto solo lo acompaña. */
+  .nb-exec-phase.is-degraded { border-color: var(--color-warning); }
+  .nb-exec-phase-text { display: flex; flex-direction: column; gap: 6px; }
+  .nb-exec-phase-text strong { font-size: 14.5px; }
+  .nb-exec-speed { font-family: var(--font-mono); font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .nb-exec-speed span { font-size: 14px; font-weight: 600; color: var(--color-text-muted); margin-left: 6px; }
+  .nb-progress { position: relative; width: 100%; height: 6px; border-radius: var(--radius-pill); background: var(--surface-field); overflow: hidden; }
+  /* C03 (auditoría v3): dos desincronizaciones reales con ProgressBar.svelte
+     (la fuente real, no la maqueta) — la transición de relleno era .5s
+     linear aquí y var(--duration-base) ease allí, y la animación
+     indeterminada 1.1s aquí frente a 1.3s allí. Ambas corregidas para
+     coincidir con el componente real.
+     C04: relleno determinado de `width` a `transform: scaleX()` — mismo
+     motivo que en ProgressBar.svelte (solo compositor, sin layout en cada
+     frame). El ancho es del 100 % siempre; `scaleX()` inline (puesto por
+     JS) es lo que cambia. */
+  .nb-progress-fill { width: 100%; height: 100%; border-radius: var(--radius-pill); background: var(--gradient-button-primary); transform-origin: left; transition: transform var(--duration-base) ease; }
+  /* Tramos sin duración estimable ("Analizando resultados…", "Reconectando…")
+     — ver ProgressBar.svelte prop `indeterminate`, ya documentado en
+     README.md pero nunca maquetado hasta ahora (A05). */
+  .nb-progress.is-indeterminate .nb-progress-fill { position: absolute; left: 0; top: 0; width: 40% !important; transition: none; animation: nb-progress-indeterminate var(--duration-progress-indeterminate) ease-in-out infinite; }
+  @keyframes nb-progress-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+  @media (prefers-reduced-motion: reduce) {
+    /* C03: la maqueta solo ralentizaba la animación (2.4s); el componente
+       real la PARA del todo (barra fija al 100%, opacidad 0.5) — una
+       tercera desincronización encontrada de paso. La maqueta pasa a
+       igualar el comportamiento real en vez de solo su duración. */
+    .nb-progress.is-indeterminate .nb-progress-fill { animation: none; width: 100% !important; opacity: 0.5; }
+  }
+  .nb-chart-wrap { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: var(--radius-lg); background: var(--gradient-card-default); border: 1px solid var(--border-default); }
+  .nb-chart { width: 100%; height: 130px; display: block; }
+  /* §16.9 compacta: gráfica a 200px de alto (más alta que los 130px por
+     defecto de estándar/amplia — a menos ancho horizontal, más alto para
+     seguir siendo legible). Tiene que vivir DESPUÉS de la regla base de
+     arriba: misma especificidad (una clase), así que gana por orden de
+     cascada — puesta antes, la regla de base la habría pisado sin
+     importar si la media query estaba activa o no. */
+  @media (max-width: 1048px) {
+    .nb-chart { height: 200px; }
+  }
+  /* A08: sin flex-wrap esto desbordaba horizontalmente a 800px de ancho
+     (la segunda entrada, con la nota "patrón discontinuo…", es la más
+     larga de toda la maqueta) — ahora las dos entradas se apilan en
+     vertical en vez de cortarse. */
+  .nb-chart-legend { display: flex; flex-wrap: wrap; row-gap: 4px; column-gap: 18px; font-size: 12px; color: var(--color-text-secondary); }
+  .nb-chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .nb-chart-swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* --- Resultado básico (§7) + switcher de demo --- */
+  .nb-result-card { display: flex; align-items: center; gap: 20px; padding: 26px 28px; border-radius: var(--radius-xl); background: var(--gradient-card-hero); border: 1px solid var(--border-card-hero); backdrop-filter: blur(var(--blur-hero)); box-shadow: var(--shadow-card-hero); }
+  .nb-result-verdict { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nb-result-verdict svg { width: 27px; height: 27px; }
+  .nb-result-verdict.tone-success { background: var(--color-success-soft); color: var(--color-success); }
+  .nb-result-verdict.tone-warning { background: rgba(246, 200, 95, 0.16); color: var(--color-warning); }
+  .nb-result-verdict.tone-danger { background: rgba(255, 124, 141, 0.16); color: var(--color-danger); }
+  .nb-result-text { flex: 1; min-width: 0; }
+  .nb-result-text strong { font-size: 18px; }
+  .nb-result-text p { margin: 4px 0 0; font-size: 12.5px; color: var(--color-text-secondary); }
+  /* Cifra principal (A06, §13) — mismo tratamiento tipográfico que
+     `.nb-exec-speed` en Ejecución, a propósito: es el mismo tipo de dato
+     (una cifra que resume el estado de la prueba de un vistazo), solo que
+     aquí es un % de capacidad en vez de un Mbit/s instantáneo. */
+  .nb-result-headline { font-family: var(--font-mono); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; flex-shrink: 0; }
+  .nb-result-headline span { display: block; font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-align: right; margin-top: 2px; }
+  .nb-result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .nb-result-stat { padding: 14px 16px; border-radius: var(--radius-md); background: var(--gradient-card-default); border: 1px solid var(--border-default); display: flex; flex-direction: column; gap: 4px; }
+  .nb-result-stat span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: var(--color-text-muted); font-weight: 600; }
+  .nb-result-stat span:last-child { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .nb-result-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Chips de "solo demo" para cambiar de variante de resultado — nunca
+     existirían en la app real, sirven para que quien revise vea las
+     cuatro variantes del correo (§7) sin tener que repetir la prueba. */
+  .nb-demo-switch { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--radius-md); background: var(--surface-secondary); border: 1px dashed var(--border-hover); }
+  .nb-demo-switch button { padding: 7px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-2xs); font-weight: 600; color: var(--color-text-secondary); }
+  .nb-demo-switch button.is-active { background: var(--gradient-nav-active); color: var(--color-nav-active-text); }
+
+  @media (max-width: 640px) {
+    .nb-result-grid { grid-template-columns: 1fr; }
+    .nb-result-card { flex-direction: column; align-items: flex-start; }
+    .nb-result-headline, .nb-result-headline span { text-align: left; }
+    .nb-exec-phase { flex-direction: column; align-items: flex-start; }
+    .nb-exec-speed { text-align: left; }
+    /* El apilado de .nb-exec-link/.nb-exec-node ya no se repite aquí:
+       vivía solo bajo 640px (un umbral que no venía de ningún sitio) y
+       se ha corregido a los <1048px reales de §16.9 compacta (ver el
+       bloque @media (max-width: 1048px) más arriba) — 640px está siempre
+       dentro de ese rango, así que sigue apilado igual, solo que ahora
+       por la regla correcta. */
+  }
+
+  /* ================= C01 (auditoría v3): respaldo opaco §16.10 =================
+     Dialog (arriba) ya tenía su respaldo; Card/Sidebar/Button/StatusPill no lo
+     tenían en ninguno de los dos sitios (componentes Svelte y maqueta) — este
+     bloque es el lado de la maqueta. A diferencia de los componentes Svelte
+     (donde el material `glass-card` solo aparece en Card/Button), aquí el mismo
+     tratamiento visual se repite bajo nombres de clase distintos en cada
+     pantalla (Inicio, Ejecución, Resultado, Ajustes…) porque la maqueta no
+     reutiliza una única clase compartida — así que este bloque cubre TODOS los
+     sitios que usan `--gradient-card-default`/`--gradient-card-hero`/`--pill-bg`
+     con `backdrop-filter`, no solo los nombrados literalmente "card"/"pill", o
+     el propio propósito de esta corrección (que nada se quede transparente sin
+     soporte de blur) quedaría incompleto en la mitad de las pantallas.
+     Va al final de la hoja de estilos a propósito: con la misma especificidad,
+     gana la regla declarada más tarde, y varias de las reglas base que esto
+     corrige (`.nb-summary-card`, `.nb-exec-phase`, `.nb-result-card`…) están
+     más abajo en el fichero que donde estaba el primer `@supports` (junto a
+     `.nb-dialog`) — puesto aquí, siempre va después de todas ellas. */
+  @supports not (backdrop-filter: blur(1px)) {
+    /* Tooltip CSS-only (equivalente de Tooltip.svelte, que sí tenía ya su
+       respaldo) — mismo material `glass-overlay` que .nb-dialog. */
+    [data-tt]::after { background: var(--surface-solid-overlay); }
+
+    /* glass-chrome */
+    .nb-sidebar { background: var(--surface-solid-chrome); }
+
+    /* glass-card — variante "default": tarjetas de equipo, fila de Ajustes,
+       botón secundario. Selected/busy conservan su distinción por borde y
+       sombra (no tocados aquí), solo cambia el fondo translúcido. */
+    .nb-card,
+    .nb-card:hover,
+    .nb-card.is-selected,
+    .nb-card.is-selected:hover,
+    .nb-card.is-busy:hover,
+    .nb-settings-row,
+    .nb-btn-secondary,
+    .nb-btn-secondary:hover,
+    .nb-btn-secondary:disabled,
+    .nb-btn-secondary:disabled:hover {
+      background: var(--surface-solid-card);
+    }
+
+    /* glass-card — variante "hero": mismo token de respaldo que "default"
+       (ver DESIGN_TOKENS.md, los dos comparten `--surface-solid-card`).
+       Cubre el panel de Inicio, el placeholder de Historial/Ajustes, el
+       resumen de conexión manual, la fase de Ejecución y la cabecera de
+       Resultado — todos son el mismo material bajo nombres distintos. */
+    .nb-hero,
+    .nb-placeholder,
+    .nb-summary-card,
+    .nb-exec-phase,
+    .nb-result-card {
+      background: var(--surface-solid-card);
+    }
+
+    /* Cuarto material propio del pill de estado (StatusPill.svelte). */
+    .nb-pill { background: var(--surface-solid-pill); }
+  }
+</style>
+</head>
+<body>
+  <div class="demo-shell">
+    <div class="demo-toolbar">
+      <span><strong>Maqueta navegable</strong> — no es la app final, es para revisar el diseño</span>
+      <div class="demo-theme-toggle" role="radiogroup" aria-label="Tema de la maqueta">
+        <button type="button" data-demo-theme="dark" class="is-active">Oscuro</button>
+        <button type="button" data-demo-theme="light">Claro</button>
+      </div>
+    </div>
+
+    <div class="nb-window">
+      <div class="titlebar">
+        <div class="titlebar-brand">
+          <span class="titlebar-mark"></span>
+          <span class="titlebar-name">NetworkBench</span>
+        </div>
+        <div class="titlebar-controls">
+          <button class="winctrl" type="button" aria-label="Minimizar" data-tt="Solo disponible en la app de escritorio" data-tt-below>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <button class="winctrl" type="button" aria-label="Maximizar" data-tt="Solo disponible en la app de escritorio" data-tt-below>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg>
+          </button>
+          <button class="winctrl winctrl-close" type="button" aria-label="Cerrar" data-tt="Solo disponible en la app de escritorio" data-tt-below>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="nb-body">
+        <div class="app-background" aria-hidden="true"></div>
+
+        <!-- Auditoría v3 (A08): "sidebar solo-iconos por debajo de
+             1000px". `data-tt` (tooltip propio, nunca nativo — ver su
+             regla más arriba) puesto directo en el HTML como etiqueta
+             por defecto de cada ítem: no es solo para el estado
+             bloqueado de la sesión, así que al entrar en modo
+             solo-icono (donde <span> se oculta por CSS) el nombre sigue
+             disponible al pasar el ratón/foco, nunca se pierde. -->
+        <nav class="nb-sidebar" aria-label="Navegación principal">
+          <button type="button" class="nb-navitem is-active" data-nav="inicio" data-tt="Inicio" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9.2a.8.8 0 00.8.8H10v-6h4v6h3.2a.8.8 0 00.8-.8V10"/></svg>
+            <span>Inicio</span>
+          </button>
+          <button type="button" class="nb-navitem" data-nav="historial" data-tt="Historial">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3.2 2"/></svg>
+            <span>Historial</span>
+          </button>
+          <button type="button" class="nb-navitem" data-nav="ajustes" data-tt="Ajustes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2.06 2.06 0 11-2.9 2.9l-.07-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.03 1.56V21.4a2.06 2.06 0 11-4.12 0v-.1a1.7 1.7 0 00-1.03-1.56 1.7 1.7 0 00-1.87.34l-.07.06a2.06 2.06 0 11-2.9-2.9l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-1.56-1.03H2.94a2.06 2.06 0 110-4.12h.1A1.7 1.7 0 004.6 8.82a1.7 1.7 0 00-.34-1.87l-.06-.07a2.06 2.06 0 112.9-2.9l.07.06A1.7 1.7 0 008.94 4.4h.09A1.7 1.7 0 0010.56 3V2.94a2.06 2.06 0 114.12 0v.1A1.7 1.7 0 0016 4.4a1.7 1.7 0 001.87-.34l.07-.06a2.06 2.06 0 112.9 2.9l-.06.07a1.7 1.7 0 00-.34 1.87v.09c.24.68.82 1.18 1.56 1.24h.1a2.06 2.06 0 110 4.12h-.1A1.7 1.7 0 0019.4 15z"/></svg>
+            <span>Ajustes</span>
+          </button>
+        </nav>
+
+        <main class="nb-main">
+          <!-- INICIO -->
+          <section class="nb-pane is-active" data-pane="inicio">
+            <div class="nb-header">
+              <div class="nb-header-id">
+                <span class="nb-eyebrow">Este equipo</span>
+                <div class="nb-header-line">
+                  <span class="nb-header-name">DESKTOP-DANIEL</span>
+                  <span class="nb-dim">·</span>
+                  <span class="nb-header-meta">Intel X550-T2</span>
+                  <span class="nb-dim">·</span>
+                  <span class="nb-header-meta mono">10 Gbit/s</span>
+                  <span class="nb-dim">·</span>
+                  <span class="nb-header-meta mono">192.168.10.15</span>
+                </div>
+              </div>
+              <div class="nb-pill" id="network-pill">
+                <span class="nb-dot"></span>
+                Visible en la red
+              </div>
+            </div>
+
+            <!-- Auditoría v3 (A03): "cero adaptadores de red + acción
+                 Abrir configuración de red" — cita literal del §16.2:
+                 "si no hay ningún adaptador con operStatus = up, se
+                 sustituye el contenido por «Este equipo no tiene conexión
+                 de red» con acción «Abrir configuración de red»". Antes
+                 solo estaba prometido en PANTALLAS-H1.md, sin maquetar. -->
+            <div class="nb-placeholder" id="inicio-no-network" hidden>
+              <span class="tag">Sin conexión de red</span>
+              <h2>Este equipo no tiene conexión de red</h2>
+              <p>No se ha detectado ningún adaptador de red activo — ni para buscar otros equipos ni para conectar con ellos.</p>
+              <button type="button" class="nb-btn-primary" data-simulate="open-network-settings" style="margin-top:4px;">Abrir configuración de red</button>
+            </div>
+
+            <!-- Solo demo (A02/A03): fuera de #inicio-content a propósito
+                 — si viviera dentro, el botón "sin adaptadores de red"
+                 haría desaparecer también los botones para volver a
+                 salir de ese estado (nadie podría deshacerlo). -->
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> "Analizar conexión" y la cabecera se comportan distinto según cuántos equipos y adaptadores hay — pruébalo con cada botón.</span>
+              <div class="nb-demo-branches">
+                <button type="button" data-devices-demo="empty">Simular: 0 equipos</button>
+                <button type="button" data-devices-demo="one">Simular: 1 equipo</button>
+                <button type="button" data-devices-demo="many">Simular: varios equipos (por defecto)</button>
+                <button type="button" data-devices-demo="server-busy">Simular: SERVER-01 ya no disponible (A03)</button>
+                <button type="button" data-devices-demo="no-network">Simular: sin adaptadores de red (A03)</button>
+              </div>
+            </div>
+
+            <div id="inicio-content">
+            <div class="nb-hero">
+              <div class="nb-hero-text">
+                <span class="nb-hero-eyebrow">Prueba estándar</span>
+                <span class="nb-hero-title">Analiza tu conexión con otro equipo</span>
+                <span class="nb-hero-sub">TCP en ambas direcciones · aprox. 1 minuto</span>
+                <!-- Auditoría v3 (A03): "el acceso rápido al último usado
+                     debería condicionarse a su disponibilidad (§16.2), no
+                     mostrarse siempre" — antes aparecía fijo aunque
+                     SERVER-01 no estuviera disponible ahora mismo. Ver
+                     updateHeroLast() en el <script>. -->
+                <div class="nb-hero-last" id="hero-last">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--color-success)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+                  <span>Última prueba: SERVER-01, hoy 10:32</span>
+                  <button type="button" class="nb-link-btn" data-nav-target="selector" data-device="server-01">Repetir con SERVER-01</button>
+                </div>
+              </div>
+              <!-- Auditoría v3 (A02): antes llevaba siempre a "selector" con
+                   SERVER-01 fijo, sin importar cuántos equipos hubiera
+                   realmente. data-action="analyze-connection" decide de
+                   verdad según cuántos candidatos hay — ver JS. -->
+              <button type="button" class="nb-btn-primary" id="analyze-btn" data-action="analyze-connection">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="19.5" cy="12" r="2.1" fill="currentColor" stroke="none"/><path d="M7 12h9"/><path d="M13 8.6l3.4 3.4-3.4 3.4"/></svg>
+                Analizar conexión
+              </button>
+            </div>
+
+            <div class="nb-section" id="devices-section">
+              <div class="nb-section-head">
+                <div class="nb-section-title"><span>Equipos disponibles</span><span class="nb-muted" id="devices-count">3 en la red</span></div>
+                <button type="button" class="nb-btn-secondary" data-nav-target="manual">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8.5 15.5L15.5 8.5"/><path d="M7.8 12L5.4 14.4a3 3 0 004.2 4.2L12 16.2"/><path d="M16.2 12l2.4-2.4a3 3 0 00-4.2-4.2L12 7.8"/></svg>
+                  Conectar manualmente
+                </button>
+              </div>
+              <!-- A02: aviso "elige uno de estos" cuando "Analizar conexión"
+                   no puede decidir por ti (varios candidatos, ninguno
+                   preseleccionado) — oculto el resto del tiempo. -->
+              <p class="nb-devices-hint" id="devices-hint" hidden>Hay varios equipos disponibles — elige uno de la lista para analizar la conexión.</p>
+              <!-- Revisión H1 (apdo. 21 pto. 2 del correo): disponibilidad,
+                   compatibilidad, confianza, favorito y selección son ahora
+                   cinco señales independientes (antes "de confianza"
+                   reutilizaba la clase .is-selected). SERVER-01 y NAS-BACKUP
+                   son a propósito el mismo ejemplo que en HomeScreenExample.svelte:
+                   favorito + de confianza + disponible/ocupado a la vez. -->
+              <div id="devices-live">
+              <div class="nb-device-row">
+                <!-- div[role=button], no <button>: lleva un <button> real
+                     anidado dentro (favorito) y <button> dentro de <button>
+                     es HTML inválido — el navegador cierra el de fuera antes
+                     de tiempo y descuadra todo el layout (bug real, visto y
+                     corregido en esta revisión; mismo arreglo en Card.svelte). -->
+                <div class="nb-card" role="button" tabindex="0" id="card-server-01" data-device="server-01" data-selectable="true">
+                  <div class="nb-device-head">
+                    <span class="nb-device-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                    <div class="nb-device-id">
+                      <div class="nb-device-name-row">
+                        <span class="nb-device-name" title="SERVER-01">SERVER-01</span>
+                        <span class="nb-device-trust nb-device-trust-full" data-tt="De confianza" tabindex="0" role="img" aria-label="De confianza">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2l7 2.6v5.4c0 4.5-3 7.6-7 9.6-4-2-7-5.1-7-9.6V5.8l7-2.6z"/><path d="M9 12l2.2 2.2L15.5 9.5"/></svg>
+                        </span>
+                        <button type="button" class="nb-device-fav nb-device-fav-on" aria-pressed="true" aria-label="Quitar de favoritos" data-tt="Favorito">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3z"/></svg>
+                        </button>
+                      </div>
+                      <span class="nb-device-ip">192.168.10.22</span>
+                    </div>
+                  </div>
+                  <div class="nb-device-foot">
+                    <span class="nb-device-link" data-tt="Ethernet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>10 Gbit/s</span>
+                    <span class="nb-device-status tone-success" id="server-01-status"><span class="nb-status-dot"></span>Disponible</span>
+                  </div>
+                </div>
+                <div class="nb-card" role="button" tabindex="0" data-device="portatil-maria" data-selectable="true">
+                  <div class="nb-device-head">
+                    <span class="nb-device-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                    <div class="nb-device-id">
+                      <div class="nb-device-name-row">
+                        <span class="nb-device-name" title="PORTATIL-MARIA">PORTATIL-MARIA</span>
+                        <span class="nb-device-trust" data-tt="Conocido" tabindex="0" role="img" aria-label="Conocido">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2l7 2.6v5.4c0 4.5-3 7.6-7 9.6-4-2-7-5.1-7-9.6V5.8l7-2.6z"/><path d="M9 12l2.2 2.2L15.5 9.5"/></svg>
+                        </span>
+                        <button type="button" class="nb-device-fav" aria-pressed="false" aria-label="Marcar como favorito" data-tt="Marcar como favorito">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3z"/></svg>
+                        </button>
+                      </div>
+                      <span class="nb-device-ip">192.168.10.40</span>
+                    </div>
+                  </div>
+                  <div class="nb-device-foot">
+                    <span class="nb-device-link" data-tt="Wi-Fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 8.8a15 15 0 0119 0"/><path d="M5.5 12.3a10 10 0 0113 0"/><path d="M9 15.8a5 5 0 016 0"/></svg>1 Gbit/s</span>
+                    <span class="nb-device-status tone-success"><span class="nb-status-dot"></span>Disponible</span>
+                  </div>
+                </div>
+                <div class="nb-card is-busy" role="button" tabindex="-1" aria-disabled="true" data-device="nas-backup" data-selectable="false">
+                  <div class="nb-device-head">
+                    <span class="nb-device-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                    <div class="nb-device-id">
+                      <div class="nb-device-name-row">
+                        <span class="nb-device-name" title="NAS-BACKUP">NAS-BACKUP</span>
+                        <span class="nb-device-trust nb-device-trust-full" data-tt="De confianza" tabindex="0" role="img" aria-label="De confianza">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2l7 2.6v5.4c0 4.5-3 7.6-7 9.6-4-2-7-5.1-7-9.6V5.8l7-2.6z"/><path d="M9 12l2.2 2.2L15.5 9.5"/></svg>
+                        </span>
+                        <button type="button" class="nb-device-fav nb-device-fav-on" aria-pressed="true" aria-label="Quitar de favoritos" data-tt="Favorito">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3z"/></svg>
+                        </button>
+                      </div>
+                      <span class="nb-device-ip">192.168.10.8</span>
+                    </div>
+                  </div>
+                  <div class="nb-device-foot">
+                    <span class="nb-device-link" data-tt="Ethernet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>2,5 Gbit/s</span>
+                    <span class="nb-device-status tone-warning"><span class="nb-status-dot"></span>Ocupado</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Ejemplo de equipo con versión incompatible (§8.4) — nunca
+                   seleccionable para una prueba (prevalece sobre
+                   disponibilidad), pero SÍ se puede consultar su
+                   información — auditoría v3, A03: "acceso a info/
+                   actualización para un equipo incompatible no
+                   seleccionable" — antes era inerte del todo
+                   (tabindex="-1", inalcanzable por teclado, sin ninguna
+                   acción). Ahora sí es foco-alcanzable y al activarlo
+                   muestra qué pasa y qué equipo hay que actualizar, igual
+                   que ya hace NB-VERSION-001 (A09) — nunca abre una
+                   prueba, "no seleccionable" e "inerte" no son lo mismo. -->
+              <div class="nb-device-row" style="margin-top: 13px;">
+                <div class="nb-card is-busy" role="button" tabindex="0" aria-label="Ver información de LAPTOP-INVENTARIO — versión incompatible" data-device="laptop-legacy" data-selectable="false" data-action="device-info" style="max-width: 340px;">
+                  <div class="nb-device-head">
+                    <span class="nb-device-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                    <div class="nb-device-id">
+                      <span class="nb-device-name" title="LAPTOP-INVENTARIO">LAPTOP-INVENTARIO</span>
+                      <span class="nb-device-ip">192.168.10.61</span>
+                    </div>
+                  </div>
+                  <div class="nb-device-foot">
+                    <span class="nb-device-link" data-tt="Wi-Fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 8.8a15 15 0 0119 0"/><path d="M5.5 12.3a10 10 0 0113 0"/><path d="M9 15.8a5 5 0 016 0"/></svg>300 Mbit/s</span>
+                    <span class="nb-device-status tone-danger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>Versión incompatible</span>
+                  </div>
+                </div>
+              </div>
+              </div><!-- /#devices-live -->
+
+              <!-- A02, A03: estado vacío real — "ningún equipo encontrado
+                   todavía" (documentado antes solo en PANTALLAS-H1.md, ahora
+                   también maquetado para poder enseñarlo y probarlo). -->
+              <div class="nb-placeholder nb-devices-empty" id="devices-empty" hidden>
+                <span class="tag">Sin resultados</span>
+                <h2>No se ha encontrado ningún equipo todavía</h2>
+                <p>¿No aparece? Si está en otra red, usa Conectar manualmente.</p>
+              </div>
+            </div>
+
+            <div class="nb-section">
+              <span class="nb-section-title">Otros equipos</span>
+              <div class="nb-chip-row">
+                <button type="button" class="nb-chip">
+                  <svg viewBox="0 0 24 24" fill="var(--color-accent)" stroke="none"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6L12 3z"/></svg>
+                  SERVER-01
+                </button>
+                <button type="button" class="nb-chip">PC-OFICINA</button>
+                <button type="button" class="nb-chip muted">LAPTOP-PERU · hace 3 días</button>
+              </div>
+            </div>
+            </div><!-- /#inicio-content -->
+          </section>
+
+          <!-- HISTORIAL (placeholder) -->
+          <section class="nb-pane" data-pane="historial">
+            <div class="nb-placeholder">
+              <span class="tag">Hito H3</span>
+              <h2>El historial todavía no está diseñado</h2>
+              <p>
+                Esta pestaña ya navega y respeta el tema, pero el contenido real
+                (lista agrupada por fecha, filtros, gráfica de evolución — §19)
+                se construye en la siguiente ronda sobre esta misma base visual.
+              </p>
+            </div>
+          </section>
+
+          <!-- AJUSTES (placeholder con el selector de tema real) -->
+          <section class="nb-pane" data-pane="ajustes">
+            <div class="nb-section">
+              <span class="nb-section-title">General</span>
+              <div class="nb-settings-row">
+                <div class="nb-settings-label">
+                  <strong>Tema</strong>
+                  <span>Sistema sigue el modo claro/oscuro de Windows</span>
+                </div>
+                <!-- Revisión H1 (apdo. 21 pto. 4 del correo): el tema inicial
+                     es "Sistema", no "Oscuro" — el código de theme.svelte.ts
+                     ya lo hacía bien (readStoredMode() por defecto "system"),
+                     el error estaba solo aquí y en la documentación; ambos
+                     corregidos. Sistema activo por defecto + detección real
+                     de prefers-color-scheme, ver <script> más abajo. -->
+                <div class="nb-theme-toggle" role="radiogroup" aria-label="Tema">
+                  <button type="button" data-settings-theme="system" class="is-active">Sistema</button>
+                  <button type="button" data-settings-theme="light">Claro</button>
+                  <button type="button" data-settings-theme="dark">Oscuro</button>
+                </div>
+              </div>
+            </div>
+            <div class="nb-placeholder">
+              <span class="tag">Hito H3</span>
+              <h2>El resto de Ajustes todavía no está diseñado</h2>
+              <p>
+                Red, Equipos de confianza, Firewall, Datos, Actualizaciones y
+                Acerca de (§23) llegan en la siguiente ronda — este control de
+                Tema ya es el real, no un boceto.
+              </p>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               SELECTOR DE EQUIPO (§4) — se abre desde una tarjeta de Inicio
+               o desde "Analizar conexión". Apdo. 2 del correo: pantalla de
+               sesión, fuera de la barra lateral (§16.1) — ver JS: entrar
+               aquí deshabilita Historial/Ajustes hasta volver a Inicio o
+               terminar/cancelar la prueba.
+               ============================================================ -->
+          <section class="nb-pane" data-pane="selector">
+            <button type="button" class="nb-back" data-nav-back="inicio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+              Inicio
+            </button>
+            <div class="nb-summary-card">
+              <span class="nb-summary-icon" id="selector-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg>
+              </span>
+              <div class="nb-summary-text">
+                <strong id="selector-name">SERVER-01</strong>
+                <span id="selector-meta">192.168.10.22 · Ethernet · 10 Gbit/s · De confianza</span>
+              </div>
+            </div>
+            <div class="nb-section">
+              <span class="nb-section-title">Tipo de prueba</span>
+              <div class="nb-option-row">
+                <div>
+                  <strong>Prueba estándar</strong>
+                  <span>TCP en ambas direcciones · aprox. 1 minuto</span>
+                </div>
+                <span class="nb-pill"><span class="nb-dot"></span>Recomendada</span>
+              </div>
+              <span class="nb-field-hint">Opciones avanzadas (UDP, una sola dirección, duración) — §10 del correo, hito H2.</span>
+            </div>
+            <!-- Auditoría v3 (A02): "adaptador local seleccionado
+                 automáticamente antes de enviar la solicitud" (§10.2) —
+                 antes no se mostraba en ningún sitio cuál se iba a usar.
+                 Regla (documentada también en FLUJOS.md): el de mayor
+                 `linkSpeedBps` con `operStatus = up`; en empate, el de la
+                 ruta por defecto. Sin selector manual en H1 — es
+                 automático, esto es solo confirmación informativa. -->
+            <div class="nb-section">
+              <span class="nb-section-title">Tu adaptador</span>
+              <div class="nb-option-row">
+                <div>
+                  <span class="nb-device-link" style="font-size:13px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>Intel X550-T2 · 10 Gbit/s</span>
+                </div>
+                <span class="nb-chip muted" data-tt="Se usa el adaptador activo de mayor velocidad de enlace; en empate, el de la ruta por defecto (§10.2)." data-tt-below>Automático</span>
+              </div>
+            </div>
+            <button type="button" class="nb-btn-primary" style="align-self:flex-start" data-action="start-test">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.5" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="19.5" cy="12" r="2.1" fill="currentColor" stroke="none"/><path d="M7 12h9"/><path d="M13 8.6l3.4 3.4-3.4 3.4"/></svg>
+              Iniciar prueba
+            </button>
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> los botones de abajo simulan lo que pasaría en cada camino alternativo de la conexión inicial (§21 correo — FLUJOS.md tabla 2), para poder enseñarlos sin depender de un segundo equipo real.</span>
+            </div>
+            <div class="nb-demo-branches">
+              <button type="button" data-simulate="aviso:conn-error">Simular: error de conexión</button>
+              <button type="button" data-simulate="aviso:version">Simular: versión incompatible</button>
+              <button type="button" data-simulate="aviso:busy">Simular: equipo ocupado</button>
+            </div>
+          </section>
+
+          <!-- ========== CONEXIÓN MANUAL (§4) ========== -->
+          <section class="nb-pane" data-pane="manual">
+            <button type="button" class="nb-back" data-nav-back="inicio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+              Inicio
+            </button>
+            <div class="nb-header-id" style="gap:4px;">
+              <span class="nb-header-name" style="font-size:18px;">Conectar manualmente</span>
+              <span class="nb-dim" style="font-size:12.5px;">Para equipos fuera de esta red o con el descubrimiento desactivado.</span>
+            </div>
+            <!-- Auditoría v3 (A04): la etiqueta, el placeholder y la ayuda
+                 decían "Dirección IP" / "una IPv4 de la red local", que
+                 contradecía §7.2 (admite nombre DNS, IPv4 e IPv6 con o sin
+                 corchetes, opcionalmente con :puerto) y a PANTALLAS-H1.md,
+                 que ya documentaba esos formatos por separado. Ahora el
+                 campo lo dice y lo valida de verdad. -->
+            <div class="nb-field" id="manual-field">
+              <label for="manual-ip">Dirección del equipo</label>
+              <input id="manual-ip" type="text" placeholder="equipo.local, 192.168.1.23 o [fe80::1]:7411" autocomplete="off">
+              <span class="nb-field-hint">Nombre DNS, IPv4 o IPv6 (con o sin corchetes). Con puerto: <code>host:7411</code> o <code>[ipv6]:7411</code> — sin puerto se usa el de control por defecto.</span>
+              <span class="nb-field-error" data-error="syntax">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+                Eso no tiene forma de nombre, IPv4 o IPv6 — revisa el formato.
+              </span>
+              <span class="nb-field-error" data-error="unresolved">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+                El formato es correcto, pero ese nombre no se ha podido resolver (NB-CONN-002).
+              </span>
+            </div>
+            <button type="button" class="nb-btn-primary" style="align-self:flex-start" data-action="manual-connect">Conectar</button>
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> el valor introducido se conserva si hay que corregirlo — nunca se borra al fallar. "No resuelve" es un estado distinto de "formato inválido": el primero pasa la validación del campo y falla después, al intentar la conexión real.</span>
+              <div class="nb-demo-branches">
+                <button type="button" data-simulate="manual-unresolved">Simular: nombre válido que no resuelve</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               PREPARACIÓN (§10.5, §6) — checklist conjunto, misma pantalla
+               en los dos extremos (FLUJOS.md fila 7).
+               ============================================================ -->
+          <section class="nb-pane" data-pane="preparando">
+            <div class="nb-header-id" style="gap:4px;">
+              <span class="nb-eyebrow">Preparando prueba con SERVER-01</span>
+              <span class="nb-header-name" style="font-size:18px;">Comprobaciones antes de empezar</span>
+            </div>
+            <!-- Auditoría v3 (A05): "ampliar/agrupar la checklist para que
+                 corresponda a todos los pasos de §10.2/§10.5" — antes era
+                 una lista plana de 4 líneas que mezclaba comprobaciones
+                 locales (§10.2) con la conjunta de verdad (§10.5). Ahora
+                 son dos grupos explícitos: el local ya viene resuelto —
+                 FLUJOS.md fila 5: "si todas pasan no hay pantalla propia,
+                 se encadena directo a WAITING_FOR_ACCEPTANCE" — así que al
+                 llegar aquí ya pasó en silencio; se muestra igualmente,
+                 hecho, por transparencia de qué se comprobó. El conjunto
+                 es el que de verdad avanza en esta pantalla. -->
+            <div class="nb-checklist-group">
+              <span class="nb-checklist-group-label">Comprobaciones locales (este equipo) — §10.2</span>
+              <div class="nb-checklist" id="checklist-local">
+                <div class="nb-check-item done">
+                  <span class="nb-check-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                  <!-- A09: "quitar ntttcp.exe de toda pantalla visible" —
+                       decía "Motor de pruebas (ntttcp.exe)"; no hay
+                       pantalla de Detalles técnicos/Acerca de en H1 donde
+                       ese nombre de proceso tenga sitio legítimo (ver
+                       comentario junto a SCENARIOS.engine más abajo). -->
+                  <div class="nb-check-text"><span class="nb-check-label">Motor de pruebas</span></div>
+                </div>
+                <div class="nb-check-item done">
+                  <span class="nb-check-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                  <div class="nb-check-text"><span class="nb-check-label">Adaptador de red activo</span></div>
+                </div>
+                <div class="nb-check-item done">
+                  <span class="nb-check-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                  <div class="nb-check-text"><span class="nb-check-label">Dirección IP asignada</span></div>
+                </div>
+                <div class="nb-check-item done">
+                  <span class="nb-check-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                  <div class="nb-check-text"><span class="nb-check-label">Versión de protocolo compatible</span></div>
+                </div>
+                <div class="nb-check-item done">
+                  <span class="nb-check-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                  <div class="nb-check-text"><span class="nb-check-label">Espacio en disco para resultados</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="nb-checklist-group">
+              <span class="nb-checklist-group-label">Comprobaciones conjuntas (con SERVER-01) — §10.5</span>
+              <div class="nb-checklist" id="checklist-joint">
+                <div class="nb-check-item running">
+                  <span class="nb-check-icon"><span class="nb-check-spinner"></span></span>
+                  <div class="nb-check-text"><span class="nb-check-label">Puerto accesible a través del firewall</span></div>
+                </div>
+                <div class="nb-check-item pending">
+                  <span class="nb-check-icon"><span class="nb-check-dot-empty"></span></span>
+                  <div class="nb-check-text"><span class="nb-check-label">SERVER-01 también ha terminado sus comprobaciones</span></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="button" class="nb-btn-secondary" data-action="cancel-test">Cancelar prueba</button>
+            </div>
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> el grupo local se muestra ya resuelto (pasó en silencio antes de llegar aquí, §10.2); el conjunto avanza solo tras un instante. Los botones simulan los dos fallos de esta fase que documenta FLUJOS.md.</span>
+              <div class="nb-demo-branches">
+                <button type="button" data-simulate="aviso:firewall">Simular: firewall bloquea</button>
+                <button type="button" data-simulate="aviso:engine">Simular: fallo del motor</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               EJECUCIÓN (§6-§7) — velocidad instantánea + gráfica en vivo.
+               ============================================================ -->
+          <section class="nb-pane" data-pane="ejecucion">
+            <!-- Auditoría v3 (A05, §16.4): "cambio de perspectiva
+                 local/remoto sin invertir el significado de A→B/B→A" — en
+                 la app real, este mismo paso se ve a la vez en los dos
+                 equipos (FLUJOS.md: "misma pantalla en los dos extremos");
+                 cada uno ve "Este equipo" sobre SU propia tarjeta. Este
+                 selector es solo para poder enseñar las dos vistas desde
+                 una sola maqueta — nunca reordena las tarjetas ni toca la
+                 flecha, solo mueve la etiqueta. -->
+            <div class="nb-exec-perspective">
+              <span>Ver desde:</span>
+              <div class="nb-exec-perspective-buttons" role="radiogroup" aria-label="Ver la prueba desde">
+                <button type="button" data-exec-view="a" class="is-active" aria-pressed="true">DESKTOP-DANIEL</button>
+                <button type="button" data-exec-view="b" aria-pressed="false">SERVER-01</button>
+              </div>
+            </div>
+
+            <div class="nb-exec-link" id="exec-link">
+              <div class="nb-exec-node" id="exec-node-a">
+                <span class="nb-exec-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                <div class="nb-exec-node-text">
+                  <span class="nb-exec-node-name">DESKTOP-DANIEL</span>
+                  <span class="nb-exec-node-tag" id="exec-node-a-tag">Este equipo</span>
+                  <span class="nb-exec-node-nic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>Intel X550-T2 · 10 Gbit/s</span>
+                </div>
+              </div>
+              <div class="nb-exec-link-mid" id="exec-link-mid" data-dir="ab">
+                <svg class="nb-exec-arrow" id="exec-arrow" viewBox="0 0 120 24">
+                  <line x1="4" y1="12" x2="106" y2="12" stroke="var(--color-chart-a-b)" stroke-width="2.5" id="exec-arrow-line"/>
+                  <path d="M99 4 L114 12 L99 20 Z" fill="var(--color-chart-a-b)" id="exec-arrow-head"/>
+                </svg>
+                <span class="nb-exec-link-label" id="exec-link-label">DESKTOP-DANIEL → SERVER-01</span>
+              </div>
+              <div class="nb-exec-node" id="exec-node-b">
+                <span class="nb-exec-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="11" rx="1.5"/><path d="M8 19.5h8M12 15.5v4"/></svg></span>
+                <div class="nb-exec-node-text">
+                  <span class="nb-exec-node-name">SERVER-01</span>
+                  <span class="nb-exec-node-tag" id="exec-node-b-tag" hidden>Este equipo</span>
+                  <span class="nb-exec-node-nic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>Intel X710 · 10 Gbit/s</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- §16.9 amplia (>1400px): "A→B y B→A lado a lado" — resumen
+                 compacto con las dos direcciones a la vez, además de la
+                 flecha única de arriba (que sigue mostrando solo la
+                 dirección que se está sondeando ahora mismo, §12). Oculto
+                 por defecto vía CSS (`.nb-exec-both`); visible solo en la
+                 media query de amplia. `aria-hidden`: es un resumen visual
+                 redundante con el texto ya accesible de `#exec-link-label`
+                 y la fase actual, no información nueva. -->
+            <div class="nb-exec-both" id="exec-both-directions" aria-hidden="true">
+              <span class="nb-exec-both-item is-active" data-eb-dir="ab">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+                DESKTOP-DANIEL → SERVER-01
+              </span>
+              <span class="nb-exec-both-item" data-eb-dir="ba">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>
+                SERVER-01 → DESKTOP-DANIEL
+              </span>
+            </div>
+
+            <div class="nb-exec-phase" id="exec-phase">
+              <div class="nb-exec-phase-text">
+                <span class="nb-eyebrow" id="exec-eyebrow">Dirección 1 de 2</span>
+                <strong id="exec-phase-label">Probando envío desde DESKTOP-DANIEL</strong>
+                <div class="nb-progress" role="progressbar" aria-label="Probando envío desde DESKTOP-DANIEL" aria-valuenow="12" aria-valuemin="0" aria-valuemax="100"><div class="nb-progress-fill" id="exec-progress" style="transform: scaleX(0.12)"></div></div>
+                <span class="nb-field-hint" id="exec-remaining">Tiempo restante aproximado: 24 s</span>
+              </div>
+              <div class="nb-exec-speed" id="exec-speed">941<span>Mbit/s</span></div>
+            </div>
+
+            <!-- Estados con acción siempre accesible (§16.4): reconexión
+                 automática (recuperable, distinta de la pérdida sin
+                 recuperación que ya lleva a un aviso) y acción requerida
+                 en el otro equipo. "Cancelar prueba" sigue disponible
+                 debajo en los dos casos — esto nunca lo sustituye. -->
+            <div class="nb-exec-state-note tone-warning" id="exec-state-note" hidden>
+              <svg id="exec-state-note-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+              <div class="nb-exec-state-note-text">
+                <strong id="exec-state-note-title">—</strong>
+                <span id="exec-state-note-desc">—</span>
+                <button type="button" class="nb-btn-secondary" id="exec-state-note-action" hidden>Reintentar ahora</button>
+              </div>
+            </div>
+
+            <div class="nb-chart-wrap">
+              <svg class="nb-chart" id="exec-chart" viewBox="0 0 600 130" preserveAspectRatio="none">
+                <line x1="0" y1="32" x2="600" y2="32" stroke="var(--color-chart-grid)" stroke-width="1"/>
+                <line x1="0" y1="65" x2="600" y2="65" stroke="var(--color-chart-grid)" stroke-width="1"/>
+                <line x1="0" y1="98" x2="600" y2="98" stroke="var(--color-chart-grid)" stroke-width="1"/>
+                <polyline id="exec-chart-line" fill="none" stroke="var(--color-chart-a-b)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="0,90 40,70 80,50 120,45 160,40 200,38"/>
+              </svg>
+              <div class="nb-chart-legend">
+                <span><span class="nb-chart-swatch" style="background:var(--color-chart-a-b)"></span>DESKTOP-DANIEL → SERVER-01</span>
+                <span><span class="nb-chart-swatch" style="background:none; border-top:2.5px dashed var(--color-chart-b-a);"></span>SERVER-01 → DESKTOP-DANIEL (patrón discontinuo, §16.7/§19.4 — no solo color)</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="button" class="nb-btn-secondary" data-action="cancel-test">Cancelar prueba</button>
+            </div>
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> la gráfica y la velocidad son datos de muestra fijos, no una prueba real. "Reconexión" y "acción requerida" son recuperables — la prueba sigue; solo "pérdida sin recuperación" lleva a un aviso y la corta.</span>
+              <div class="nb-demo-branches">
+                <button type="button" data-simulate="exec-reconnect">Simular: reconexión automática (breve)</button>
+                <button type="button" data-simulate="exec-action">Simular: SERVER-01 necesita una acción</button>
+                <button type="button" data-simulate="aviso:connloss">Simular: pérdida de conexión sin recuperación</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               RESULTADO BÁSICO (§7) — con switcher de demo para las 5
+               variantes (correcto / con advertencias / problemático /
+               cancelada / incompleta — auditoría v3, A06: la incompleta es
+               nueva, distinta de cancelada).
+               ============================================================ -->
+          <section class="nb-pane" data-pane="resultado">
+            <div class="nb-demo-switch" role="radiogroup" aria-label="Variante de resultado (solo demo)">
+              <button type="button" data-result="ok" class="is-active">Correcto</button>
+              <button type="button" data-result="warn">Con advertencias</button>
+              <button type="button" data-result="bad">Problemático</button>
+              <button type="button" data-result="cancelled">Cancelada</button>
+              <button type="button" data-result="incomplete">Incompleta</button>
+            </div>
+            <!-- Auditoría v3 (A06): "añadir cifra principal con jerarquía
+                 visual clara". Antes las tres cifras del grid pesaban
+                 igual — sin ninguna que resumiera "cómo ha ido" de un
+                 vistazo.
+                 Revisión del frontend sobre esta ronda: la cifra grande es
+                 la VELOCIDAD (mín. de ambas direcciones, o la única si solo
+                 se completó una — §16.5, Nivel 1), coherente con la propia
+                 pantalla de Ejecución, que ya usa la velocidad como cifra
+                 grande («9,36 Gbit/s», §16.4). El % de la capacidad del
+                 enlace pasa a texto de apoyo debajo — sigue siendo el dato
+                 que decide el veredicto (ver la nota de más abajo sobre
+                 §13), solo que ya no es la cifra visualmente protagonista. -->
+            <div class="nb-result-card">
+              <span class="nb-result-verdict tone-success" id="result-verdict-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>
+              </span>
+              <div class="nb-result-text">
+                <strong id="result-title">Conexión en buen estado</strong>
+                <p id="result-sub">DESKTOP-DANIEL ↔ SERVER-01 · hoy 10:32 · Prueba estándar</p>
+              </div>
+              <div class="nb-result-headline" id="result-headline">8,87 Gbit/s<span>89 % de 10 Gbit/s</span></div>
+            </div>
+            <div class="nb-result-grid" id="result-grid">
+              <div class="nb-result-stat"><span>Envío (A→B)</span><span id="result-stat-ab">9,41 Gbit/s</span></div>
+              <div class="nb-result-stat"><span>Recepción (B→A)</span><span id="result-stat-ba">8,87 Gbit/s</span></div>
+              <!-- A06: "pérdida de paquetes" era una métrica de UDP — TCP no
+                   pierde en silencio, retransmite. Lo que hay que mostrar
+                   es la retransmisión, no una pérdida que TCP no expone. -->
+              <div class="nb-result-stat"><span>Retransmisiones</span><span id="result-stat-retrans">0 segmentos</span></div>
+            </div>
+            <div class="nb-result-actions">
+              <button type="button" class="nb-btn-primary" data-nav-back="inicio">Volver a Inicio</button>
+              <button type="button" class="nb-btn-secondary" data-action="repeat-test">Repetir con SERVER-01</button>
+              <button type="button" class="nb-btn-secondary" disabled data-tt="Hito H2" data-tt-below>Exportar PDF</button>
+              <button type="button" class="nb-btn-secondary" disabled data-tt="Hito H2" data-tt-below>Ver detalles técnicos</button>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- ============================================================
+           OVERLAY DE SESIÓN (§9.1.5, §10.4) — diálogo modal sobre la
+           ventana. Tres variantes, una activa cada vez (ver JS):
+             · pairing → emparejamiento (solo la 1ª vez con un equipo)
+             · waiting → esperando aceptación en el otro equipo
+             · aviso   → resultado de cualquier camino alternativo
+                         (contenido rellenado por JS desde SCENARIOS)
+           ============================================================ -->
+      <!-- INICIADOR — PAIRING (§9.1.3), peer desconocido: espera PASIVA.
+           Auditoría v3 (A01): esta pantalla tenía antes los botones
+           «No coincide» / «Coincide, continuar» — pero según el propio
+           §9.1.3 quien pulsa eso es el RECEPTOR ("El receptor ve:
+           ... con botones Coincide/No coincide. El iniciador ve
+           «Esperando confirmación…»"), no el iniciador. El iniciador
+           solo compara el código a simple vista y espera; no decide
+           nada aquí. La decisión real ocurre en el diálogo del
+           receptor, ver overlay "peer-accept" más abajo — es la MISMA
+           pantalla para emparejamiento y para la primera aceptación
+           (§9.1.5: "un solo diálogo... un solo botón 'Coincide y
+           aceptar'"), así que no hay una doble confirmación. -->
+      <div class="nb-overlay" data-overlay="pairing">
+        <div class="nb-dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="pairing-title">
+          <span class="nb-dialog-icon tone-accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2l7 2.6v5.4c0 4.5-3 7.6-7 9.6-4-2-7-5.1-7-9.6V5.8l7-2.6z"/><path d="M9 12l2.2 2.2L15.5 9.5"/></svg>
+          </span>
+          <h2 class="nb-dialog-title" id="pairing-title">Esperando confirmación en SERVER-01…</h2>
+          <p class="nb-dialog-desc">Es la primera vez que os conectáis. Comprueba que este código coincide con el que ve la otra persona — es quien tiene que confirmarlo (§9.1.3).</p>
+          <div class="nb-vcode"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+          <div class="nb-demo-note">
+            <span><strong>Solo en esta maqueta:</strong> quien decide aquí es SERVER-01, no esta ventana. Emparejamiento y primera aceptación son un único paso para el receptor (§9.1.5) — no una confirmación de código seguida, aparte, de una aceptación.</span>
+            <div class="nb-demo-branches">
+              <button type="button" data-simulate="peer-view:unknown">Ver la pantalla real de SERVER-01</button>
+              <button type="button" data-simulate="peer-view:changed">Ver: identidad de SERVER-01 cambiada (§9.4)</button>
+            </div>
+          </div>
+          <div class="nb-dialog-actions">
+            <button type="button" class="nb-btn-ghost" data-action="cancel-pairing" data-nav-back="inicio">Cancelar</button>
+          </div>
+          <div class="nb-demo-branches-label">Solo demo — simular la respuesta de SERVER-01</div>
+          <div class="nb-demo-branches">
+            <button type="button" data-simulate="preparando">Coincide y acepta</button>
+            <button type="button" data-simulate="aviso:pairing-nomatch">No coincide</button>
+            <button type="button" data-simulate="aviso:no-response">Sin respuesta (60 s)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- INICIADOR — WAITING_FOR_ACCEPTANCE (§10.4), peer ya conocido o de
+           confianza: sin bloque de código, porque el emparejamiento ya
+           pasó en una conexión anterior. Espera igualmente pasiva. -->
+      <div class="nb-overlay" data-overlay="waiting">
+        <div class="nb-dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="waiting-title">
+          <span class="nb-dialog-icon tone-accent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>
+          </span>
+          <h2 class="nb-dialog-title" id="waiting-title">Esperando a que SERVER-01 acepte…</h2>
+          <p class="nb-dialog-desc">Se le ha enviado la solicitud de prueba. Si no responde en un minuto, se cancelará automáticamente.</p>
+          <div class="nb-demo-note">
+            <span><strong>Solo en esta maqueta:</strong> como ya es un equipo conocido, SERVER-01 ve el diálogo de aceptación sin código — «Aceptar» / «Rechazar» (§9.2, §10.4).</span>
+            <div class="nb-demo-branches">
+              <button type="button" data-simulate="peer-view:known">Ver la pantalla real de SERVER-01</button>
+            </div>
+          </div>
+          <div class="nb-dialog-actions">
+            <button type="button" class="nb-btn-ghost" data-action="cancel-waiting" data-nav-back="inicio">Cancelar</button>
+          </div>
+          <div class="nb-demo-branches-label">Solo demo — simular la respuesta de SERVER-01</div>
+          <div class="nb-demo-branches">
+            <button type="button" data-simulate="preparando">Acepta</button>
+            <button type="button" data-simulate="aviso:rejected">Rechaza</button>
+            <button type="button" data-simulate="aviso:no-response">No responde (60 s)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECEPTOR — diálogo real de emparejamiento+aceptación (§9.1.5,
+           §9.2, §9.4, §10.4). Auditoría v3 (A01): "falta la composición
+           real del diálogo de aceptación del receptor" — antes solo se
+           describía en una nota de texto; esta es la composición real,
+           con los mismos campos para las tres variantes (desconocido /
+           conocido / identidad cambiada). Un único diálogo, contenido
+           rellenado por JS desde PEER_VARIANTS — mismo patrón que el
+           overlay "aviso". -->
+      <div class="nb-overlay" data-overlay="peer-accept">
+        <div class="nb-dialog" id="peer-accept-dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="peer-accept-title">
+          <span class="nb-dialog-icon" id="peer-accept-icon-wrap"></span>
+          <h2 class="nb-dialog-title" id="peer-accept-title">—</h2>
+          <p class="nb-dialog-desc" id="peer-accept-desc">—</p>
+
+          <div class="nb-dialog-scroll">
+            <div class="nb-peer-changed-banner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+              <span>La identidad de <strong id="peer-accept-changed-name">SERVER-01</strong> ha cambiado. Esto ocurre si se ha reinstalado NetworkBench o si otro equipo está usando su nombre. Comprueba el código antes de continuar (§9.4).</span>
+            </div>
+
+            <div class="nb-peer-summary">
+              <span class="nb-peer-summary-row"><strong id="peer-accept-name">DESKTOP-DANIEL</strong></span>
+              <span class="nb-peer-summary-row" id="peer-accept-ip">192.168.10.31</span>
+              <span class="nb-peer-summary-row nb-device-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10V6.5a1 1 0 011-1h8a1 1 0 011 1V10"/><rect x="4.5" y="10" width="15" height="8" rx="1.3"/><path d="M9 10v3M12 10v3M15 10v3"/></svg>
+                <span id="peer-accept-adapter">Ethernet · 2,5 Gbit/s</span>
+              </span>
+              <span class="nb-peer-summary-row" id="peer-accept-test">Prueba estándar TCP · ida y vuelta · duración estimada 20 s</span>
+            </div>
+
+            <p class="nb-peer-traffic-warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+              Esto generará tráfico de red intenso en tu adaptador durante unos segundos.
+            </p>
+
+            <div class="nb-vcode" id="peer-accept-code"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+
+            <label class="nb-check-row" id="peer-accept-trust-row">
+              <input type="checkbox" id="peer-accept-trust">
+              Confiar siempre en este equipo
+            </label>
+
+            <div class="nb-demo-note">
+              <span><strong>Solo en esta maqueta:</strong> esta es la pantalla que vería SERVER-01, no una descripción — cambia según si el equipo es desconocido, conocido o si su identidad ha cambiado.</span>
+              <div class="nb-demo-branches">
+                <button type="button" data-simulate="peer-cancelled">Simular: DESKTOP-DANIEL cancela antes de que respondas</button>
+                <button type="button" class="nb-back-to-iniciador" data-simulate="back-to-iniciador">← Volver a la vista del iniciador</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-dialog-actions">
+            <button type="button" class="nb-btn-ghost" id="peer-accept-reject">No coincide</button>
+            <button type="button" class="nb-btn-primary" id="peer-accept-accept">Coincide y aceptar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nb-overlay" data-overlay="aviso">
+        <div class="nb-dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="aviso-title">
+          <span class="nb-dialog-icon" id="aviso-icon-wrap"></span>
+          <h2 class="nb-dialog-title" id="aviso-title">—</h2>
+          <p class="nb-dialog-desc" id="aviso-desc">—</p>
+          <div class="nb-dialog-meta" id="aviso-code"></div>
+          <div class="nb-dialog-detail" id="aviso-detail" hidden></div>
+          <div class="nb-dialog-actions" id="aviso-actions"></div>
+        </div>
+      </div>
+
+      <!-- Auditoría v3 (A07): "qué pasa si se pulsa Inicio durante una
+           prueba en curso — no debe poder abandonarse el recorrido sin
+           querer". El resto de la barra lateral ya se bloquea del todo
+           (inerte, con tooltip) desde que hay una sesión activa — pero
+           "Inicio" no puede tratarse igual sin más: es el único sitio al
+           que SÍ tiene sentido poder ir (para abandonar la prueba), así
+           que en vez de inerte, confirma. Pulsar Inicio durante la sesión
+           NUNCA navega directo — abre esto primero. Cierre seguro con
+           Escape/clic fuera = "Seguir aquí" (ver OVERLAY_SAFE_DISMISS),
+           igual que el resto de diálogos de esta maqueta: nunca se
+           abandona la prueba sin pulsar a propósito el botón que lo dice. -->
+      <div class="nb-overlay" data-overlay="confirm-leave">
+        <div class="nb-dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="confirm-leave-title">
+          <span class="nb-dialog-icon tone-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+          </span>
+          <h2 class="nb-dialog-title" id="confirm-leave-title">¿Salir de la prueba en curso?</h2>
+          <p class="nb-dialog-desc">Todavía no ha terminado. Si sales ahora, se cancela y se pierde el progreso — no hace falta que canceles primero, ir a Inicio ya es cancelarla.</p>
+          <div class="nb-dialog-actions">
+            <button type="button" class="nb-btn-ghost" data-action="stay-in-test">Seguir aquí</button>
+            <button type="button" class="nb-btn-primary" data-action="confirm-leave-test">Cancelar prueba y salir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+
+      /* ================= Tema: Sistema / Claro / Oscuro (§21 correo, pto. 4) =================
+         "Sistema" es el modo por defecto y sigue prefers-color-scheme en vivo;
+         igual que readStoredMode() en theme.svelte.ts del paquete de desarrollo
+         (ese fichero ya lo hacía bien — el fallo era solo aquí y en la doc). */
+      var themeMode = 'system';
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolveTheme() {
+        return themeMode === 'system' ? (mq.matches ? 'dark' : 'light') : themeMode;
+      }
+
+      function applyTheme() {
+        var actual = resolveTheme();
+        root.setAttribute('data-theme', actual);
+        document.querySelectorAll('[data-demo-theme]').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-demo-theme') === actual);
+        });
+        document.querySelectorAll('[data-settings-theme]').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-settings-theme') === themeMode);
+        });
+      }
+
+      function setThemeMode(mode) {
+        themeMode = mode;
+        applyTheme();
+      }
+
+      document.querySelectorAll('[data-demo-theme]').forEach(function (btn) {
+        // El toggle de la barra de la maqueta (no de la app) solo tiene
+        // Claro/Oscuro: es un atajo de revisión, siempre explícito.
+        btn.addEventListener('click', function () { setThemeMode(btn.getAttribute('data-demo-theme')); });
+      });
+      document.querySelectorAll('[data-settings-theme]').forEach(function (btn) {
+        btn.addEventListener('click', function () { setThemeMode(btn.getAttribute('data-settings-theme')); });
+      });
+      if (mq.addEventListener) {
+        mq.addEventListener('change', function () { if (themeMode === 'system') applyTheme(); });
+      }
+      applyTheme();
+
+      /* ================= Navegación de panes ================= */
+      // Auditoría v3 (A07): "mover el inicio del bloqueo de sidebar de
+      // PREPARING a CONNECTING (toda la sesión activa)". Antes el
+      // bloqueo se decidía por en qué PANE estabas (`sessionPanes`), y
+      // `CONNECTING`/`PAIRING`/`WAITING_FOR_ACCEPTANCE` no son panes
+      // propios en esta maqueta — son overlays sobre "selector" — así que
+      // el sidebar quedaba desbloqueado durante todo ese tramo, pese a
+      // que la sesión ya estaba en curso desde que se pulsa "Iniciar
+      // prueba" (§16.1 no dice "desde que hay checklist visible", dice
+      // "durante la sesión activa"). Ahora es un estado explícito
+      // (`sessionActive`), independiente del pane visible, que se activa
+      // en ese clic — no cuando se llega a `preparando` — y se desactiva
+      // solo al llegar a un estado terminal de verdad: Resultado, o
+      // volver a Inicio/Selector porque la sesión nunca llegó a
+      // completarse (avisos de fallo antes de `PREPARING`, cancelación).
+      var sessionActive = false;
+      var pendingTimers = [];
+
+      function clearPendingTimers() {
+        pendingTimers.forEach(function (t) { clearTimeout(t); });
+        pendingTimers = [];
+      }
+
+      // A08: la etiqueta de cada ítem también vive en `data-tt` (tooltip
+      // propio) para el modo solo-icono — así que el bloqueo de sesión ya
+      // no puede limpiarse el atributo sin más al desbloquear (eso
+      // borraría el nombre del ítem para siempre). Aquí queda la de cada
+      // uno para poder restaurarla.
+      var NAV_LABELS = { inicio: 'Inicio', historial: 'Historial', ajustes: 'Ajustes' };
+
+      function updateSidebarLock() {
+        document.querySelectorAll('.nb-navitem[data-nav]').forEach(function (btn) {
+          var id = btn.getAttribute('data-nav');
+          var isInicio = id === 'inicio';
+          // A07: "Inicio" ya NO es una excepción inerte del bloqueo — se
+          // trata aparte (ver el handler de [data-nav] más abajo, que
+          // abre el overlay "confirm-leave" en vez de dejarlo pasar sin
+          // más). El resto de la barra sigue inerte del todo.
+          var lockThis = sessionActive && !isInicio;
+          btn.toggleAttribute('disabled', lockThis);
+          btn.setAttribute('aria-disabled', lockThis ? 'true' : 'false');
+          btn.setAttribute('data-tt', lockThis ? 'Prueba en curso' : (NAV_LABELS[id] || ''));
+        });
+      }
+
+      function hideOverlays() {
+        document.querySelectorAll('.nb-overlay').forEach(function (o) { o.classList.remove('is-active'); });
+      }
+
+      function navigateTo(pane, opts) {
+        opts = opts || {};
+        if (!opts.keepTimers) clearPendingTimers();
+        if (!opts.keepOverlay) hideOverlays();
+        document.querySelectorAll('[data-nav]').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-nav') === pane);
+        });
+        document.querySelectorAll('[data-pane]').forEach(function (p) {
+          p.classList.toggle('is-active', p.getAttribute('data-pane') === pane);
+        });
+        // A08: los panes comparten un único contenedor con scroll
+        // (`.nb-main`) — sin esto, navegar a un pane nuevo conservaba el
+        // `scrollTop` del anterior, así que a tamaños de ventana pequeños
+        // (donde hace falta scroll a menudo, 800×600) se podía aterrizar
+        // a media pantalla de un pane que se acaba de abrir por primera
+        // vez, con su principio fuera de vista.
+        var main = document.querySelector('.nb-main');
+        if (main) main.scrollTop = 0;
+        // Solo "preparando"/"ejecucion" mantienen la sesión activa; llegar
+        // a cualquier otro pane (resultado = terminal; inicio/selector =
+        // la sesión nunca llegó a completarse) la cierra.
+        if (pane !== 'preparando' && pane !== 'ejecucion') {
+          sessionActive = false;
+        }
+        updateSidebarLock();
+      }
+
+      // Qué overlay (si alguno) estaba visible justo antes de abrir
+      // "confirm-leave" — para poder devolver a la persona exactamente a
+      // lo que estaba viendo (p. ej. el diálogo de "Esperando a que
+      // SERVER-01 acepte…") si elige "Seguir aquí", en vez de dejarla en
+      // el pane de debajo sin overlay ninguno.
+      var overlayBeforeConfirmLeave = null;
+
+      document.querySelectorAll('[data-nav]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (btn.hasAttribute('disabled')) return;
+          var target = btn.getAttribute('data-nav');
+          // A07: pulsar "Inicio" con una sesión activa NUNCA navega
+          // directo — abandonar la prueba a medias siempre pasa por una
+          // confirmación explícita, nunca por un clic de la barra lateral
+          // que podría ser sin querer (el resto de la barra ya está
+          // inerte; solo "Inicio" necesita este trato aparte, porque es
+          // el único sitio de la barra al que SÍ tiene sentido poder ir).
+          if (target === 'inicio' && sessionActive) {
+            var currentOverlay = document.querySelector('.nb-overlay.is-active');
+            overlayBeforeConfirmLeave = currentOverlay ? currentOverlay.getAttribute('data-overlay') : null;
+            hideOverlays();
+            document.querySelector('[data-overlay="confirm-leave"]').classList.add('is-active');
+            return;
+          }
+          navigateTo(target);
+        });
+      });
+      document.querySelectorAll('[data-action="stay-in-test"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          hideOverlays();
+          if (overlayBeforeConfirmLeave) {
+            document.querySelector('[data-overlay="' + overlayBeforeConfirmLeave + '"]').classList.add('is-active');
+            overlayBeforeConfirmLeave = null;
+          }
+        });
+      });
+      document.querySelectorAll('[data-action="confirm-leave-test"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          overlayBeforeConfirmLeave = null;
+          navigateTo('inicio');
+        });
+      });
+      document.querySelectorAll('[data-nav-back]').forEach(function (btn) {
+        btn.addEventListener('click', function () { navigateTo(btn.getAttribute('data-nav-back')); });
+      });
+
+      /* ================= Datos de equipo (selector / conexión manual) ================= */
+      var DEVICES = {
+        'server-01': { name: 'SERVER-01', meta: '192.168.10.22 · Ethernet · 10 Gbit/s · De confianza', trust: 'trusted' },
+        'portatil-maria': { name: 'PORTATIL-MARIA', meta: '192.168.10.40 · Wi-Fi · 1 Gbit/s · Conocido', trust: 'known' },
+        'nas-backup': { name: 'NAS-BACKUP', meta: '192.168.10.8 · Ethernet · 2,5 Gbit/s · De confianza', trust: 'trusted' }
+      };
+      var currentDeviceId = 'server-01';
+
+      function fillSelector(id) {
+        var d = DEVICES[id] || DEVICES['server-01'];
+        currentDeviceId = id;
+        document.getElementById('selector-name').textContent = d.name;
+        document.getElementById('selector-meta').textContent = d.meta;
+      }
+
+      document.querySelectorAll('[data-device][data-selectable="true"]').forEach(function (card) {
+        card.addEventListener('click', function () {
+          fillSelector(card.getAttribute('data-device'));
+          navigateTo('selector');
+          document.getElementById('devices-hint').hidden = true;
+        });
+      });
+      // C04 (accesibilidad, tarjetas de equipo): el mismo fallo que la
+      // auditoría pide separar en Card.svelte ("procesa Enter/Espacio sin
+      // filtrar si viene del botón de favorito interno") existía tal cual
+      // en las tarjetas de Inicio de ESTA maqueta — el botón de favorito
+      // no paraba la propagación, así que marcar/desmarcar favorito
+      // también "pulsaba" la tarjeta entera y abría el selector por
+      // detrás. Corregido aquí igual que se pide corregir allí.
+      document.querySelectorAll('.nb-device-fav').forEach(function (btn) {
+        btn.addEventListener('click', function (e) { e.stopPropagation(); });
+      });
+      document.querySelectorAll('[data-nav-target]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (btn.hasAttribute('data-device')) fillSelector(btn.getAttribute('data-device'));
+          navigateTo(btn.getAttribute('data-nav-target'));
+        });
+      });
+
+      // A03: tarjetas no seleccionables que SÍ tienen información que
+      // consultar (versión incompatible) — nunca abren selector/conexión.
+      document.querySelectorAll('[data-action="device-info"]').forEach(function (card) {
+        card.addEventListener('click', function () { showAviso('device-incompatible-info'); });
+      });
+
+      // Ninguna tarjeta div[role="button"] de esta maqueta tenía activación
+      // por teclado (solo click) — un div no la trae de serie como sí la
+      // trae <button>. Afectaba a TODAS por igual, no solo a la nueva
+      // tarjeta de info; se corrige aquí para todas de una vez.
+      document.querySelectorAll('[role="button"]').forEach(function (el) {
+        el.addEventListener('keydown', function (e) {
+          // e.target, no solo "es Enter/Espacio": estas tarjetas llevan un
+          // <button> real anidado (favorito, ver DeviceCard.svelte/C04) —
+          // sin este filtro, activar el favorito con teclado también
+          // "pulsaría" la tarjeta entera por encima (mismo bug que C04
+          // pide separar para el click, aplicado aquí también al teclado).
+          if (e.target !== el) return;
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();
+            el.click();
+          }
+        });
+      });
+
+      /* ================= "Analizar conexión" (§16.2) ================= *
+         Auditoría v3 (A02): antes llevaba siempre a "selector" con
+         SERVER-01 fijo. Ahora depende de cuántos equipos hay disponibles
+         para elegir AHORA MISMO — ninguno se preselecciona salvo que sea
+         el único posible. */
+      function emphasizeDevicesSection() {
+        var section = document.getElementById('devices-section');
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        section.classList.remove('is-emphasized');
+        void section.offsetWidth; // reinicia la animación si ya se había mostrado
+        section.classList.add('is-emphasized');
+      }
+
+      var analyzeBtn = document.getElementById('analyze-btn');
+      if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', function () {
+          // offsetParent, no solo [hidden] del propio nodo: cuando el
+          // contenedor #devices-live entero está oculto (demo "0 equipos"),
+          // las tarjetas de dentro no llevan su propio [hidden] — hay que
+          // mirar la visibilidad real, no solo el atributo local.
+          var candidates = Array.prototype.filter.call(
+            document.querySelectorAll('#devices-live [data-selectable="true"]'),
+            function (el) { return el.offsetParent !== null; }
+          );
+          if (candidates.length === 0) {
+            // Nada que analizar todavía — se queda en Inicio y señala la
+            // sección (que ya muestra su propio estado vacío) en vez de
+            // abrir una pantalla de confirmación sin ningún equipo.
+            emphasizeDevicesSection();
+          } else if (candidates.length === 1) {
+            // Único candidato: sin ambigüedad, se preselecciona de verdad
+            // (no es "adivinar", es el único resultado posible).
+            fillSelector(candidates[0].getAttribute('data-device'));
+            navigateTo('selector');
+          } else {
+            // Varios candidatos: ninguno se preselecciona. Quien elige es
+            // la propia lista de "Equipos disponibles" (§16.2/16.3) — este
+            // botón solo señala hacia ella, nunca adivina por el usuario.
+            document.getElementById('devices-hint').hidden = false;
+            emphasizeDevicesSection();
+          }
+        });
+      }
+
+      /* Solo demo (A02): simular 0 / 1 / varios equipos detectados, para
+         poder probar los tres caminos de arriba sin depender de datos
+         reales. */
+      /* Auditoría v3 (A03): el acceso rápido "Repetir con SERVER-01" del
+         hero solo tiene sentido si SERVER-01 está disponible AHORA — antes
+         se mostraba siempre, sin comprobarlo (§16.2: "si... el último peer
+         está disponible"). Se recalcula cada vez que cambia la lista de
+         equipos (demo de A02 incluida) y también al cargar la página. */
+      function updateHeroLast() {
+        var heroLast = document.getElementById('hero-last');
+        var last = document.querySelector('[data-device="server-01"][data-selectable="true"]');
+        heroLast.hidden = !(last && last.offsetParent !== null);
+      }
+
+      function setServerCardBusy(busy) {
+        // A03: para poder probar que "Repetir con SERVER-01" desaparece
+        // cuando deja de estar disponible SIN quitarlo de la lista (caso
+        // distinto de "no descubierto en absoluto", que ya cubren los
+        // otros botones de demo).
+        var card = document.getElementById('card-server-01');
+        var status = document.getElementById('server-01-status');
+        card.setAttribute('data-selectable', busy ? 'false' : 'true');
+        card.setAttribute('tabindex', busy ? '-1' : '0');
+        card.setAttribute('aria-disabled', busy ? 'true' : 'false');
+        card.classList.toggle('is-busy', busy);
+        status.className = 'nb-device-status ' + (busy ? 'tone-warning' : 'tone-success');
+        status.innerHTML = '<span class="nb-status-dot"></span>' + (busy ? 'Ocupado' : 'Disponible');
+      }
+
+      function setNoNetwork(active) {
+        // §16.2, cita literal: "si no hay ningún adaptador con operStatus
+        // = up, se sustituye el contenido por «Este equipo no tiene
+        // conexión de red» con acción «Abrir configuración de red»".
+        document.getElementById('inicio-content').hidden = active;
+        document.getElementById('inicio-no-network').hidden = !active;
+        var pill = document.getElementById('network-pill');
+        pill.classList.toggle('is-offline', active);
+        pill.innerHTML = active
+          ? '<span class="nb-dot"></span>Sin conexión de red'
+          : '<span class="nb-dot"></span>Visible en la red';
+      }
+
+      function showDevicesDemo(mode) {
+        var live = document.getElementById('devices-live');
+        var empty = document.getElementById('devices-empty');
+        var countEl = document.getElementById('devices-count');
+        document.getElementById('devices-hint').hidden = true;
+        document.getElementById('devices-section').classList.remove('is-emphasized');
+        var cards = live.querySelectorAll('[data-device]');
+        setServerCardBusy(mode === 'server-busy');
+        setNoNetwork(mode === 'no-network');
+        if (mode === 'empty') {
+          live.hidden = true;
+          empty.hidden = false;
+          countEl.textContent = '0 en la red';
+        } else {
+          live.hidden = false;
+          empty.hidden = true;
+          cards.forEach(function (card) {
+            card.hidden = mode === 'one' && card.getAttribute('data-device') !== 'server-01';
+          });
+          countEl.textContent = (mode === 'one' ? '1' : '3') + ' en la red';
+        }
+        updateHeroLast();
+      }
+      updateHeroLast();
+      document.querySelectorAll('[data-devices-demo]').forEach(function (btn) {
+        btn.addEventListener('click', function () { showDevicesDemo(btn.getAttribute('data-devices-demo')); });
+      });
+      var openNetSettingsBtn = document.querySelector('[data-simulate="open-network-settings"]');
+      if (openNetSettingsBtn) {
+        openNetSettingsBtn.addEventListener('click', function () { navigateTo('ajustes'); });
+      }
+
+      /* Conexión manual (§7.2): nombre DNS, IPv4, o IPv6 con/sin corchetes,
+         opcionalmente con :puerto. Auditoría v3 (A04): antes solo
+         aceptaba IPv4 pese a que el propio texto de ayuda (y
+         PANTALLAS-H1.md) ya prometían más formatos — corregido para que
+         el campo valide de verdad lo que dice aceptar. Esto es un chequeo
+         de FORMATO ("¿tiene pinta de dirección?"), no de resolución DNS
+         real — por eso "no resuelve" es un camino aparte (ver más abajo). */
+      var IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+      var HOSTNAME = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      var IPV6_BARE = /^[0-9a-fA-F:]+:[0-9a-fA-F:]*$/;
+
+      function splitPort(value) {
+        var m = value.match(/^\[(.+)\](?::(\d{1,5}))?$/); // [ipv6] o [ipv6]:puerto
+        if (m) return { host: m[1], port: m[2] };
+        var lastColon = value.lastIndexOf(':');
+        // host:puerto (IPv4 o nombre) — solo si NO hay más de un ':' antes,
+        // porque un IPv6 sin corchetes ya usa ':' como separador propio y
+        // no admite puerto pegado sin corchetes (por eso los exige la spec).
+        if (lastColon > -1 && value.indexOf(':') === lastColon && /^\d{1,5}$/.test(value.slice(lastColon + 1))) {
+          return { host: value.slice(0, lastColon), port: value.slice(lastColon + 1) };
+        }
+        return { host: value, port: undefined };
+      }
+
+      function looksLikeAddress(raw) {
+        var value = raw.trim();
+        if (!value) return false;
+        var { host, port } = splitPort(value);
+        if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return false;
+        return IPV4.test(host) || HOSTNAME.test(host) || IPV6_BARE.test(host);
+      }
+
+      var manualBtn = document.querySelector('[data-action="manual-connect"]');
+      if (manualBtn) {
+        manualBtn.addEventListener('click', function () {
+          var field = document.getElementById('manual-field');
+          var input = document.getElementById('manual-ip');
+          var raw = input.value.trim();
+          var ok = looksLikeAddress(raw);
+          // El valor introducido NUNCA se borra al fallar — se corrige
+          // sobre lo ya escrito, no se vuelve a empezar (nota del propio
+          // aviso de demo en la pantalla).
+          if (!ok) { field.setAttribute('data-error-kind', 'syntax'); input.focus(); return; }
+          field.removeAttribute('data-error-kind');
+          DEVICES['manual'] = { name: raw, meta: raw + ' · conexión manual · sin emparejar', trust: 'unknown' };
+          fillSelector('manual');
+          navigateTo('selector');
+        });
+        // Corregir el valor limpia cualquiera de los dos estados de error
+        // (sintaxis o no-resuelve) — el usuario no tiene que volver a pulsar
+        // "Conectar" a ciegas para saber si ya lo arregló.
+        var manualInput = document.getElementById('manual-ip');
+        if (manualInput) {
+          manualInput.addEventListener('input', function () {
+            document.getElementById('manual-field').removeAttribute('data-error-kind');
+          });
+        }
+      }
+
+      /* ================= Emparejamiento / aceptación (§9, §10.4) ================= */
+      var lastIniciadorOverlay = 'pairing';
+      var startBtn = document.querySelector('[data-action="start-test"]');
+      if (startBtn) {
+        startBtn.addEventListener('click', function () {
+          var trust = (DEVICES[currentDeviceId] || {}).trust || 'unknown';
+          // A07: la sesión se considera activa (y la barra lateral se
+          // bloquea) desde aquí — CONNECTING — no desde que se llega a
+          // `preparando`. `updateSidebarLock()` la aplica de inmediato
+          // aunque el pane visible siga siendo "selector".
+          sessionActive = true;
+          updateSidebarLock();
+          hideOverlays();
+          if (trust === 'unknown') {
+            // Peer nunca visto: pasa por PAIRING (§9.1) antes de pedir aceptación.
+            lastIniciadorOverlay = 'pairing';
+            document.querySelector('[data-overlay="pairing"]').classList.add('is-active');
+          } else {
+            // Peer ya conocido/de confianza: se salta el emparejamiento.
+            lastIniciadorOverlay = 'waiting';
+            document.querySelector('[data-overlay="waiting"]').classList.add('is-active');
+          }
+        });
+      }
+
+      /* --- Diálogo real del receptor (A01) — ver overlay "peer-accept" ---
+         Auditoría v3 (A01): "falta la composición real". PEER_VARIANTS
+         cubre las tres variantes con las que el correo pide poder
+         mostrarlo: desconocido (§9.1), conocido (§9.2) e identidad
+         cambiada (§9.4). El icono se referencia por clave para no
+         depender del orden de declaración de ICONS más abajo. */
+      var PEER_ICON_PAIRING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.2l7 2.6v5.4c0 4.5-3 7.6-7 9.6-4-2-7-5.1-7-9.6V5.8l7-2.6z"/><path d="M9 12l2.2 2.2L15.5 9.5"/></svg>';
+      var PEER_VARIANTS = {
+        unknown: {
+          tone: 'accent', icon: 'pairing',
+          title: 'DESKTOP-DANIEL quiere emparejarse con este equipo',
+          desc: 'Comprueba que en el otro equipo aparece el mismo código antes de confirmar (§9.1.3).',
+          showCode: true, rejectLabel: 'No coincide', acceptLabel: 'Coincide y aceptar'
+        },
+        changed: {
+          tone: 'warning', icon: 'alert',
+          title: 'DESKTOP-DANIEL quiere emparejarse con este equipo',
+          desc: 'Comprueba que en el otro equipo aparece el mismo código antes de confirmar (§9.1.3).',
+          showCode: true, rejectLabel: 'No coincide', acceptLabel: 'Coincide y aceptar'
+        },
+        known: {
+          tone: 'accent', icon: 'pairing',
+          title: 'DESKTOP-DANIEL quiere hacer una prueba contigo',
+          desc: 'Ya es un equipo conocido — no hace falta comprobar el código otra vez (§9.2).',
+          showCode: false, rejectLabel: 'Rechazar', acceptLabel: 'Aceptar'
+        }
+      };
+      var currentPeerVariant = null;
+
+      function showPeerAccept(variant) {
+        var v = PEER_VARIANTS[variant];
+        if (!v) return;
+        currentPeerVariant = variant;
+        clearPendingTimers();
+        hideOverlays();
+        var dialog = document.getElementById('peer-accept-dialog');
+        dialog.setAttribute('data-peer-variant', variant);
+        var iconWrap = document.getElementById('peer-accept-icon-wrap');
+        iconWrap.className = 'nb-dialog-icon tone-' + v.tone;
+        iconWrap.innerHTML = v.icon === 'pairing' ? PEER_ICON_PAIRING : ICONS.alert;
+        document.getElementById('peer-accept-title').textContent = v.title;
+        document.getElementById('peer-accept-desc').textContent = v.desc;
+        // La casilla nunca empieza marcada — ni siquiera al volver a abrir
+        // el diálogo desde otra variante (A01: "sin marcar por defecto").
+        document.getElementById('peer-accept-trust').checked = false;
+        document.getElementById('peer-accept-reject').textContent = v.rejectLabel;
+        document.getElementById('peer-accept-accept').textContent = v.acceptLabel;
+        // Cada vez que se (re)abre este diálogo empieza desde arriba —
+        // el mismo nodo se reutiliza entre variantes, así que sin esto
+        // podía heredar el scroll de una apertura anterior.
+        var scrollBody = dialog.querySelector('.nb-dialog-scroll');
+        if (scrollBody) scrollBody.scrollTop = 0;
+        document.querySelector('[data-overlay="peer-accept"]').classList.add('is-active');
+      }
+
+      var peerAcceptBtn = document.getElementById('peer-accept-accept');
+      if (peerAcceptBtn) {
+        peerAcceptBtn.addEventListener('click', function () {
+          // "Coincide y aceptar" / "Aceptar": un único botón para las dos
+          // decisiones en el caso desconocido (§9.1.5) — no hay un paso
+          // de confirmación de código seguido, aparte, de otro de
+          // aceptación (auditoría v3, A01).
+          hideOverlays();
+          navigateTo('preparando', { keepOverlay: true });
+          runPreparandoSequence();
+        });
+      }
+      var peerRejectBtn = document.getElementById('peer-accept-reject');
+      if (peerRejectBtn) {
+        peerRejectBtn.addEventListener('click', function () {
+          showAviso(currentPeerVariant === 'known' ? 'rejected' : 'pairing-nomatch');
+        });
+      }
+
+      /* ================= Motor de "simulaciones" de demo ================= */
+      var SCENARIOS = {
+        'conn-error': { tone: 'danger', icon: 'alert', code: 'NB-CONN-001', title: 'No se puede conectar con SERVER-01',
+          desc: 'Puede estar apagado, con la app cerrada, o el firewall está bloqueando la conexión.',
+          actions: [{ label: 'Cerrar', kind: 'ghost', go: 'inicio' }, { label: 'Reintentar', kind: 'primary', go: 'selector' }] },
+        // A09: "decir qué equipo actualizar" — antes decía "actualiza uno
+        // de los dos equipos", sin precisar cuál, dejando al usuario sin
+        // saber qué hacer. La negociación de protocolo (§8.4) conoce las
+        // dos versiones tras el HELLO, así que se puede — y se debe —
+        // nombrar el equipo concreto, igual que ya hacía
+        // 'device-incompatible-info' más abajo para el caso de Inicio.
+        'version': { tone: 'danger', icon: 'alert', code: 'NB-VERSION-001', title: 'Versión incompatible',
+          desc: 'SERVER-01 usa NetworkBench 2.1, una versión anterior e incompatible con la tuya (2.3). Actualiza NetworkBench en SERVER-01 para poder conectar — no hace falta actualizar este equipo.',
+          actions: [{ label: 'Entendido', kind: 'primary', go: 'inicio' }] },
+        'busy': { tone: 'warning', icon: 'clock', code: 'NB-PEER-003', title: 'SERVER-01 está ocupado',
+          desc: 'Ya está realizando otra prueba con otro equipo. Puedes intentarlo de nuevo en unos segundos.',
+          actions: [{ label: 'Cerrar', kind: 'ghost', go: 'inicio' }, { label: 'Reintentar', kind: 'primary', go: 'selector' }] },
+        // A03: "acceso a info/actualización para un equipo incompatible no
+        // seleccionable" — se abre desde la propia tarjeta en Inicio, sin
+        // pasar por selector/conexión (nunca se llega a intentar una
+        // prueba con este equipo).
+        'device-incompatible-info': { tone: 'danger', icon: 'alert', code: 'NB-VERSION-001', title: 'LAPTOP-INVENTARIO usa una versión incompatible',
+          desc: 'Este equipo tiene instalada una versión de NetworkBench distinta e incompatible con la tuya. Actualiza NetworkBench en LAPTOP-INVENTARIO para poder hacer una prueba con él — no hace falta actualizar este equipo.',
+          actions: [{ label: 'Entendido', kind: 'primary', go: 'inicio' }] },
+        // A09: "acciones de código-no-coincide" — FLUJOS.md (§2, fila
+        // "Código no coincide") ya documentaba la acción "Ver detalles"
+        // para este aviso; la maqueta se había quedado solo con "Cerrar".
+        // El detalle es el propio código que este equipo esperaba frente
+        // al que se ha recibido — la información concreta que hace falta
+        // para decidir "me he equivocado de equipo" frente a "esto es
+        // sospechoso, alguien está intentando suplantar a SERVER-01"
+        // (§9.4 identidad cambiada es un aviso aparte, no este).
+        'pairing-nomatch': { tone: 'danger', icon: 'alert', code: 'NB-PEER-005', title: 'El código no coincide',
+          desc: 'Por seguridad, la prueba no continúa. Comprueba que estáis emparejando con el equipo correcto e inténtalo de nuevo.',
+          detail: 'Código esperado en este equipo: 123 456\nCódigo introducido: 493 217',
+          actions: [
+            { label: 'Ver detalles', kind: 'detail-toggle', labelExpanded: 'Ocultar detalles' },
+            { label: 'Cerrar', kind: 'primary', go: 'inicio' }
+          ] },
+        'rejected': { tone: 'accent', icon: 'info', code: 'NB-PEER-001 · aviso', title: 'SERVER-01 ha rechazado la prueba',
+          desc: 'No se ha realizado ninguna prueba. Puedes intentarlo de nuevo cuando quieras.',
+          actions: [{ label: 'Cerrar', kind: 'primary', go: 'inicio' }] },
+        'no-response': { tone: 'warning', icon: 'clock', code: 'NB-PEER-002', title: 'Nadie ha respondido en SERVER-01',
+          desc: 'Puede que no esté atento a la pantalla ahora mismo. Puedes intentarlo de nuevo.',
+          actions: [{ label: 'Cerrar', kind: 'ghost', go: 'inicio' }, { label: 'Reintentar', kind: 'primary', go: 'selector' }] },
+        // A09: "usar el código de diagnóstico correcto para fallo de
+        // puertos (no NB-FW-001, que es del canal de control)". NB-FW-001
+        // es el firewall bloqueando la conexión TCP+TLS inicial (§8) —
+        // esa causa ya la cubre, de forma más genérica, NB-CONN-001 ("no
+        // se puede conectar", que ya menciona el firewall como posible
+        // causa, ver escenario 'conn-error' más arriba). Este aviso es
+        // otro momento distinto: PREPARING, cuando falla el sondeo del
+        // puerto de datos de la prueba en sí (§10.5) — necesita su propio
+        // código dentro del rango NB-FW-00x, no el de control. Se usa
+        // NB-FW-002 aquí — confirmado como el código correcto contra
+        // §14.4/§21.2 de Especificacion.md (revisión del desarrollador,
+        // ronda de cierre H1): "canal de control OK, sondeo TCP al puerto
+        // NTTTCP del receptor falla, regla NTTTCP ausente/deshabilitada
+        // en el receptor". El título y las acciones de más abajo son
+        // ahora la cita literal de §14.4 (antes eran un genérico
+        // "Cerrar/Reintentar" por no tener esa tabla completa delante).
+        'firewall': { tone: 'danger', icon: 'alert', code: 'NB-FW-002', title: 'El Firewall de Windows de SERVER-01 puede estar bloqueando la prueba',
+          desc: 'El canal de control funciona, pero el sondeo de conexión al puerto de pruebas de SERVER-01 falla — la regla de firewall de NetworkBench no existe o está desactivada en ese equipo (§14.4).',
+          actions: [
+            { label: 'Configurar automáticamente', kind: 'primary', go: 'preparando' },
+            { label: 'Ver instrucciones', kind: 'ghost', go: 'inicio' },
+            { label: 'Cancelar', kind: 'ghost', go: 'inicio' }
+          ] },
+        // A09: "quitar ntttcp.exe de toda pantalla visible para el
+        // usuario" — no hay pantalla de "Detalles técnicos"/"Acerca de"
+        // en H1 (la de Resultado sigue deshabilitada, hito H2 — ver tabla
+        // de arriba, fila 9), así que en esta ronda no hay ningún sitio
+        // legítimo donde mostrarlo. Sustituido por lenguaje genérico; las
+        // referencias a `ntttcp` se conservan en `FLUJOS.md` porque es
+        // documentación para quien implementa, no una pantalla de la app.
+        'engine': { tone: 'danger', icon: 'alert', code: 'NB-ENGINE-001', title: 'El motor de pruebas ha fallado',
+          desc: 'El motor de pruebas no se ha podido iniciar en uno de los dos equipos.',
+          actions: [{ label: 'Cerrar', kind: 'ghost', go: 'inicio' }, { label: 'Reintentar', kind: 'primary', go: 'selector' }] },
+        'connloss': { tone: 'danger', icon: 'alert', code: 'NB-CONN-005', title: 'Se ha perdido la conexión',
+          desc: 'La red ha fallado 15 segundos o más y no se ha podido recuperar. Las direcciones que ya se habían completado se conservan.',
+          actions: [{ label: 'Cerrar', kind: 'ghost', go: 'inicio' }, { label: 'Repetir prueba', kind: 'primary', go: 'selector' }] },
+        'cancelled': { tone: 'accent', icon: 'info', code: 'CANCELLED · origin local', title: 'Prueba cancelada',
+          desc: 'Has cancelado la prueba. (En la app real, si había resultados parciales que guardar, aquí se ofrecería guardarlos — §10.8.5; simplificado en esta maqueta.)',
+          actions: [{ label: 'Volver a Inicio', kind: 'primary', go: 'inicio' }] },
+        // Auditoría v3 (A01): "qué pasa si el peer cancela mientras el
+        // diálogo está abierto" — el diálogo de aceptación del receptor
+        // se cierra solo con este aviso, sin dejarlo "colgado" a mitad
+        // de una decisión (FLUJOS.md, nota de implementación 2).
+        'peer-cancelled': { tone: 'accent', icon: 'info', code: 'CANCELLED · origin remota', title: 'DESKTOP-DANIEL ha cancelado la solicitud',
+          desc: 'Se ha cancelado antes de que respondieras. No se ha hecho ninguna prueba.',
+          actions: [{ label: 'Entendido', kind: 'primary', go: 'inicio' }] }
+      };
+      var ICONS = {
+        alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>',
+        clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>',
+        info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.2M12 7.8h.01"/></svg>'
+      };
+
+      function showAviso(key) {
+        var s = SCENARIOS[key];
+        if (!s) return;
+        clearPendingTimers();
+        hideOverlays();
+        var iconWrap = document.getElementById('aviso-icon-wrap');
+        iconWrap.className = 'nb-dialog-icon tone-' + s.tone;
+        iconWrap.innerHTML = ICONS[s.icon] || ICONS.info;
+        document.getElementById('aviso-title').textContent = s.title;
+        document.getElementById('aviso-desc').textContent = s.desc;
+        document.getElementById('aviso-code').textContent = s.code || '';
+        // A09: "Ver detalles" (código-no-coincide, §21.2) — bloque de
+        // diagnóstico oculto por defecto, con lo que este equipo esperaba
+        // recibir frente a lo que ha recibido de verdad. Se reinicia
+        // siempre oculto al abrir el aviso, sin importar el estado con el
+        // que se cerró la vez anterior.
+        var detailEl = document.getElementById('aviso-detail');
+        detailEl.textContent = s.detail || '';
+        detailEl.setAttribute('hidden', '');
+        var actionsEl = document.getElementById('aviso-actions');
+        actionsEl.innerHTML = '';
+        s.actions.forEach(function (a) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = a.kind === 'primary' ? 'nb-btn-primary' : 'nb-btn-ghost';
+          b.textContent = a.label;
+          if (a.kind === 'detail-toggle') {
+            // No navega — expande/colapsa #aviso-detail dentro del mismo
+            // diálogo (ver comentario de la regla CSS .nb-dialog-detail).
+            b.addEventListener('click', function () {
+              var isHidden = detailEl.hasAttribute('hidden');
+              if (isHidden) { detailEl.removeAttribute('hidden'); } else { detailEl.setAttribute('hidden', ''); }
+              b.textContent = isHidden ? (a.labelExpanded || 'Ocultar detalles') : a.label;
+            });
+          } else {
+            b.addEventListener('click', function () { navigateTo(a.go); });
+          }
+          actionsEl.appendChild(b);
+        });
+        document.querySelector('[data-overlay="aviso"]').classList.add('is-active');
+      }
+
+      document.querySelectorAll('[data-simulate]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var v = btn.getAttribute('data-simulate');
+          if (v === 'waiting') {
+            hideOverlays();
+            document.querySelector('[data-overlay="waiting"]').classList.add('is-active');
+          } else if (v === 'preparando') {
+            hideOverlays();
+            navigateTo('preparando', { keepOverlay: true });
+            runPreparandoSequence();
+          } else if (v === 'manual-unresolved') {
+            /* Auditoría v3 (A04): estado "nombre con sintaxis válida que no
+               resuelve por DNS" — distinto de "sintaxis inválida". Mismo
+               campo, mensaje distinto, y el valor introducido se conserva
+               (no se limpia el input). */
+            var field = document.getElementById('manual-field');
+            field.setAttribute('data-error-kind', 'unresolved');
+            document.getElementById('manual-ip').focus();
+          } else if (v.indexOf('peer-view:') === 0) {
+            // A01 — ver la pantalla real del receptor, no una descripción.
+            showPeerAccept(v.slice(10));
+          } else if (v === 'peer-cancelled') {
+            showAviso('peer-cancelled');
+          } else if (v === 'back-to-iniciador') {
+            hideOverlays();
+            document.querySelector('[data-overlay="' + lastIniciadorOverlay + '"]').classList.add('is-active');
+          } else if (v.indexOf('aviso:') === 0) {
+            showAviso(v.slice(6));
+          } else if (v === 'exec-reconnect') {
+            // Recuperable: la prueba sigue sola en cuanto se restablece —
+            // nunca corta a un aviso (eso es solo 'connloss', sin
+            // recuperación). Cancelar prueba sigue disponible mientras tanto.
+            clearPendingTimers();
+            setExecState('reconnecting');
+            pendingTimers.push(setTimeout(function () {
+              setExecState('running');
+              runEjecucionSequence();
+            }, 1800));
+          } else if (v === 'exec-action') {
+            // También recuperable, pero no avanza sola: hace falta la
+            // acción en el otro equipo (botón "Comprobar de nuevo").
+            clearPendingTimers();
+            setExecState('action');
+          }
+        });
+      });
+
+      var execActionBtn = document.getElementById('exec-state-note-action');
+      if (execActionBtn) {
+        execActionBtn.addEventListener('click', function () {
+          setExecState('running');
+          runEjecucionSequence();
+        });
+      }
+
+      document.querySelectorAll('[data-exec-view]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setExecPerspective(btn.getAttribute('data-exec-view'));
+        });
+      });
+
+      /* ================= Escape / clic fuera en diálogos modales (A01) =================
+         Definición explícita, pedida por la auditoría v3: cada overlay
+         tiene un "cierre seguro" — nunca uno que conceda algo (aceptar,
+         confiar, continuar) solo por pulsar Escape o clicar fuera por
+         error. Si el usuario decidiera aceptar, tiene que pulsar el
+         botón de aceptar a propósito.
+           · pairing / waiting (iniciador, esperando) → igual que "Cancelar".
+           · peer-accept (receptor decidiendo)         → igual que "No coincide"/"Rechazar".
+           · aviso (informativo)                        → la primera acción de la lista
+                                                            (la menos comprometedora: "Cerrar",
+                                                            nunca "Reintentar" si hay ambas). */
+      var OVERLAY_SAFE_DISMISS = {
+        pairing: function () { navigateTo('inicio'); },
+        waiting: function () { navigateTo('inicio'); },
+        'peer-accept': function () {
+          var reject = document.getElementById('peer-accept-reject');
+          if (reject) reject.click();
+        },
+        aviso: function () {
+          var first = document.querySelector('#aviso-actions button');
+          if (first) first.click();
+        },
+        // A07: Escape/clic fuera en la confirmación de salida nunca sale
+        // — la opción segura es siempre quedarse, igual que en el resto
+        // de diálogos de esta tabla.
+        'confirm-leave': function () {
+          var stay = document.querySelector('[data-action="stay-in-test"]');
+          if (stay) stay.click();
+        }
+      };
+
+      function dismissActiveOverlaySafely() {
+        var active = document.querySelector('.nb-overlay.is-active');
+        if (!active) return;
+        var fn = OVERLAY_SAFE_DISMISS[active.getAttribute('data-overlay')];
+        if (fn) fn();
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') dismissActiveOverlaySafely();
+      });
+      document.querySelectorAll('.nb-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) dismissActiveOverlaySafely();
+        });
+      });
+
+      document.querySelectorAll('[data-action="cancel-test"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { showAviso('cancelled'); });
+      });
+      var repeatBtn = document.querySelector('[data-action="repeat-test"]');
+      if (repeatBtn) {
+        repeatBtn.addEventListener('click', function () { navigateTo('selector'); });
+      }
+
+      /* ================= C04: foco atrapado + fondo `inert` en overlays =================
+         Equivalente de maqueta al fix de Dialog.svelte (todos los diálogos
+         reales cuelgan de ese único componente, así que el arreglo real
+         está ahí). Aquí los overlays se abren desde muchos puntos distintos
+         del fichero (showAviso, las distintas ramas de emparejamiento,
+         etc.) — en vez de tocar cada uno, se observa el atributo `class` de
+         cada `.nb-overlay`: en cuanto gana `is-active` se atrapa Tab dentro
+         y se marcan `inert` sus hermanos (`.app-background`, `.nb-sidebar`,
+         `.nb-main`, cualquier otro overlay); en cuanto lo pierde, se
+         deshace — mismo criterio que `onMount`/`onDestroy` allí. */
+      (function () {
+        var FOCUSABLE_SELECTOR =
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        var activeOverlay = null;
+        var unInerted = [];
+
+        function getFocusable(overlay) {
+          return Array.prototype.filter.call(
+            overlay.querySelectorAll(FOCUSABLE_SELECTOR),
+            function (el) { return el.offsetParent !== null; }
+          );
+        }
+
+        function openOverlay(overlay) {
+          activeOverlay = overlay;
+          var focusable = getFocusable(overlay);
+          var panel = overlay.querySelector('.nb-dialog');
+          (focusable[0] || panel || overlay).focus();
+          // Los `.nb-overlay` son HERMANOS de `.nb-body` (ambos cuelgan de
+          // `.nb-window`, que es su ancla de posicionamiento — ver el
+          // comentario en `.nb-window` más arriba), no hijos suyos. `inert`
+          // en `.nb-body` ya cubre `.nb-sidebar`/`.nb-main` por herencia de
+          // comportamiento (no hace falta bajar a marcarlos uno a uno —
+          // `.inert` como propiedad IDL solo refleja el atributo puesto en
+          // el propio elemento, pero el efecto sí que cae en cascada).
+          var parent = overlay.parentElement;
+          if (parent) {
+            Array.prototype.forEach.call(parent.children, function (el) {
+              if (el !== overlay && !el.inert) {
+                el.inert = true;
+                unInerted.push(el);
+              }
+            });
+          }
+        }
+
+        function closeOverlay() {
+          unInerted.forEach(function (el) { el.inert = false; });
+          unInerted = [];
+          activeOverlay = null;
+        }
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Tab' || !activeOverlay) return;
+          var focusable = getFocusable(activeOverlay);
+          if (focusable.length === 0) {
+            e.preventDefault();
+            var panel = activeOverlay.querySelector('.nb-dialog');
+            (panel || activeOverlay).focus();
+            return;
+          }
+          var first = focusable[0];
+          var last = focusable[focusable.length - 1];
+          var active = document.activeElement;
+          var activeIsInside = active && activeOverlay.contains(active);
+          if (e.shiftKey) {
+            if (!activeIsInside || active === first) { e.preventDefault(); last.focus(); }
+          } else {
+            if (!activeIsInside || active === last) { e.preventDefault(); first.focus(); }
+          }
+        });
+
+        new MutationObserver(function (mutations) {
+          mutations.forEach(function (m) {
+            var el = m.target;
+            if (!el.classList || !el.classList.contains('nb-overlay')) return;
+            var isActive = el.classList.contains('is-active');
+            if (isActive && activeOverlay !== el) {
+              openOverlay(el);
+            } else if (!isActive && activeOverlay === el) {
+              closeOverlay();
+            }
+          });
+        }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+      })();
+
+      /* ================= Secuencia de demo: Preparación → Ejecución → Resultado =================
+         Solo para poder enseñar el recorrido sin depender de una prueba real.
+         Cualquier navegación del usuario (Cancelar, un aviso, la barra
+         lateral) limpia estos temporizadores — ver clearPendingTimers(). */
+      function runPreparandoSequence() {
+        // El grupo local ya se pinta "done" en el HTML (§10.2 pasó en
+        // silencio antes de esta pantalla, FLUJOS.md fila 5) — solo el
+        // grupo conjunto (§10.5) avanza aquí.
+        var items = document.querySelectorAll('#checklist-joint .nb-check-item');
+        var doneIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+        pendingTimers.push(setTimeout(function () {
+          items[0].className = 'nb-check-item done';
+          items[0].querySelector('.nb-check-icon').innerHTML = doneIcon;
+          items[1].className = 'nb-check-item running';
+          items[1].querySelector('.nb-check-icon').innerHTML = '<span class="nb-check-spinner"></span>';
+        }, 900));
+        pendingTimers.push(setTimeout(function () {
+          items[1].className = 'nb-check-item done';
+          items[1].querySelector('.nb-check-icon').innerHTML = doneIcon;
+        }, 1700));
+        pendingTimers.push(setTimeout(function () {
+          navigateTo('ejecucion', { keepTimers: true });
+          runEjecucionSequence();
+        }, 2300));
+      }
+
+      /* Flecha + etiqueta entre las dos tarjetas (§16.4). Solo depende de
+         la dirección REAL de la prueba (dir: 'ab' | 'ba') — nunca de la
+         perspectiva elegida en "Ver desde", que es un selector aparte
+         (ver setExecPerspective). Es justo esa separación la que evita
+         invertir el significado al cambiar de perspectiva (A05). */
+      function setExecDirection(dir) {
+        var mid = document.getElementById('exec-link-mid');
+        var line = document.getElementById('exec-arrow-line');
+        var head = document.getElementById('exec-arrow-head');
+        var label = document.getElementById('exec-link-label');
+        var color = dir === 'ba' ? 'var(--color-chart-b-a)' : 'var(--color-chart-a-b)';
+        mid.setAttribute('data-dir', dir);
+        line.setAttribute('stroke', color);
+        head.setAttribute('fill', color);
+        // Mismo criterio que la gráfica (§16.7/§19.4): B→A también
+        // discontinua aquí, nunca solo un cambio de color.
+        if (dir === 'ba') {
+          line.setAttribute('stroke-dasharray', '6 5');
+        } else {
+          line.removeAttribute('stroke-dasharray');
+        }
+        label.textContent = dir === 'ba' ? 'SERVER-01 → DESKTOP-DANIEL' : 'DESKTOP-DANIEL → SERVER-01';
+        // §16.9 amplia: mismo estado reflejado en el indicador de las dos
+        // direcciones a la vez (ver comentario junto a #exec-both-directions
+        // en el HTML) — solo visible por CSS en ese tramo, pero se mantiene
+        // sincronizado siempre para no depender del ancho al leerlo.
+        document.querySelectorAll('.nb-exec-both-item').forEach(function (el) {
+          el.classList.toggle('is-active', el.getAttribute('data-eb-dir') === dir);
+        });
+      }
+
+      /* Perspectiva "Ver desde" — solo mueve la etiqueta "Este equipo" de
+         una tarjeta a otra (nunca reordena tarjetas ni toca la flecha).
+         Solo existe para poder enseñar las dos vistas desde esta única
+         maqueta; en la app real cada equipo simplemente ve su propia
+         pantalla, con su propia tarjeta marcada. */
+      function setExecPerspective(view) {
+        document.querySelectorAll('[data-exec-view]').forEach(function (btn) {
+          var active = btn.getAttribute('data-exec-view') === view;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        document.getElementById('exec-node-a-tag').hidden = view !== 'a';
+        document.getElementById('exec-node-b-tag').hidden = view !== 'b';
+      }
+
+      /* C04 (auditoría v3, accesibilidad — sincronizado con ProgressBar.svelte):
+         `.nb-progress` ahora es `role="progressbar"` con nombre accesible
+         propio (`aria-label`, obligatorio en el componente real) y
+         `aria-valuenow` real — antes no tenía ninguno de los dos, un
+         lector de pantalla no podía anunciar el progreso en absoluto.
+         `aria-valuenow` se quita mientras es indeterminado, igual que
+         `ProgressBar.svelte` (`aria-valuenow={indeterminate ? undefined :
+         clamped}`). El relleno pasa de `style.width` a `style.transform:
+         scaleX()` — mismo motivo que allí: solo compositor, sin disparar
+         layout en cada frame. */
+      function setProgressValue(wrap, fillEl, pct) {
+        fillEl.style.transform = 'scaleX(' + (pct / 100) + ')';
+        wrap.setAttribute('aria-valuenow', String(pct));
+      }
+      function setProgressIndeterminate(wrap, isIndeterminate) {
+        wrap.classList.toggle('is-indeterminate', isIndeterminate);
+        if (isIndeterminate) {
+          wrap.removeAttribute('aria-valuenow');
+        }
+      }
+
+      /* Estados con acción siempre accesible (§16.4) — nunca ocultan
+         "Cancelar prueba", que vive fuera de este bloque. */
+      function setExecState(state) {
+        var note = document.getElementById('exec-state-note');
+        var icon = document.getElementById('exec-state-note-icon');
+        var title = document.getElementById('exec-state-note-title');
+        var desc = document.getElementById('exec-state-note-desc');
+        var action = document.getElementById('exec-state-note-action');
+        var phase = document.getElementById('exec-phase');
+        var progress = document.getElementById('exec-progress');
+        var progressWrap = progress.closest('.nb-progress');
+        if (state === 'running') {
+          note.hidden = true;
+          phase.classList.remove('is-degraded');
+          setProgressIndeterminate(progressWrap, false);
+          return;
+        }
+        note.hidden = false;
+        phase.classList.add('is-degraded');
+        if (state === 'reconnecting') {
+          note.className = 'nb-exec-state-note tone-warning';
+          icon.innerHTML = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>';
+          title.textContent = 'Reconectando…';
+          desc.textContent = 'Se ha interrumpido la conexión brevemente. Reintentando automáticamente — la prueba continuará donde estaba si se recupera a tiempo.';
+          action.hidden = true;
+          progressWrap.setAttribute('aria-label', 'Reconectando');
+          setProgressIndeterminate(progressWrap, true);
+        } else if (state === 'action') {
+          note.className = 'nb-exec-state-note tone-warning';
+          icon.innerHTML = '<path d="M12 4l9.5 16.5H2.5L12 4z"/><path d="M12 10.2v4.2"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/>';
+          title.textContent = 'SERVER-01 necesita una acción';
+          desc.textContent = 'Windows está pidiendo permiso en SERVER-01 antes de seguir. Confírmalo allí — esto no avanza solo.';
+          action.hidden = false;
+          action.textContent = 'Comprobar de nuevo';
+          setProgressIndeterminate(progressWrap, false);
+        }
+      }
+
+      function runEjecucionSequence() {
+        var eyebrow = document.getElementById('exec-eyebrow');
+        var label = document.getElementById('exec-phase-label');
+        var progress = document.getElementById('exec-progress');
+        var progressWrap = progress.closest('.nb-progress');
+        var remaining = document.getElementById('exec-remaining');
+        var speed = document.getElementById('exec-speed');
+        var chartLine = document.getElementById('exec-chart-line');
+        var forwardPoints = '0,90 40,70 80,50 120,45 160,40 200,38 240,36 280,35 320,34 360,34';
+        var reversePoints = '0,95 40,80 80,60 120,52 160,48 200,46 240,44 280,42 320,41 360,40';
+
+        setExecState('running');
+        setExecDirection('ab');
+
+        // Calentamiento (§16.4) — tramo sin duración estimable antes de
+        // que haya nada que medir todavía.
+        eyebrow.textContent = 'Preparando el envío';
+        label.textContent = 'Calentando la conexión con SERVER-01…';
+        progressWrap.setAttribute('aria-label', label.textContent);
+        setProgressIndeterminate(progressWrap, true);
+        remaining.textContent = 'Un momento…';
+        speed.innerHTML = '—<span>Mbit/s</span>';
+
+        pendingTimers.push(setTimeout(function () {
+          eyebrow.textContent = 'Dirección 1 de 2';
+          label.textContent = 'Probando envío desde DESKTOP-DANIEL';
+          progressWrap.setAttribute('aria-label', label.textContent);
+          setProgressIndeterminate(progressWrap, false);
+          setProgressValue(progressWrap, progress, 15);
+          remaining.textContent = 'Tiempo restante aproximado: 24 s';
+          speed.innerHTML = '941<span>Mbit/s</span>';
+          chartLine.setAttribute('points', forwardPoints);
+          chartLine.setAttribute('stroke', 'var(--color-chart-a-b)');
+          chartLine.removeAttribute('stroke-dasharray');
+        }, 600));
+
+        pendingTimers.push(setTimeout(function () {
+          setProgressValue(progressWrap, progress, 60);
+          speed.innerHTML = '968<span>Mbit/s</span>';
+          remaining.textContent = 'Tiempo restante aproximado: 12 s';
+        }, 1400));
+
+        pendingTimers.push(setTimeout(function () {
+          // Enfriamiento de A→B + calentamiento de B→A en un solo tramo
+          // (§16.4) — sin duración estimable, igual que el calentamiento
+          // inicial.
+          eyebrow.textContent = 'Cambiando de dirección';
+          label.textContent = 'Enfriando el envío y calentando la recepción…';
+          progressWrap.setAttribute('aria-label', label.textContent);
+          setProgressValue(progressWrap, progress, 100);
+          setProgressIndeterminate(progressWrap, true);
+        }, 2300));
+
+        pendingTimers.push(setTimeout(function () {
+          eyebrow.textContent = 'Dirección 2 de 2';
+          label.textContent = 'Recibiendo prueba desde SERVER-01';
+          progressWrap.setAttribute('aria-label', label.textContent);
+          setProgressIndeterminate(progressWrap, false);
+          setProgressValue(progressWrap, progress, 20);
+          remaining.textContent = 'Tiempo restante aproximado: 20 s';
+          speed.innerHTML = '887<span>Mbit/s</span>';
+          chartLine.setAttribute('points', reversePoints);
+          chartLine.setAttribute('stroke', 'var(--color-chart-b-a)');
+          // §16.7/§19.4: las dos direcciones se distinguen por color Y por
+          // patrón de línea (nunca solo color) — B→A siempre discontinua.
+          chartLine.setAttribute('stroke-dasharray', '7 5');
+          setExecDirection('ba');
+        }, 3000));
+
+        pendingTimers.push(setTimeout(function () {
+          label.textContent = 'Analizando resultados…';
+          progressWrap.setAttribute('aria-label', label.textContent);
+          setProgressValue(progressWrap, progress, 100);
+          setProgressIndeterminate(progressWrap, true);
+        }, 4000));
+
+        pendingTimers.push(setTimeout(function () {
+          setProgressIndeterminate(progressWrap, false);
+          navigateTo('resultado', { keepTimers: true });
+          setResultVariant('ok');
+        }, 4700));
+      }
+
+      /* ================= Resultado: switcher de las 5 variantes (§7 del correo + A06) =================
+         Auditoría v3 (A06): los ejemplos numéricos tienen que poder
+         justificarse con la regla de veredicto de §13, no ser cifras
+         sueltas de aspecto razonable. Regla usada aquí — confirmada contra
+         §13.1/§13.2 de Especificacion.md (revisión del desarrollador, ya
+         no es una interpretación): se compara cada dirección contra `ref`
+         (la capacidad de referencia — el mínimo de los dos adaptadores
+         para el caso fiable/negociado, aquí 10 Gbit/s en los dos, ver
+         `maqueta-navegable.html` pane Inicio y `ExecutionLink.svelte`) —
+         nunca contra un número absoluto fijo — y el veredicto usa el MÍNIMO
+         de las dos direcciones. ≥85 % → correcto; 60–85 % → advertencia;
+         <60 % → problemático (no 50 %, como se usó en una versión
+         provisional de esta ronda sin la tabla completa delante — ver
+         README.md § "Resultado — regla de veredicto" para el detalle de
+         la corrección). Por eso "941 Mbit/s" ya NO es un buen resultado en
+         los ejemplos (es solo el 9,4 % de un enlace de 10 Gbit/s) — los
+         valores de "correcto" se han escalado a Gbit/s para seguir siendo
+         coherentes con el resto de la maqueta. */
+      var LINK_CAPACITY_MBPS = 10000; // 10 Gbit/s — el más lento de los dos extremos en esta maqueta.
+      // Revisión del frontend sobre esta ronda: la cifra grande de Nivel 1
+      // es la velocidad (mín. de ambas direcciones, o la única si solo se
+      // completó una — §16.5), no el %; ver el comentario junto a
+      // `.nb-result-headline` en el HTML. `headlineSpeed` es ese valor;
+      // `headlinePct`/`headlineNote` siguen siendo el texto de apoyo de
+      // debajo, igual que antes (es el dato que decide el veredicto,
+      // §13.2 — ver README.md § "Resultado — regla de veredicto").
+      var RESULT_VARIANTS = {
+        ok: {
+          tone: 'success', icon: 'check', title: 'Conexión en buen estado',
+          sub: 'DESKTOP-DANIEL ↔ SERVER-01 · hoy 10:32 · Prueba estándar',
+          ab: '9,41 Gbit/s', ba: '8,87 Gbit/s', retrans: '0 segmentos',
+          headlineSpeed: '8,87 Gbit/s', headlinePct: 89,
+        },
+        warn: {
+          tone: 'warning', icon: 'alert', title: 'Conexión con advertencias',
+          sub: 'La recepción se queda en el 62 % de la capacidad del enlace (10 Gbit/s) — notablemente menos de lo esperado para este adaptador.',
+          ab: '9,38 Gbit/s', ba: '6,20 Gbit/s', retrans: '340 segmentos (0,3 %)',
+          headlineSpeed: '6,20 Gbit/s', headlinePct: 62,
+        },
+        bad: {
+          tone: 'danger', icon: 'alert', title: 'Se han detectado problemas',
+          sub: 'Las dos direcciones se quedan muy por debajo de la capacidad del enlace (10 Gbit/s), con retransmisiones altas.',
+          ab: '1,88 Gbit/s', ba: '1,45 Gbit/s', retrans: '6.400 segmentos (4,9 %)',
+          headlineSpeed: '1,45 Gbit/s', headlinePct: 15,
+        },
+        cancelled: {
+          tone: 'warning', icon: 'info', title: 'Prueba cancelada',
+          sub: 'Se canceló antes de completar la segunda dirección, a petición del usuario — no hay resultado que interpretar.',
+          ab: '9,21 Gbit/s', ba: '— (no llegó a probarse)', retrans: '—',
+          headlineSpeed: '9,21 Gbit/s', headlinePct: null, headlineNote: 'cancelada, sin veredicto',
+        },
+        // A06: variante nueva, distinta de "cancelada" — aquí NADIE decidió
+        // parar, la conexión se perdió sin recuperación (NB-CONN-005,
+        // FLUJOS.md "Pérdida de canal, sin recuperación") con una
+        // dirección ya completa. Mismo aspecto de "sin veredicto" en la
+        // cifra principal, pero tono de fallo (no de advertencia) y texto
+        // que dice claramente que fue un fallo, no una decisión.
+        incomplete: {
+          tone: 'danger', icon: 'alert', title: 'Resultado incompleto',
+          sub: 'Se perdió la conexión antes de completar la segunda dirección (NB-CONN-005). El envío ya medido se conserva — la sesión queda incompleta, no cancelada (§19.3, H3).',
+          ab: '9,15 Gbit/s', ba: '— (conexión perdida)', retrans: '—',
+          headlineSpeed: '9,15 Gbit/s', headlinePct: null, headlineNote: 'incompleta, sin veredicto',
+        },
+      };
+      function setResultVariant(key) {
+        var v = RESULT_VARIANTS[key];
+        var iconEl = document.getElementById('result-verdict-icon');
+        iconEl.className = 'nb-result-verdict tone-' + v.tone;
+        iconEl.innerHTML = v.icon === 'check' ? ICONS_CHECK : (ICONS[v.icon] || ICONS.info);
+        document.getElementById('result-title').textContent = v.title;
+        document.getElementById('result-sub').textContent = v.sub;
+        document.getElementById('result-stat-ab').textContent = v.ab;
+        document.getElementById('result-stat-ba').textContent = v.ba;
+        document.getElementById('result-stat-retrans').textContent = v.retrans;
+        var headline = document.getElementById('result-headline');
+        var headlineSub = v.headlinePct === null ? v.headlineNote : (v.headlinePct + ' % de ' + (LINK_CAPACITY_MBPS / 1000) + ' Gbit/s');
+        headline.innerHTML = v.headlineSpeed + '<span>' + headlineSub + '</span>';
+        document.querySelectorAll('[data-result]').forEach(function (b) {
+          b.classList.toggle('is-active', b.getAttribute('data-result') === key);
+        });
+      }
+      var ICONS_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+      document.querySelectorAll('[data-result]').forEach(function (btn) {
+        btn.addEventListener('click', function () { setResultVariant(btn.getAttribute('data-result')); });
+      });
+
+      /* Estado inicial */
+      navigateTo('inicio');
+    })();
+  </script>
+</body>
+</html>
