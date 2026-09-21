@@ -8,8 +8,8 @@ Cuando dos documentos se contradigan, prevalece el de arriba:
 
 | # | Documento | Naturaleza | Estado |
 |---|---|---|---|
-| 1 | `.specify/memory/constitution.md` | Marco normativo | v0.4.0 **NO ratificada** |
-| 2 | `Historias.md` | Requisitos de producto | Normativo, sin versionar en Git |
+| 1 | `.specify/memory/constitution.md` | Marco normativo | v0.6.0 **NO ratificada** |
+| 2 | `Historias.md` | Requisitos de producto | Normativo, sin versionar en Git. **Editable** desde el 2026-09-21 por decisión del propietario; no está en el guard ni en el hook de Git |
 | 3 | `Design/*.md` | Presentación: tokens, flujos, pantallas, avisos | Normativo donde no contradiga producto, seguridad o accesibilidad |
 | 4 | `Design/maqueta-navegable.html` | Ilustración para enseñar y aprobar | **Nunca contrato** |
 
@@ -18,9 +18,13 @@ define presentación donde no contradiga producto, seguridad o accesibilidad».
 
 ## La constitución no está ratificada
 
-Versión 0.4.0, `Ratified: pendiente — TODO(RATIFICATION_DATE)`. Tiene abiertas:
+Versión 0.6.0, `Ratified: pendiente — TODO(RATIFICATION_DATE)`. Enmiendas del 2026-09-21:
+0.5.0 (accesibilidad básica desde H1, completa en H2) y 0.6.0 (matriz Windows 10 22H2 y
+Windows 11 x64). Tiene abiertas:
 
-- **Q1-Q4**: matriz Windows, umbrales de cobertura, paquete de decisiones de alcance, tema inicial.
+- **Q2** (umbrales de cobertura) y **Q4** (tema inicial: Oscuro, respondido en `spec.md`,
+  no enmendado). Q1 y la parte de accesibilidad de Q3 están enmendadas; el resto de Q3
+  (offline, persistencia H1, 32 simultáneos, updater) está adoptado en la feature 001.
 - **G1-G6**: puertas técnicas que deben resolverse con evidencia antes de implementar lo afectado.
 - Una tabla de **17 discrepancias** `Historias.md` ↔ constitución «resueltas por esta
   propuesta» que aún **no se han trasladado** a los artefactos afectados.

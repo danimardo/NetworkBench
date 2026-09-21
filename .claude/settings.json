@@ -65,8 +65,6 @@
       "Edit(**/.agents/skills/speckit-*/**)",
       "Edit(Design/**)",
       "Edit(**/Design/**)",
-      "Edit(Historias.md)",
-      "Edit(**/Historias.md)",
       "Edit(Especificacion.md)",
       "Edit(**/Especificacion.md)",
       "Edit(AUDITORIA_DISENO_V3.md)",

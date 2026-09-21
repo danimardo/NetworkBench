@@ -13,13 +13,14 @@
  *
  * Dos modos, porque una ruta mencionada no es una ruta escrita:
  *
- *   herramienta de fichero (write, edit, patch, create, delete, move):
- *       cualquier mención de una ruta protegida -> deny.
+ *   herramienta de fichero (write, edit, create, delete, move):
+ *       inspecciona los campos de ruta; fallback conservador al payload.
+ *   apply_patch: inspecciona destinos Add/Update/Delete/Move, no el contenido.
  *
  *   herramienta de shell (shell, bash, powershell, exec, run):
  *       deny solo si aparece una ruta protegida JUNTO A un indicio de escritura
  *       (redirección, tee, sed -i, rm, mv, cp, Set-Content, git restore...).
- *       Así `cat Historias.md` se permite y `echo x >> Historias.md` no.
+ *       Así `cat Design/README.md` se permite y `echo x >> Design/README.md` no.
  *
  *   resto: allow.
  *
@@ -32,7 +33,6 @@ const PROTEGIDAS = [
   [/(^|[^\w.-])\.specify[\/]/i, "gestionado por el CLI de SpecKit (manifiestos SHA-256)"],
   [/(^|[^\w.-])\.agents[\/]skills[\/]speckit-/i, "skill instalada por SpecKit"],
   [/(^|[^\w.-])Design[\/]/i, "entrega del disenador"],
-  [/(^|[^\w.-])Historias\.md(\W|$)/i, "requisitos de producto"],
   [/(^|[^\w.-])Especificacion\.md(\W|$)/i, "documento histórico"],
   [/(^|[^\w.-])AUDITORIA_DISENO_V3\.md(\W|$)/i, "documento histórico"],
 ];
@@ -123,8 +123,32 @@ const aplanar = (v, p = 0, acc = []) => {
 const CAMPOS_RUTA = ["file_path", "filePath", "path", "notebook_path", "notebookPath", "paths", "file", "files"];
 const CAMPOS_COMANDO = ["command", "cmd", "script", "argv"];
 
+/**
+ * apply_patch transporta las rutas en cabeceras, no en campos JSON de fichero.
+ * Las líneas de contenido llevan prefijo +, - o espacio y no son destinos.
+ * Un formato desconocido conserva la inspección anterior de todo el payload.
+ */
+const rutasDelParche = (entrada) => {
+  const textos = aplanar(entrada);
+  if (textos.length !== 1) return null;
+  const lineas = textos[0].trim().split(/\r?\n/);
+  if (lineas[0] !== "*** Begin Patch" || lineas.at(-1) !== "*** End Patch") return null;
+  const rutas = [];
+  for (const linea of lineas.slice(1, -1)) {
+    const cabecera = /^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/.exec(linea);
+    if (cabecera) rutas.push(cabecera[1].replaceAll("\\", "/"));
+    else if (linea.startsWith("*** ") && linea !== "*** End of File") return null;
+  }
+  return rutas.length > 0 ? rutas : null;
+};
+
+const esApplyPatch = /(?:^|[._/])apply_patch$/.test(herramienta);
+const rutasParche = esApplyPatch ? rutasDelParche(args) : null;
+
 let inspeccionado;
-if (esShell) {
+if (rutasParche !== null) {
+  inspeccionado = rutasParche;
+} else if (esShell) {
   const cmd = CAMPOS_COMANDO.filter((k) => args && args[k] !== undefined).map((k) => args[k]);
   inspeccionado = cmd.length > 0 ? aplanar(cmd) : aplanar(args);
 } else {

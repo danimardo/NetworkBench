@@ -184,3 +184,25 @@ Los avisos corresponden a referencias históricas y al cambio previo de Historia
 Contradicción ajena al arreglo de hooks: los comentarios antiguos de config.toml afirman
 una precedencia y un efecto de aprobación que los ensayos no demuestran; las sesiones
 mostraron `approval: never`. No se atribuye a esa configuración el bloqueo observado.
+
+## Corrección de falso positivo en `apply_patch`
+
+Durante la creación de `ARCHITECTURE.md`, el hook bloqueó un parche cuyo destino no estaba
+protegido porque el contenido documental mencionaba `.specify/`, `Historias.md` y `Design/`.
+La causa era que `apply_patch` no expone un campo de ruta separado y el guard inspeccionaba
+todo el parche, incluidas las líneas añadidas.
+
+El parser específico de parches inspecciona ahora únicamente las cabeceras `Add File`,
+`Update File`, `Delete File` y `Move to`. Ante formato desconocido o truncado conserva el
+fallback anterior sobre todo el payload. No se eliminó ninguna ruta protegida ni se amplió
+el conjunto de operaciones autorizadas.
+
+`scripts/agent/guard-protected-paths.test.mjs` cubre 33 casos: contenido que menciona rutas
+protegidas, cada operación sobre cada ruta protegida, rutas absolutas Windows, movimientos,
+parches mixtos, CRLF, payload estructurado, fallback, herramientas de edición y shell.
+Se incorporó a `node scripts/agent/verify.mjs`.
+
+Evidencia real adicional: tras el cambio, `apply_patch` creó `ARCHITECTURE.md` aunque su
+contenido cita las rutas protegidas. El verificador completo terminó con código 0 y registró
+`Guard de rutas protegidas: ℹ pass 33`. La constitución permaneció idéntica a HEAD y el
+SHA-256 de `Historias.md` no cambió durante esta corrección.

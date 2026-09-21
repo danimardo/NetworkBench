@@ -67,7 +67,7 @@ Una ruta mencionada no es una ruta escrita.
 | shell (`shell`, `bash`, `powershell`, `exec`, `run`) | ruta protegida **más** indicio de escritura (`>`, `tee`, `sed -i`, `rm`, `mv`, `Set-Content`, `git restore`...) → `deny` |
 | resto | `allow` |
 
-Así `cat Historias.md` se permite y `echo x >> Historias.md` no.
+Así `cat Design/README.md` se permite y `echo x >> Design/README.md` no.
 
 Probado con 12 casos el 2026-09-21: 7 denegados y 5 permitidos, todos como se esperaba.
 Los payloads son simulados: **el esquema real de entrada de Codex no está verificado.**
@@ -85,7 +85,7 @@ sin que alguien lo acepte. Acéptalos una vez y quedan activos.
 **DOCUMENTADO, no ejecutado.** La precedencia de la configuración de proyecto y el formato
 de los hooks proceden de las cadenas del binario instalado, no de una sesión real de Codex.
 
-Cómo comprobarlo: abre Codex en este repositorio y pídele que escriba en `Historias.md`.
+Cómo comprobarlo: abre Codex en este repositorio y pídele que escriba en `Design/README.md`.
 Debe pedir aprobación y el hook debe denegarlo, **sin que se rompa la ejecución de
 comandos**. Si los comandos volvieran a fallar, el problema está en esta configuración,
 no en el hook: retírala y dilo.

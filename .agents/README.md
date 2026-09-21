@@ -82,4 +82,3 @@ No se usan enlaces simbólicos: no están autorizados y son frágiles en Windows
   rompe `codex.manifest.json` y `speckit.manifest.json`.
 - `.agents/skills/speckit-*/` — instaladas por SpecKit, incluidas en esos manifiestos.
 - `Design/**` — entrega del diseñador.
-- `Historias.md` — requisitos de producto.

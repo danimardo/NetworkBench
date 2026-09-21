@@ -10,6 +10,8 @@
 
 ---
 
+<!-- Esta aplicación se utilizará principalmente con Codex y Claude CLI. -->
+
 ## 0. Convenciones de este documento
 
 ### 0.1. Nivel de obligación
@@ -551,7 +553,7 @@ BenchmarkPlan {
   measureSeconds: u16          // 5..300
   warmupSeconds: u8            // 0..10
   cooldownSeconds: u8          // 0..10
-  streams: u8                  // 1..64
+  streams: u8                  // 1..64; con both_simultaneous, 1..32 (§17)
   bufferBytes: u32             // 4096..4194304
   basePort: u16                // 1024..65000
   ipFamily: "auto" | "v4" | "v6"
@@ -1027,7 +1029,7 @@ Panel desplegable en el selector de equipo. Lista **cerrada**; cada campo con ex
 | Duración de medición | número | 5–300 s | 20 |
 | Calentamiento | número | 0–10 s | 2 |
 | Enfriamiento | número | 0–10 s | 2 |
-| Streams | número | 1–64 | según enlace (§11.3) |
+| Streams | número | 1–64 (1–32 si «Ambas a la vez») | según enlace (§11.3) |
 | Tamaño de buffer | selector | 4 KB – 4 MB (potencias de 2) | 64 KB |
 | Puerto base | número | 1024–65000 | 5001 |
 | Adaptador local | lista | adaptadores `up` | automático |
@@ -1036,7 +1038,7 @@ Panel desplegable en el selector de equipo. Lista **cerrada**; cada campo con ex
 | UDP: tasa objetivo | número Mbit/s | 1–100 000 | 50 % de ref o 100 |
 | UDP: tamaño de datagrama | número | 64–65 507 bytes | 1 472 |
 
-- «Ambas a la vez» lanza dos ntttcp por equipo (emisor y receptor simultáneos, puertos `base..` y `base+32..`), y se presenta como suma total + por dirección; sin veredicto de asimetría.
+- «Ambas a la vez» lanza dos ntttcp por equipo (emisor y receptor simultáneos, puertos `base..base+31` y `base+32..base+63`), por lo que admite como máximo 32 streams por sentido dentro del bloque de 64 puertos (decisión del propietario, 2026-09-21); se presenta como suma total + por dirección; sin veredicto de asimetría.
 - Los valores avanzados se guardan como «último plan usado» por peer y se pueden fijar como predeterminados.
 - No existe campo de argumentos NTTTCP libres.
 
@@ -1979,3 +1981,4 @@ ratificación o autoriza herramientas incompatibles.
   comprobar compatibilidad antes del piloto.
 - [GitHub Spec Kit](https://github.com/github/spec-kit):
   trasladar requisitos y estrategia a especificación, plan y tareas trazables.
+<!-- prueba de barrera -->

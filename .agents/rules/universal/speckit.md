@@ -26,7 +26,9 @@ speckit-constitution → speckit-specify → speckit-clarify → speckit-plan
 Auxiliares: `speckit-analyze` (consistencia entre artefactos), `speckit-checklist`,
 `speckit-converge` (trabajo pendiente frente al código real), `speckit-taskstoissues`.
 
-**No existe `specs/`.** Ninguna feature se ha planificado todavía.
+**Existe `specs/001-network-benchmark-v1/`** (sin versionar) con `spec.md`, `plan.md`,
+`tasks.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/` y `checklists/`.
+Es la única feature; `$speckit-analyze` se ejecutó el 2026-09-21.
 
 ## Reglas
 
@@ -39,7 +41,7 @@ Auxiliares: `speckit-analyze` (consistencia entre artefactos), `speckit-checklis
 - **No borrar ni sobrescribir specs históricas.** Si hay que migrarlas: informar, proponer
   estrategia, esperar. `scripts/agent/check-spec-history.mjs` lo comprueba.
 - Cada `spec.md`, `plan.md` y `tasks.md` identifica **qué versión de la constitución** usó.
-  Hoy sería 0.4.0 no ratificada: decláralo.
+  Hoy sería 0.6.0 no ratificada: decláralo.
 - El Constitution Check de cada plan cubre arquitectura, versiones, seguridad, datos,
   accesibilidad, rendimiento, pruebas y distribución. Un incumplimiento exige cambiar el
   plan o tramitar una enmienda, nunca una excepción tácita.

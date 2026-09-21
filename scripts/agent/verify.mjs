@@ -49,10 +49,34 @@ function checkTokens() {
   }
 }
 
+/** Evita que el guard vuelva a confundir contenido documental con rutas de destino. */
+function checkGuardProtectedPaths() {
+  const test = join(ROOT, "scripts", "agent", "guard-protected-paths.test.mjs");
+  if (!existsSync(test)) {
+    return [warn("scripts/agent/guard-protected-paths.test.mjs no existe: comprobación omitida")];
+  }
+  try {
+    const salida = execFileSync(process.execPath, ["--test", test], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const resumen = salida.match(/ℹ pass \d+/)?.[0] ?? "pruebas del guard correctas";
+    return [{ estado: "ok", mensaje: resumen }];
+  } catch (e) {
+    const detalle = `${e.stdout || ""}${e.stderr || ""}`.trim().split(/\r?\n/).slice(-5).join(" | ");
+    return [{ estado: "fallo", mensaje: `pruebas del guard fallaron: ${detalle}` }];
+  }
+}
+
 let codigo = 0;
 const resumen = [];
 
-for (const [titulo, fn] of [...COMPROBACIONES, ["Tokens de diseño", checkTokens]]) {
+for (const [titulo, fn] of [
+  ...COMPROBACIONES,
+  ["Guard de rutas protegidas", checkGuardProtectedPaths],
+  ["Tokens de diseño", checkTokens],
+]) {
   let resultados;
   try {
     resultados = fn();

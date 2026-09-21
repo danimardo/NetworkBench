@@ -1,0 +1,419 @@
+---
+description: "Tareas de implementación de NetworkBench v1"
+---
+
+# Tareas: NetworkBench v1
+
+**Entrada**: documentos de diseño en `specs/001-network-benchmark-v1/`  
+**Constitución**: 0.6.0, no ratificada  
+**Prerrequisitos**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`  
+**Pruebas**: obligatorias por la especificación y la estrategia de calidad del proyecto
+
+## Formato: `[ID] [P?] [Historia] Descripción con ruta`
+
+- **[P]**: ejecutable en paralelo después de completar las dependencias de su fase; escribe archivos distintos.
+- **[USn]**: historia de usuario de `spec.md`; solo aparece en fases de historia.
+- Cada tarea incluye las rutas que puede crear o modificar. Un cambio fuera de ellas exige revisar ownership.
+- No hacer commit, push, ramas, tags ni releases sin autorización Git específica.
+- Un gate Q/G/V solo se cierra con decisión o evidencia registrada; nunca mediante una suposición de implementación.
+
+## Fase 1: Preparación L00
+
+**Propósito**: cerrar decisiones de bootstrap y crear una base reproducible antes de implementar historias.
+
+- [ ] T001 Registrar las decisiones del propietario sobre Q2, ADR-001–ADR-006 y los conflictos Windows/accesibilidad/streams/updater en `docs/governance/ADRS.md` y `specs/001-network-benchmark-v1/checklists/architecture.md`, sin modificar `.specify/memory/constitution.md` salvo autorización específica
+- [ ] T002 Crear `VALIDACION.md` con estructura fija (entorno, comando, resultado, estado) e inventariar y probar G5 en Windows 10 22H2 y Windows 11 x64 (matriz Q1 decidida el 2026-09-21), registrando builds de SO, Rust/MSVC/SDK, Node/pnpm, WebView2 y NTTTCP con comandos y resultados en `VALIDACION.md`
+- [ ] T003 Crear los manifiestos versionados y sincronizados `package.json`, `pnpm-workspace.yaml`, `rust-toolchain.toml`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` y `src-tauri/build.rs` conforme a la línea base aceptada
+- [ ] T004 Resolver versiones/features/licencias, generar `pnpm-lock.yaml` y `src-tauri/Cargo.lock`, y documentar cada desviación aprobada de la línea base en `docs/governance/ADRS.md`
+- [ ] T005 Configurar los comandos canónicos en `package.json` y `scripts/verify-app.mjs`: `pnpm check` = `svelte-check --tsconfig ./tsconfig.json --fail-on-warnings` (constitución VIII, cero errores y cero avisos), formato, lint, build, test y `pnpm verify`, que ejecuta `pnpm check` antes de cualquier test o build y falla si falla; sin declarar disponibles checks que aún no existan. `scripts/agent/verify.mjs` sigue verificando solo el sistema de instrucciones y no forma parte de `pnpm verify`
+- [ ] T006 [P] Crear únicamente la estructura inicial necesaria en `src/main.ts`, `src/app/`, `src/lib/`, `src-tauri/src/lib.rs`, `src-tauri/src/app.rs`, `tests/`, `e2e/`, `engine/` y `locales/`, sin carpetas vacías para features futuras
+- [ ] T007 Definir CSP, capabilities y permisos mínimos de la ventana principal en `src-tauri/capabilities/main.json`, `src-tauri/permissions/` y `src-tauri/tauri.conf.json`, sin shell, SQL ni filesystem genéricos
+- [ ] T008 [P] Configurar TypeScript estricto, Svelte/Vite/Tailwind 4, ESLint y Prettier en `tsconfig.json`, `svelte.config.js`, `vite.config.ts`, `eslint.config.js`, `.prettierrc.json` y `src/app.css`, usando runes y `@tailwindcss/vite`
+- [ ] T009 [P] Configurar Vitest/V8, Testing Library, Playwright/axe-core y cobertura Rust en `vitest.config.ts`, `playwright.config.ts`, `e2e/`, `.cargo/config.toml` y `scripts/test/`, distinguiendo mocks WebView de pruebas nativas
+- [ ] T010 **(requiere autorización específica del propietario: crea CI)** Crear CI baseline con instalación locked, estáticos, contratos, builds y suites dependientes en `.github/workflows/ci.yml`, fijando acciones por SHA y permisos mínimos
+- [ ] T011 Implementar checks mecanizables de imports, APIs legacy, logger único, claves es/en y contratos en `scripts/architecture/`, integrándolos en `scripts/verify-app.mjs`
+- [ ] T012 [P] Adaptar tokens y primitivas permitidas desde `Design/` en `src/lib/design-system/` y `src/lib/components/`, documentando procedencia sin modificar `Design/`
+- [ ] T013 Crear `LICENSE`, `THIRD_PARTY_NOTICES.md`, `engine/LICENSE` y `engine/VERSION`; verificar y registrar el SHA-256 de NTTTCP en `VALIDACION.md` antes de incorporarlo
+- [ ] T014 Ejecutar el checkpoint L00 definido en `specs/001-network-benchmark-v1/quickstart.md`, registrar resultados reales y pendientes G5/Q2/ADR en `VALIDACION.md` y no avanzar con dependencias incompatibles
+
+**Checkpoint**: base locked, compilable y verificable; ninguna compatibilidad se afirma sin evidencia.
+
+---
+
+## Fase 2: Fundamentos compartidos
+
+**Propósito**: contratos, errores, configuración, logging, persistencia base e IPC que bloquean todas las historias.
+
+**⚠️ BLOQUEANTE**: ninguna historia comienza hasta que esta fase supera su checkpoint.
+
+- [ ] T015 [P] Definir ids, enteros exactos, timestamps, unidades y uniones `available/notAvailable/notEvaluable/invalid` en `src-tauri/src/model/` según `data-model.md` §§Convenciones y 19
+- [ ] T016 [P] Definir schemas Zod equivalentes para ids, enteros decimales y métricas discriminadas en `src/lib/contracts/common.ts`, usando `unknown` en fronteras y sin `any`, `!` ni defaults silenciosos
+- [ ] T017 Crear fixtures cruzados válidos/inválidos y round-trip de precisión en `tests/contracts/fixtures/`, `tests/contracts/common.test.ts` y `src-tauri/tests/contract_common.rs`
+- [ ] T018 [P] Implementar errores tipados, acciones allowlisted y catálogo NB inicial en `src-tauri/src/errors/` y `src/lib/contracts/errors.ts`, sin strings internos como protocolo
+- [ ] T019 [P] Implementar configuración Rust/TypeScript con único lector de entorno, validación al arranque y allowlist pública en `src-tauri/src/config/` y `src/lib/config/`
+- [ ] T020 [P] Implementar logging Rust estructurado, local, rotado y saneado en `src-tauri/src/logging/`, sin huellas, `sessionId`, secretos ni payloads crudos
+- [ ] T021 [P] Implementar wrapper frontend de `loglevel` y captura global controlada en `src/lib/logging/`, prohibiendo `console.*` en código de funcionalidad
+- [ ] T021b [P] Crear pruebas del contrato de logging exigidas por la constitución XIII en `src-tauri/tests/logging.rs` y `tests/contracts/logging.test.ts`: filtrado por nivel, precedencia Ajustes > `LOG_LEVEL`/`VITE_LOG_LEVEL` > default, valores inválidos que fallan al arrancar, captura global frontend sin duplicados ni bucles, redacción anidada y lista permitida, rotación 10 archivos / 50 MB, buffers llenos con resumen de pérdidas, fallo del sink sin bloquear cancelación, y formato `Europe/Madrid` en invierno, verano y durante el cambio de hora
+- [ ] T022 [P] Crear catálogos i18n es/en, formatos y comprobación de paridad en `locales/es.json`, `locales/en.json`, `src/lib/i18n/` y `scripts/architecture/check-locales.mjs`
+- [ ] T023 Definir `Success<T>/Failure/AppError`, tokens de un uso y adaptador único de transporte en `src-tauri/src/ipc/response.rs`, `src/lib/api/transport.ts` y `src/lib/contracts/ipc.ts` según `contracts/ipc.md`
+- [ ] T024 Implementar suscripción+snapshot atómica, `revision` monotónica, descarte de eventos obsoletos y recuperación de huecos en `src-tauri/src/ipc/snapshot.rs` y `src/lib/api/snapshot.svelte.ts`
+- [ ] T025 [P] Implementar migraciones numeradas, WAL, claves foráneas, backup y rechazo de esquema futuro en `src-tauri/src/history/migrations/`, `src-tauri/src/history/database.rs` y `src-tauri/tests/history_migrations.rs`
+- [ ] T026 [P] Implementar `Preferences` con `schemaVersion`, tema `system|light|dark` inicial `dark`, escritura atómica y recuperación explícita en `src-tauri/src/settings/` y `src-tauri/tests/settings_store.rs`
+- [ ] T027 Crear shell mínimo y ensamblaje explícito sin autoridad duplicada en `src/app/App.svelte`, `src/app/router.svelte.ts`, `src-tauri/src/app.rs` y `src-tauri/src/lib.rs`
+- [ ] T028 Añadir pruebas de capabilities permitidas/denegadas, configuración inválida, logging según T021b, migración/rollback y snapshot/revisión en `tests/contracts/ipc.test.ts`, `src-tauri/tests/ipc_permissions.rs`, `src-tauri/tests/foundation.rs` y ejecutar `pnpm verify`
+
+**Checkpoint**: contratos base equivalentes, IPC cerrado, persistencia recuperable y shell compilable.
+
+---
+
+## Fase 2b: L01 — Shell, tema, idioma y ventana
+
+**Propósito**: UI mínima es/en con tema Oscuro inicial (FR-037) y ventana restaurable antes de la primera historia, según el lote L01 de `plan.md`.
+
+- [ ] T120 [P] Implementar tema inicial Oscuro y opciones Sistema/Claro/Oscuro, es/en y reducción de movimiento en `src/lib/design-system/theme.svelte.ts`, `src/lib/i18n/` y `src/features/settings/AppearanceSettings.svelte` *(trasladada desde la Fase 9)*
+- [ ] T121 Implementar geometría persistente, validación de 100×100 px visibles y ventana inicialmente oculta hasta restaurar en `src-tauri/src/platform/window.rs` y `src/lib/window.ts` *(trasladada desde la Fase 9)*
+
+**Checkpoint**: shell es/en en tema Oscuro y geometría probada en Windows; accesibilidad básica desde H1 conforme a la constitución VI.
+
+---
+
+## Fase 3: Historia 1 — Medir una conexión entre dos equipos (P1) 🎯 MVP
+
+**Objetivo**: descubrir o conectar dos equipos, verificar identidad, aceptar y ejecutar TCP secuencial en ambos sentidos con el mismo resultado básico persistido.
+
+**Prueba independiente**: dos instalaciones limpias completan descubrimiento/conexión manual, código, aceptación, A→B/B→A, resultado común, reinicio y reapertura; cancelación no deja procesos propios.
+
+### Pruebas de US1
+
+- [ ] T029 [P] [US1] Crear pruebas de contrato de `Peer`, `BenchmarkPlan`, estados y mensajes HELLO/PAIR/REQUEST en `tests/contracts/peer-protocol.test.ts` y `src-tauri/tests/peer_contract.rs`, incluyendo desconocido/conocido/confiable/autoaceptación como estados distintos
+- [ ] T030 [P] [US1] Crear tablas de pruebas de pairing para código coincidente, distinto, caducado a 60 s y huella cambiada en `src-tauri/src/pairing/pairing_tests.rs`
+- [ ] T031 [P] [US1] Crear pruebas de máquina de estados para todas las transiciones válidas/ilegales, duplicados y una sola sesión activa en `src-tauri/src/control/domain_tests.rs`
+- [ ] T032 [P] [US1] Crear fixtures XML reales/sintéticos y pruebas de args/parser/timeout/error del motor en `tests/fixtures/ntttcp/` y `src-tauri/src/engine/ntttcp/ntttcp_tests.rs`, sin congelar campos hasta cerrar G1/V-01–V-03
+- [ ] T033 [P] [US1] Crear pruebas de persistencia idempotente de peers/sesiones/direcciones/muestras por `sessionId` en `src-tauri/tests/history_session.rs`
+- [ ] T034 [P] [US1] Crear pruebas UI de lista/vacío/manual/pairing/aceptación/sesión/cancelación, incluyendo teclado, foco visible/recuperable, icono+texto además de color y es/en (FR-038/FR-039, accesibilidad básica desde H1) en `src/features/peers/PeersScreen.test.ts` y `src/features/session/SessionScreen.test.ts`
+- [ ] T035 [US1] Crear integración de dos instancias aisladas para éxito, rechazo, ocupado, timeout, cancelación y reconexión en `src-tauri/tests/two_peers_tcp.rs` y `tests/fixtures/peers/`
+
+### Implementación de US1
+
+- [ ] T036 [P] [US1] Implementar `InstanceIdentity` con UUID, certificado autofirmado Ed25519 (rcgen), huella SHA-256 y clave privada DPAPI —nunca expuesta— en `src-tauri/src/identity/`
+- [ ] T037 [P] [US1] Implementar mDNS y conexión manual DNS/IP/IPv4/IPv6 con nombres remotos normalizados NFC, sin caracteres de control ni bidi, limitados a 48 caracteres y nunca renderizados como HTML (FR-056) en `src-tauri/src/discovery/` y `src-tauri/src/netinfo/resolve.rs`
+- [ ] T038 [US1] Implementar `Peer` y pairing persistente: fingerprint único, `displayName` máximo 48, alias opcional y `autoAccept=false` salvo peer trusted en `src-tauri/src/pairing/` y `src-tauri/src/history/peers.rs`
+- [ ] T039 [P] [US1] Implementar `BenchmarkPlan` sin argumentos libres con `protocol=tcp|udp`, `streams=1..64`, `warmupSeconds=0..10`, `measureSeconds=5..300`, `cooldownSeconds=0..10`, puertos/ruta/interfaz validados en `src-tauri/src/control/plan.rs`; el plan estándar de H1 deriva streams/buffer de la velocidad de enlace del adaptador (`Historias.md` §11.3) y usa defaults documentados si no está disponible; `CapacityReference` (T056) no es prerrequisito
+- [ ] T040 [US1] Cerrar G2 con diagrama, fixtures, orden exacto TLS/HELLO/plan/pairing/aceptación y negociación de inicio/offset/tolerancia de `START` sin presuponer relojes sincronizados (constitución VII); implementar framing big-endian, negociación y límites en `src-tauri/src/control/transport.rs`, `src-tauri/src/control/protocol.rs`, `specs/001-network-benchmark-v1/contracts/peer-protocol.md` y `VALIDACION.md`
+- [ ] T041 [US1] Implementar coordinador de sesión con canal de control prioritario, muestras acotadas, timeouts, heartbeat, reconexión y cancelación idempotente en `src-tauri/src/control/domain.rs`, `service.rs` y `ports.rs`
+- [ ] T042 [US1] Cerrar G1/V-01–V-03 contra NTTTCP empaquetado e implementar verificación hash, args allowlisted, readiness, Job Object, parser y cleanup en `src-tauri/src/engine/ntttcp/` y `VALIDACION.md`
+- [ ] T043 [P] [US1] Implementar muestras `tMs/rxBps/txBps/cpuPercent/gap` cada 500 ms y agrupación posterior sin inventar huecos en `src-tauri/src/sampling/`
+- [ ] T044 [US1] Cerrar G3 para tamaño, límites y reconciliación; implementar `EngineResult`, `DirectionResult` y `SessionResult` básico con `officialBps` solo del receptor, enteros exactos y `versions.thresholdsHash` en `src-tauri/src/model/result.rs`, `specs/001-network-benchmark-v1/contracts/session-result.md` y `VALIDACION.md`
+- [ ] T045 [US1] Persistir atómicamente resultado completo/incompleto, direcciones, interfaces y muestras sin reinterpretación histórica en `src-tauri/src/history/sessions.rs` y `src-tauri/src/history/migrations/`
+- [ ] T046 [US1] Exponer comandos/eventos estrechos de peers, pairing, preview/request/respond/cancel y sesión en `src-tauri/src/ipc/peers.rs`, `src-tauri/src/ipc/session.rs`, `src/lib/api/peers.ts` y `src/lib/api/session.ts`
+- [ ] T047 [P] [US1] Implementar feature pública de equipos con `index.ts`, descubrimiento, conexión manual, verificación y control por peer de autoaceptación (desactivada por defecto, activación con aviso informado, FR-015) en `src/features/peers/`
+- [ ] T048 [P] [US1] Implementar feature pública de sesión con consentimiento, precheck, progreso y Cancelar siempre visible en `src/features/session/`
+- [ ] T049 [P] [US1] Implementar vista básica pura del resultado sin mencionar NTTTCP fuera de detalles en `src/features/results/index.ts`, `src/features/results/BasicResult.svelte` y `src/features/results/model.ts`
+- [ ] T050 [US1] Ejecutar aceptación H1 de `quickstart.md` §§5–7 en integración y Windows real, registrar procesos/puertos/BD/idiomas y tiempo aceptación→resultado en ambos equipos (SC-002: ≤ 75 s), y cerrar AC-NB-01–AC-NB-06 aplicables en `VALIDACION.md`
+
+**Checkpoint**: US1 ofrece el MVP TCP bidireccional, cancelable y persistente de forma independiente.
+
+---
+
+## Fase 4: Historia 2 — Entender el resultado y qué hacer (P1)
+
+**Objetivo**: interpretar capacidad, estabilidad, asimetría, retransmisiones, CPU e incoherencias mediante hechos, observaciones, posibles causas y acciones prudentes.
+
+**Prueba independiente**: fixtures completos, degradados, ausentes e incoherentes producen métricas/veredictos exactos y una UI accesible sin inventar causalidad.
+
+### Pruebas de US2
+
+- [ ] T051 [P] [US2] Crear tablas de casos G4 para fronteras inclusivas/exclusivas, cero/ausente, percentiles, muestras insuficientes y cohortes en `src-tauri/src/diagnostic/rules_tests.rs`
+- [ ] T052 [P] [US2] Crear fixtures `SessionResult` completos/incompletos/no evaluables y pruebas Zod/Serde de schema/precisión en `tests/contracts/session-result.test.ts` y `src-tauri/tests/session_result_contract.rs`
+- [ ] T053 [P] [US2] Crear pruebas de componentes para hechos/observaciones/causas/acciones, teclado, foco, icono+texto y es/en en `src/features/results/ResultScreen.test.ts`
+- [ ] T054 [P] [US2] Crear harness de rendimiento V-04/V-12 sin cobertura/traces, registrando app+WebView2 y refresco ≤4 Hz en `tests/windows/performance/` y `scripts/test/performance.ps1`
+
+### Implementación de US2
+
+- [ ] T055 [US2] Cerrar G4/V-06/V-07, centralizar umbrales/versiones provisionales y calcular su SHA-256 en build para `versions.thresholdsHash` en `src-tauri/src/diagnostic/thresholds.json`, `specs/001-network-benchmark-v1/contracts/session-result.md` y `VALIDACION.md`
+- [ ] T056 [P] [US2] Implementar `CapacityReference` con origen `manual|negotiated|wifi|unknown` y sin veredicto de rendimiento si `refBps` falta en `src-tauri/src/diagnostic/capacity.rs`
+- [ ] T057 [US2] Implementar reglas puras de rendimiento, estabilidad, asimetría, retransmisión, CPU, coherencia y tráfico ajeno en `src-tauri/src/diagnostic/rules.rs`, manteniendo `notEvaluable` distinto de cero
+- [ ] T058 [P] [US2] Implementar agregación, gaps y batches IPC de muestras a máximo 4 Hz en `src-tauri/src/sampling/aggregate.rs` y `src/lib/api/samples.ts`
+- [ ] T059 [P] [US2] Implementar tarjetas, conclusión y estados correcto/advertencia/problema/no evaluable/incompleto en `src/features/results/ResultScreen.svelte`, `src/features/results/VerdictCard.svelte` y `src/features/results/MetricCard.svelte`
+- [ ] T060 [P] [US2] Implementar gráfica SVG accesible con unidad única, trazos además de color, teclado, huecos explícitos y aviso de que las muestras de interfaz pueden incluir tráfico ajeno (FR-027) en `src/features/results/ThroughputChart.svelte`
+- [ ] T061 [P] [US2] Implementar detalles técnicos y copia de diagnóstico saneado con aviso previo en `src/features/results/TechnicalDetails.svelte`, `src-tauri/src/logging/diagnostics.rs` y `src-tauri/src/ipc/diagnostics.rs`
+- [ ] T062 [US2] Añadir claves es/en y tooltips desde `thresholds.json` para métricas/resultados en `locales/es.json`, `locales/en.json` y `src/lib/components/HelpTooltip.svelte`
+- [ ] T063 [US2] Ejecutar AC-NB-07/08, accesibilidad aplicable y cinco runs V-04/V-12 por escenario; registrar hardware, media/picos y resultado de cada run en `VALIDACION.md`
+
+**Checkpoint**: US2 explica cualquier resultado soportado sin afirmar más de lo medido.
+
+---
+
+## Fase 5: Historia 3 — Resolver bloqueos y fallos (P2)
+
+**Objetivo**: detectar problemas de red, puertos, permisos, motor o adaptador y ofrecer recuperación segura.
+
+**Prueba independiente**: fallos representativos antes/durante/después impiden resultados falsos, limpian recursos y muestran código, explicación y acciones.
+
+### Pruebas de US3
+
+- [ ] T064 [P] [US3] Crear tests de preflight para motor, NIC, ruta, versión, disco, puerto, permisos y firewall en `src-tauri/src/control/preflight_tests.rs`
+- [ ] T065 [P] [US3] Crear tests hostiles para mensajes truncados/grandes/duplicados/fuera de estado, rate limits e identidad cambiada en `src-tauri/tests/protocol_abuse.rs`
+- [ ] T066 [P] [US3] Crear tests de cleanup ante cancelación, timeout, desconexión, proceso fallido y cierre, verificando solo recursos propios en `src-tauri/tests/process_cleanup.rs`
+- [ ] T067 [P] [US3] Crear harness Windows de firewall/UAC para regla ausente/modificada/deshabilitada, perfil público, política y UAC rechazado en `tests/windows/firewall/`
+- [ ] T068 [P] [US3] Crear pruebas UI del catálogo de error, acciones, progreso y recuperación en `src/features/session/ErrorResolution.test.ts`
+
+### Implementación de US3
+
+- [ ] T069 [P] [US3] Completar catálogo `NB-CONN-*`, `NB-PEER-*`, `NB-ENGINE-*`, `NB-PORT-*`, `NB-FW-*`, `NB-NIC-*`, `NB-DISK-*` y `NB-VERSION-*` en `src-tauri/src/errors/errors.json`, `locales/es.json` y `locales/en.json`
+- [ ] T070 [US3] Implementar preflight conjunto por dirección, selección de interfaz por ruta al peer y `PreflightCheck` tipado en `src-tauri/src/control/preflight.rs` y `src-tauri/src/netinfo/`
+- [ ] T071 [US3] Reforzar ownership de procesos/Job Object, puertos y temporales con limpieza idempotente en `src-tauri/src/engine/ntttcp/process.rs` y `src-tauri/src/control/cleanup.rs`
+- [ ] T072 [P] [US3] Implementar inspección no elevada de reglas/perfiles/política en `src-tauri/src/firewall/inspect.rs`
+- [ ] T073 [US3] Implementar helper elevado allowlisted, autenticación de solicitud y create/remove de reglas propias en `src-tauri/helper/` y `src-tauri/src/firewall/helper_client.rs`
+- [ ] T074 [US3] Exponer inspect/requestChange y progreso sin que el mensaje remoto conceda elevación en `src-tauri/src/ipc/firewall.rs` y `src/lib/api/firewall.ts`
+- [ ] T075 [P] [US3] Implementar UI de checks, errores accionables, instrucciones manuales y reintento en `src/features/session/PreflightScreen.svelte` y `src/features/session/ErrorResolution.svelte`
+- [ ] T076 [US3] Ejecutar AC-NB-04/06/09/14 y escenarios Windows de `quickstart.md` §§6 y 9; registrar UAC aceptado/rechazado, políticas y cleanup en `VALIDACION.md`
+
+**Checkpoint**: US3 convierte fallos de entorno en estados seguros y explicables.
+
+---
+
+## Fase 6: Historia 4 — Consultar evolución e historial (P3)
+
+**Objetivo**: listar, filtrar, reabrir, comparar, repetir y eliminar sesiones sin mezclar cohortes incompatibles.
+
+**Prueba independiente**: una BD con sesiones completas/incompletas filtra correctamente, compara solo compatibles y borra únicamente lo confirmado.
+
+### Pruebas de US4
+
+- [ ] T077 [P] [US4] Crear pruebas SQL de paginación, filtros, búsqueda, reapertura y retención sin caducidad en `src-tauri/tests/history_queries.rs`
+- [ ] T078 [P] [US4] Crear tablas de cohortes por peer, interfaces, protocolo, direcciones y parámetros; comparar cinco completadas y umbral provisional 20 % en `src-tauri/src/history/comparison_tests.rs`
+- [ ] T079 [P] [US4] Crear pruebas UI de vacío/lista/filtros/detalle/borrado/repetición en `src/features/history/HistoryScreen.test.ts`
+- [ ] T080 [P] [US4] Crear integración de reinicio, esquema antiguo/futuro, borrado transaccional y recuperación en `src-tauri/tests/history_lifecycle.rs`
+
+### Implementación de US4
+
+- [ ] T081 [US4] Implementar consultas específicas y paginadas sin exponer SQL en `src-tauri/src/history/queries.rs`
+- [ ] T082 [P] [US4] Implementar API pública y modelo presentacional privado de historial en `src/features/history/index.ts` y `src/features/history/model.svelte.ts`
+- [ ] T083 [US4] Implementar listado, agrupación por fecha, filtros y búsqueda en `src/features/history/HistoryScreen.svelte`
+- [ ] T084 [US4] Reabrir snapshots mediante la API pública de `features/results` sin recalcular diagnóstico en `src/features/history/HistoryDetail.svelte`
+- [ ] T085 [US4] Implementar cohortes y evolución por peer en `src-tauri/src/history/comparison.rs` y `src/features/history/HistoryTrend.svelte`
+- [ ] T086 [US4] Implementar preview/token/confirmación y borrado transaccional en `src-tauri/src/history/delete.rs`, `src-tauri/src/ipc/history.rs` y `src/lib/api/history.ts`
+- [ ] T087 [US4] Implementar «Repetir esta prueba» reconstruyendo un preview validado, nunca argumentos históricos libres, en `src/features/history/HistoryActions.svelte` y `src-tauri/src/control/repeat.rs`
+- [ ] T088 [US4] Ejecutar AC-NB-10/11 y `quickstart.md` §§7/10; registrar migración, recuperación, cohortes y borrado en `VALIDACION.md`
+
+**Checkpoint**: US4 aporta historial/evolución sin cambiar el significado de resultados pasados.
+
+---
+
+## Fase 7: Historia 5 — Pruebas avanzadas y UDP (P3)
+
+**Objetivo**: ejecutar planes TCP/UDP avanzados y simultáneos dentro de límites seguros.
+
+**Prueba independiente**: límites mínimos/máximos/ilegales se revalidan en ambos extremos; UDP distingue objetivo, emisión, recepción y pérdida.
+
+### Pruebas de US5
+
+- [ ] T089 [P] [US5] Extender tests de plan con `streams=1..64` en secuencial y `1..32` por sentido en simultáneo (límites inclusivos y valores fuera de rango), calentamiento/enfriamiento `0..10 s`, medición `5..300 s`, puertos completos y tasa UDP opcional en `src-tauri/src/control/advanced_plan_tests.rs`
+- [ ] T090 [P] [US5] Crear pruebas NTTTCP reales V-01/V-02/V-03 para puertos por stream, rate limit UDP, XML y readiness en `tests/windows/ntttcp/`
+- [ ] T091 [P] [US5] Crear integración de UDP, un sentido y `RUNNING_BOTH`, incluyendo cancelación/solape/peer malicioso en `src-tauri/tests/two_peers_advanced.rs`
+- [ ] T092 [P] [US5] Crear pruebas UI de formulario, preview exacto, errores de límites y explicación TCP/UDP en `src/features/session/AdvancedPlan.test.ts`
+
+### Implementación de US5
+
+- [ ] T093 [US5] Extender `BenchmarkPlan` y validación bilateral para dirección única, simultáneo, UDP y capacidad/tasa manual en `src-tauri/src/control/plan.rs`; límites fijos según FR-042: 1–64 streams en secuencial y 1–32 por sentido en simultáneo; V-01 (T100) valida la viabilidad del motor y los puertos, no cambia el límite
+- [ ] T094 [US5] Implementar reserva/sondeo/reintento de bloques de puertos sin solape y con límite completo validado en `src-tauri/src/control/ports.rs`
+- [ ] T095 [US5] Implementar args, ejecución y parser UDP sin presentar streams como tasa fija si V-02 no demuestra limitador en `src-tauri/src/engine/ntttcp/`
+- [ ] T096 [US5] Implementar estados de dirección única y `RUNNING_BOTH` en `src-tauri/src/control/domain.rs` y actualizar fixtures de `specs/001-network-benchmark-v1/contracts/peer-protocol.md`
+- [ ] T097 [US5] Implementar pérdida UDP, tasa objetivo/real/recibida y estado no evaluable con umbrales versionados en `src-tauri/src/diagnostic/udp.rs`
+- [ ] T098 [P] [US5] Implementar formulario avanzado y preview del plan aceptado en `src/features/session/AdvancedPlan.svelte`
+- [ ] T099 [P] [US5] Implementar presentación UDP/simultánea sin veredicto de asimetría secuencial en `src/features/results/UdpResult.svelte`
+- [ ] T100 [US5] Ejecutar V-01/V-02/V-03/V-05 y AC-NB-13 en dos equipos/escenarios de red; ajustar contratos/umbrales con evidencia en `VALIDACION.md`
+- [ ] T101 [US5] Ejecutar `quickstart.md` §11 y cerrar el checkpoint L08 con límites, puertos, cleanup y resultados documentados en `VALIDACION.md`
+
+**Checkpoint**: US5 permite investigación avanzada sin ampliar ejecución remota arbitraria.
+
+---
+
+## Fase 8: Historia 6 — Exportar y compartir resultados (P3)
+
+**Objetivo**: exportar una o varias sesiones en PDF, JSON y CSV con aviso y anonimización recursiva.
+
+**Prueba independiente**: canarios identificativos anidados desaparecen de contenido y nombre; formatos conservan estructura, idioma y precisión.
+
+### Pruebas de US6
+
+- [ ] T102 [P] [US6] Crear fixtures con IP/MAC/nombres/huellas/comandos/XML/stdout/stderr anidados y pruebas de anonimización completa en `tests/fixtures/export/` y `src-tauri/src/export/redact_tests.rs`
+- [ ] T103 [P] [US6] Crear golden semánticos JSON/CSV es/en, enteros exactos, BOM/separador/decimal y neutralización de `=+-@` en `src-tauri/tests/export_structured.rs`
+- [ ] T104 [P] [US6] Crear harness V-09 de PDF WebView2 A4 con SVG, fuentes y fallo de destino en `tests/windows/export_pdf/`
+- [ ] T105 [P] [US6] Crear pruebas UI de preview, disclosure, anonimización, formato, destino y exportación múltiple en `src/features/export/ExportDialog.test.ts`
+
+### Implementación de US6
+
+- [ ] T106 [US6] Implementar redacción recursiva y política de omitir bloques crudos no saneables declarando la omisión en `src-tauri/src/export/redact.rs`
+- [ ] T107 [US6] Implementar exportación JSON versionada en unidades base y sin pérdida de precisión en `src-tauri/src/export/json.rs`
+- [ ] T108 [US6] Implementar CSV resumen/muestras UTF-8 BOM, locale configurable y neutralización de fórmulas en `src-tauri/src/export/csv.rs`
+- [ ] T109 [US6] Implementar plantilla de impresión local y orquestación `PrintToPdf` en `src/features/export/PrintReport.svelte` y `src-tauri/src/export/pdf.rs`
+- [ ] T110 [US6] Implementar preview/token/destino nativo/escritura atómica en `src-tauri/src/ipc/export.rs` y `src/lib/api/export.ts`
+- [ ] T111 [P] [US6] Implementar API pública, diálogo y progreso de exportación en `src/features/export/index.ts` y `src/features/export/ExportDialog.svelte`
+- [ ] T112 [US6] Implementar selección/exportación múltiple desde historial sin leer stores privados en `src/features/history/HistoryActions.svelte` y `src/features/export/client.ts`
+- [ ] T113 [US6] Ejecutar AC-NB-12, V-09 y `quickstart.md` §10; registrar canarios, parsers independientes, PDF real y fallos de destino en `VALIDACION.md`
+
+**Checkpoint**: US6 genera artefactos compartibles sin fugas conocidas ni pérdida de precisión.
+
+---
+
+## Fase 9: Historia 7 — Adaptar y mantener la aplicación (P3)
+
+**Objetivo**: preferencias, tema/idioma, ventana/bandeja/cierre y actualización confirmada durante todo el ciclo de vida.
+
+**Prueba independiente**: cambios persisten tras reinicio; cierre protege sesiones; ventana reaparece visible; actualización inválida/anterior no se instala.
+
+### Pruebas de US7
+
+- [ ] T114 [P] [US7] Crear pruebas de settings ausentes/inválidos/migrados y cambios rechazados/diferidos durante sesión en `src-tauri/tests/settings_lifecycle.rs`
+- [ ] T115 [P] [US7] Crear harness V-11 para geometría, monitor retirado, Snap, Win+flechas, maximizado y DPI 100/150/200 % en `tests/windows/window/`
+- [ ] T116 [P] [US7] Crear pruebas de manifiesto/artefacto/firma/versión, 404, timeout, downgrade y sesión activa en `src-tauri/tests/updater.rs`
+- [ ] T117 [P] [US7] Crear pruebas de instalador offline, primer arranque, actualización y desinstalación preservando datos en `tests/windows/installer/`
+- [ ] T118 [P] [US7] Crear pruebas UI de ajustes, tema, idioma, reducir movimiento, cierre, bandeja y update en `src/features/settings/SettingsScreen.test.ts` y `src/app/AppLifecycle.test.ts`
+
+### Implementación de US7
+
+- [ ] T119 [P] [US7] Implementar API pública y shell de ajustes en `src/features/settings/index.ts`, `src/features/settings/SettingsScreen.svelte` y `src/features/settings/model.svelte.ts`, sin exponer estado mutable a otras features
+- T120 y T121 (tema y geometría de ventana): ver Fase 2b, L01. US7 las consume, no las implementa.
+- [ ] T122 [P] [US7] Implementar bandeja, estado, toasts y restauración de ventana en `src-tauri/src/platform/tray.rs` y `src-tauri/src/platform/notifications.rs`
+- [ ] T123 [US7] Implementar acción de cierre/recordatorio y confirmación obligatoria con sesión activa en `src-tauri/src/platform/lifecycle.rs` y `src/app/CloseDialog.svelte`
+- [ ] T124 [P] [US7] Implementar autoarranque opt-in y su diagnóstico en `src-tauri/src/platform/autostart.rs` y `src/features/settings/LifecycleSettings.svelte`
+- [ ] T124b [P] [US7] Implementar ajustes de red, descubrimiento y confianza (puerto de control, mDNS on/off, peers conocidos/favoritos/confiables, revocación) en `src/features/settings/NetworkSettings.svelte`, `src/features/settings/TrustSettings.svelte` y `src-tauri/src/ipc/settings.rs` (FR-052)
+- [ ] T124c [P] [US7] Implementar ajustes de firewall, datos y diagnóstico (estado de reglas propias, ubicación/tamaño de datos, borrado, nivel de log temporal con aviso, copia de diagnóstico) en `src/features/settings/FirewallSettings.svelte`, `src/features/settings/DataSettings.svelte` y `src/features/settings/DiagnosticSettings.svelte` (FR-052, constitución XIII)
+- [ ] T124d [P] [US7] Implementar «Acerca de» con versión de app/motor/protocolo, licencia GPL-3.0-or-later, atribuciones de `THIRD_PARTY_NOTICES.md` y avisos de distribución, único lugar junto a Detalles técnicos donde se nombra NTTTCP (FR-008, FR-067) en `src/features/settings/AboutScreen.svelte`
+- [ ] T125 [US7] Registrar en `docs/governance/ADRS.md` y `specs/001-network-benchmark-v1/checklists/architecture.md` la forma acordada del updater (FR-042: `latest.json` estable cuyo artefacto apunta a `releases/download/vX.Y.Z/…`, nunca a un binario mutable) y definir la prueba que la verifica antes de tocar el updater
+- [ ] T126 [US7] Implementar actualización auténtica, desactivable, confirmada y pospuesta durante sesión en `src-tauri/src/updater/`, `src-tauri/src/ipc/updater.rs` y `src/lib/api/updater.ts` según T125
+- [ ] T127 [US7] Configurar NSIS por máquina, WebView2 offline, idiomas y cleanup de recursos propios en `src-tauri/tauri.conf.json`, `src-tauri/nsis/` y `scripts/package/`
+- [ ] T128 [US7] Crear el artefacto de prueba exacto y ejecutar instalación/actualización/desinstalación en la matriz, sin publicar release ni tag, registrando hashes en `VALIDACION.md`
+- [ ] T129 [US7] Ejecutar AC-NB-01/14 y `quickstart.md` §12; registrar V-11, settings, cierre, update y offline en `VALIDACION.md`
+
+**Checkpoint**: US7 completa el ciclo de vida local y distribuible sin abandonar sesiones ni instalar artefactos no auténticos.
+
+---
+
+## Fase 10: Consolidación transversal y cierre v1
+
+**Propósito**: validar el producto integrado, cerrar gates y producir evidencia reproducible; no publicar sin autorización.
+
+- [ ] T130 [P] Reejecutar análisis de dependencias/imports y eliminar aristas, APIs legacy, `console.*`, capacidades o dependencias no justificadas en `scripts/architecture/` y `artifacts/validation/architecture.md`
+- [ ] T131 [P] Ejecutar inventario/licencias/vulnerabilidades/secret scanning y resolver bloqueantes en `scripts/security/`, `THIRD_PARTY_NOTICES.md` y `artifacts/validation/security.md`
+- [ ] T132 Aplicar la decisión Q2 a la configuración de cobertura en `vitest.config.ts`, `.cargo/config.toml`, `package.json` y `.github/workflows/ci.yml`; registrar baseline completa sin promediar lenguajes/métricas en `VALIDACION.md`
+- [ ] T133 [P] Ejecutar revisión accesible/visual es/en para teclado, foco, screen reader, alto contraste, movimiento reducido, texto/DPI 200 %, responsive e impresión en `e2e/accessibility/`, `e2e/visual/` y `artifacts/validation/accessibility.md`
+- [ ] T134 Ejecutar E2E integrado de dos equipos para TCP/UDP, IPv4/IPv6, LAN/routing/VPN aplicables, caída/cancelación, UAC, persistencia y ciclo de vida en `tests/windows/e2e/` y `VALIDACION.md`
+- [ ] T135 Completar V-01–V-12 con artefacto release y entornos identificados; actualizar únicamente umbrales/contratos aprobados en `src-tauri/src/diagnostic/thresholds.json`, `specs/001-network-benchmark-v1/contracts/` y `VALIDACION.md`
+- [ ] T136 [P] Medir tiempos, flakiness y coste de suites; documentar selección PR/checkpoint/release y cuarentenas excepcionales en `docs/governance/QUALITY.md` y `artifacts/validation/test-cost.md`
+- [ ] T137 Ejecutar todos los escenarios de `specs/001-network-benchmark-v1/quickstart.md`, `pnpm verify` y gates de release sobre el mismo artefacto; registrar comandos/códigos de salida/omisiones en `VALIDACION.md`
+- [ ] T138 [P] Actualizar documentación de usuario/desarrollo, soporte, privacidad, SmartScreen y limitaciones verificadas en `README.md`, `docs/user/` y `docs/development/`
+- [ ] T139 Revisar trazabilidad FR-001–FR-067, SC-001–SC-015 y AC-NB contra tareas/evidencias en `specs/001-network-benchmark-v1/checklists/traceability.md` y corregir cualquier hueco antes de declarar v1
+- [ ] T140 Ejecutar `$speckit-analyze` y `$speckit-converge`, resolver inconsistencias/tareas restantes en `specs/001-network-benchmark-v1/tasks.md` y documentar el cierre honesto en `VALIDACION.md`
+
+**Checkpoint**: todos los requisitos aplicables tienen evidencia; cualquier NO VERIFICABLE o gate abierto impide declarar v1 terminada.
+
+---
+
+## Dependencias y orden de ejecución
+
+### Dependencias de fases
+
+```mermaid
+flowchart TD
+  P1[Fase 1 · L00 preparación] --> P2[Fase 2 · Fundamentos]
+  P2 --> P2b[Fase 2b · L01 shell/tema/ventana]
+  P2b --> US1[US1 · Medición TCP]
+  US1 --> US2[US2 · Interpretación]
+  US1 --> US3[US3 · Fallos y firewall]
+  US1 --> US4[US4 · Historial]
+  US1 --> US5[US5 · Avanzado/UDP]
+  US2 --> US4
+  US2 --> US6[US6 · Exportación]
+  US3 --> US5
+  US4 --> US6
+  US2 --> US7[US7 · Ciclo de vida]
+  US3 --> US7
+  US4 --> US7
+  US5 --> FINAL[Consolidación]
+  US6 --> FINAL
+  US7 --> FINAL
+```
+
+- Fase 1 bloquea la base técnica y requiere decisiones/compatibilidad explícitas.
+- Fase 2 bloquea todas las historias; Fase 2b (L01) bloquea US1 porque el shell, el tema inicial y la ventana deben existir antes de la primera pantalla entregada.
+- US1 es el MVP y base de sesión/resultados para las demás.
+- Tras US1, US2 y US3 pueden avanzar en paralelo; US4 puede preparar UI/consultas con fixtures pero integra después de US2.
+- US5 depende del motor/sesión US1 y del tratamiento de puertos/firewall US3.
+- US6 depende del snapshot US2 y de selección múltiple US4.
+- US7 puede avanzar por subáreas, pero updater/distribución esperan T125 y los contratos integrados.
+- La fase final espera las siete historias seleccionadas para v1.
+
+### Orden dentro de cada historia
+
+1. Crear pruebas/fixtures y demostrar que fallan por la conducta ausente.
+2. Implementar valores y reglas puras.
+3. Implementar servicios/adaptadores y fronteras.
+4. Implementar UI sobre fixtures/contratos.
+5. Integrar extremos reales y ejecutar checkpoint.
+6. Registrar evidencia, pendientes y limitaciones; un omitido no cuenta como aprobado.
+
+## Oportunidades de trabajo paralelo
+
+| Historia | Tareas paralelizables tras prerrequisitos | Coordinación necesaria |
+|---|---|---|
+| US1 | T029–T034; T036/T037/T039/T043; T047–T049 | T040–T046 fijan protocolo/estado/resultado compartidos |
+| US2 | T051–T054; T056/T058–T061 | T055 fija G4/umbrales antes de T057/T062 |
+| US3 | T064–T068; T069/T072/T075 | T070–T074 comparten preflight/firewall/helper |
+| US4 | T077–T080; T082 | T081 antes de queries UI; T082 antes de T083; T085 antes de tendencia |
+| US5 | T089–T092; T098/T099 | T093–T097 comparten plan/protocolo/motor |
+| US6 | T102–T105; T111 | T106 precede T107/T108; T109 depende de V-09 |
+| US7 | T114–T118; T119/T122/T124/T124b–T124d (T120/T121 ya en Fase 2b) | T125 precede updater; lifecycle/installer comparten recursos Windows |
+
+No asignar en paralelo dos tareas que escriban el mismo archivo. Lockfiles, migraciones, registro
+IPC, locales, capabilities, CI y `VALIDACION.md` tienen un integrador único por lote.
+
+## Ejemplos de ejecución paralela
+
+### US1
+
+- Agente A: T029/T030 sobre contratos y pairing.
+- Agente B: T032/T042 sobre NTTTCP y fixtures, sin cambiar el protocolo.
+- Agente C: T034/T047–T049 sobre UI contra fixtures aprobados.
+- Integrador: T040–T046 y T050.
+
+### US2 y US3 después del MVP
+
+- Equipo de diagnóstico: T051–T063.
+- Equipo de resiliencia Windows: T064–T076.
+- Ambos consumen `SessionResult`; solo el integrador de contrato modifica su schema.
+
+### H3
+
+- Historial T077–T088 puede preparar consultas/fixtures mientras avanzado T089–T101 valida motor.
+- Exportación T102–T113 comienza con fixtures cuando `SessionResult` queda estable.
+- Ciclo de vida T114–T119 y T122–T124d puede avanzar salvo updater/empaquetado T125–T129 (T120/T121 ya se hicieron en Fase 2b).
+
+## Estrategia de implementación
+
+### MVP primero
+
+1. Completar fases 1 y 2.
+2. Completar US1 hasta T050.
+3. Detenerse y validar el recorrido TCP independiente en dos instancias.
+4. No presentar H1 como release v1; el producto completo exige H2, H3 y consolidación.
+
+### Entrega incremental
+
+1. L00: base reproducible y verificable.
+2. US1/H1: medición TCP, consentimiento, cancelación y persistencia básica.
+3. US2+US3/H2: interpretación, rendimiento, errores y firewall.
+4. US4+US5+US6+US7/H3: historial, avanzado, exportación y ciclo de vida.
+5. Consolidación: matriz, V-01–V-12, seguridad, accesibilidad, instalador y trazabilidad.
+
+### Definition of Done por tarea/checkpoint
+
+- Solo se modificaron rutas declaradas o se registró el cambio de alcance.
+- Contratos y tests afectados se actualizaron conjuntamente.
+- Se ejecutaron checks próximos y el checkpoint agregado disponible; comandos/resultados constan.
+- No quedan fallos, omisiones o deuda temporal ocultos.
+- Fakes/mocks y garantías reales están diferenciados.
+- Gates Q/G/V y conflictos se muestran con estado y responsable.
+- No se afirma VERIFICADO sin ejecución directa ni se publica/commitea sin autorización.

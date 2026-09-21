@@ -30,8 +30,8 @@ comando verificado hoy es `node Design/scripts/verify-tokens.mjs`.
 
 Cuando dos documentos se contradigan, prevalece el de arriba:
 
-1. `.specify/memory/constitution.md` — marco normativo. **Versión 0.4.0, NO ratificada**,
-   con decisiones Q1-Q4 abiertas y puertas técnicas G1-G6 sin cerrar. Una propuesta suya
+1. `.specify/memory/constitution.md` — marco normativo. **Versión 0.6.0, NO ratificada**,
+   con Q2 y Q4 abiertas y puertas técnicas G1-G6 sin cerrar. Una propuesta suya
    sin respuesta no es una aprobación.
 2. `Historias.md` — requisitos de producto (§§1-28 + estrategia de pruebas).
 3. `Design/` — presentación: tokens, componentes, flujos, pantallas y maqueta.
@@ -80,8 +80,31 @@ El ciclo de trabajo es SpecKit 1.0.9.dev0, integración `codex`, scripts PowerSh
 specify → clarify → plan → tasks → implement
 ```
 
-Las skills canónicas están en `.agents/skills/speckit-*/`. Todavía no existe `specs/`:
-ninguna feature se ha planificado. Detalle en `.agents/rules/universal/speckit.md`.
+Las skills canónicas están en `.agents/skills/speckit-*/`. Existe una feature planificada:
+`specs/001-network-benchmark-v1/`, sin versionar. Detalle en `.agents/rules/universal/speckit.md`.
+
+## Trabajo de desarrollo
+
+La arquitectura propuesta está en `ARCHITECTURE.md`; su estado de propuesta no autoriza
+modificar la constitución. `Historias.md` es editable desde el 2026-09-21 por decisión del
+propietario: cada cambio se declara en el cierre de tarea. Antes de implementar una tarea:
+
+1. Lee la constitución, los requisitos del lote, las reglas de ámbito y los ADR aplicables.
+   Para UI, consulta también `Design/`.
+2. Localiza la feature mediante `ARCHITECTURE.md`; identifica su API pública, contratos,
+   consumidores y ficheros de escritura.
+3. Aplica `docs/governance/PLAN-CHECK.md`. Un conflicto exige rediseño o una evolución
+   arquitectónica explícita, nunca una excepción silenciosa.
+4. Mantén autorización y negocio en Rust y presentación en Svelte. No introduzcas imports
+   profundos, SQL/SDK disperso ni estado mutable compartido entre features.
+5. Sigue `docs/governance/CONVENTIONS.md`. Toda dependencia o abstracción transversal nueva
+   requiere la justificación definida en `docs/governance/QUALITY.md`.
+6. Define y completa las pruebas del lote según `Historias.md` y `QUALITY.md`, distinguiendo
+   evidencia simulada, nativa, manual y de laboratorio.
+7. Ejecuta solo comandos reales. Hasta el bootstrap siguen sin existir checks, build, lint
+   o tests de aplicación; los comandos propuestos en gobernanza no son ejecutables todavía.
+8. Cierra con `.agents/skills/cierre-de-tarea/SKILL.md`: cambios, comandos, resultados,
+   limitaciones, pendientes y versión de constitución utilizada.
 
 ## Definición de terminado
 
@@ -112,8 +135,8 @@ por clon y no lo esquives:
 git config core.hooksPath scripts/git-hooks
 ```
 
-Rechaza cualquier commit que toque `.specify/`, `.agents/skills/speckit-*`, `Design/`,
-`Historias.md` o los documentos históricos. `--no-verify` existe, requiere autorización
+Rechaza cualquier commit que toque `.specify/`, `.agents/skills/speckit-*`, `Design/`
+o los documentos históricos. `--no-verify` existe, requiere autorización
 del propietario y debe declararse en el mensaje del commit.
 
 ## Herramientas de agentes soportadas

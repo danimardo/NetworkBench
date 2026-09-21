@@ -34,7 +34,7 @@ Las importaciones de abajo inlinean el contenido: lo que se lista aquí llega si
   (`ask`) por las operaciones de escritura de Git y **deniega** las rutas protegidas.
   Si algo te hace falta, **pídelo; no amplíes el permiso.**
 - **Hook `PreToolUse`.** `scripts/agent/guard-protected-paths.mjs` deniega escrituras en
-  `.specify/`, `.agents/skills/speckit-*`, `Design/`, `Historias.md` y los documentos
+  `.specify/`, `.agents/skills/speckit-*`, `Design/` y los documentos
   históricos, tanto por `Edit`/`Write` como por `Bash`. Es el mismo guard que usa Codex.
   Si te lo deniega, **no busques otra vía**: informa, propón y espera.
 - **Sesión nueva.** Los cambios en las skills y en los ficheros importados aquí no surten

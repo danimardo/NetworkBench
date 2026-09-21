@@ -10,7 +10,6 @@
  *   .specify/**                     gestionado por el CLI de SpecKit, con manifiestos SHA-256
  *   .agents/skills/speckit-...        instaladas por SpecKit, dentro de esos manifiestos
  *   Design/**                       entrega del disenador
- *   Historias.md                    requisitos de producto
  *   Especificacion.md               documento histórico
  *   AUDITORIA_DISENO_V3.md          documento histórico
  *
@@ -32,7 +31,6 @@ const PROTEGIDAS = [
   { patron: /^\.specify\//, motivo: "gestionado por el CLI de SpecKit (manifiestos SHA-256)" },
   { patron: /^\.agents\/skills\/speckit-/, motivo: "skill instalada por SpecKit" },
   { patron: /^Design\//, motivo: "entrega del disenador" },
-  { patron: /^Historias\.md$/, motivo: "requisitos de producto" },
   { patron: /^Especificacion\.md$/, motivo: "documento histórico" },
   { patron: /^AUDITORIA_DISENO_V3\.md$/, motivo: "documento histórico" },
 ];

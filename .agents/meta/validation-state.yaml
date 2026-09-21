@@ -141,8 +141,8 @@ no_autorizado:
     nota: "requiere autorizacion especifica. Hay observaciones pendientes: ratificacion, Q1-Q4, puerta G6"
   - que: "Crear .github/workflows/"
     nota: "descartado a proposito: el DoD de CI de la constitucion es hoy inejecutable"
-  - que: "Modificar Design/** o Historias.md"
-    nota: "entrega del disenador y requisitos de producto"
+  - que: "Modificar Design/**"
+    nota: "entrega del disenador. Historias.md dejo de estar protegido el 2026-09-21 por decision del propietario"
   - que: "Modificar ~/.codex/config.toml"
     nota: "configuracion global, fuera del repositorio"
 
