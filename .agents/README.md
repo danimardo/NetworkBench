@@ -47,6 +47,16 @@ fichero. En Codex, la referencia desde `AGENTS.md` a un fichero de `rules/` es p
 depende de que el modelo decida leerla. Por eso las reglas innegociables viven **dentro**
 de `AGENTS.md` y `rules/` guarda solo las de ámbito acotado.
 
+## El guard de rutas protegidas es compartido
+
+`scripts/agent/guard-protected-paths.mjs` es un único fichero que invocan **las dos**
+herramientas como hook `PreToolUse`: Claude Code desde `.claude/settings.json` y Codex
+desde `.codex/hooks/hooks.json`. Ambas usan el mismo esquema de salida
+(`hookSpecificOutput.permissionDecision`), así que no hace falta adaptador ni copia.
+
+Vive en `scripts/agent/` y no en `.claude/` ni en `.codex/` precisamente para que ninguna
+de las dos parezca su dueña.
+
 ## Duplicación inevitable
 
 El `name` y la `description` de cada skill deben repetirse en el frontmatter del stub de

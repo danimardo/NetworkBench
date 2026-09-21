@@ -40,9 +40,15 @@ const PROTEGIDAS = [
 const HERRAMIENTA_FICHERO = ["write", "edit", "patch", "create", "delete", "remove", "move", "rename"];
 const HERRAMIENTA_SHELL = ["shell", "bash", "powershell", "pwsh", "exec", "run", "command", "terminal"];
 
-/** Indicios de que un comando de shell escribe, y no solo lee. */
+/**
+ * Indicios de que un comando de shell escribe, y no solo lee.
+ *
+ * La redirección exige que el ">" no venga precedido de "-", "=" ni ">", para no
+ * confundir una flecha de prosa ("PreToolUse -> guard") con una redirección real.
+ * Ese falso positivo bloqueó una edición legítima de documentación el 2026-09-21.
+ */
 const ESCRIBE = [
-  />>?\s/, /\|\s*tee\b/i,
+  /(^|[^-=>])>>?\s/, /\|\s*tee\b/i,
   /\bsed\b[^|;]*-i\b/i, /\bperl\b[^|;]*-i\b/i,
   /\b(rm|mv|cp|ln|truncate|dd|touch|mkdir|chmod|chown|install)\b/i,
   /\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b/i,
@@ -86,17 +92,40 @@ if (herramienta && !esFichero && !esShell) {
   responder("allow", "guard: herramienta que no escribe ficheros");
 }
 
-// Todas las cadenas del payload, para no depender de dónde venga la ruta.
-const cadenas = [];
-const recoger = (v, p = 0) => {
-  if (p > 6) return;
-  if (typeof v === "string") cadenas.push(v);
-  else if (Array.isArray(v)) v.forEach((x) => recoger(x, p + 1));
-  else if (v && typeof v === "object") Object.values(v).forEach((x) => recoger(x, p + 1));
-};
-recoger(datos.tool_input ?? datos.toolInput ?? datos.input ?? datos.arguments ?? datos);
+const args = datos.tool_input ?? datos.toolInput ?? datos.input ?? datos.arguments ?? datos;
 
-const texto = cadenas.join("\n");
+/** Aplana a texto todas las cadenas de un valor. */
+const aplanar = (v, p = 0, acc = []) => {
+  if (p > 6) return acc;
+  if (typeof v === "string") acc.push(v);
+  else if (Array.isArray(v)) v.forEach((x) => aplanar(x, p + 1, acc));
+  else if (v && typeof v === "object") Object.values(v).forEach((x) => aplanar(x, p + 1, acc));
+  return acc;
+};
+
+/**
+ * Qué parte del payload se inspecciona. Importa mucho: escribir documentación que
+ * MENCIONA una ruta protegida es legítimo, escribir EN ella no lo es.
+ *
+ *   herramienta de fichero -> los campos de ruta. El contenido que se escribe queda
+ *       fuera: si no, editar este mismo fichero sería imposible. Si no hay ningún
+ *       campo de ruta reconocible (p. ej. un parche que la lleva dentro), se cae a
+ *       todo el payload, porque ahí la ruta sí va en el cuerpo.
+ *   herramienta de shell -> solo el comando. La descripción es prosa humana.
+ */
+const CAMPOS_RUTA = ["file_path", "filePath", "path", "notebook_path", "notebookPath", "paths", "file", "files"];
+const CAMPOS_COMANDO = ["command", "cmd", "script", "argv"];
+
+let inspeccionado;
+if (esShell) {
+  const cmd = CAMPOS_COMANDO.filter((k) => args && args[k] !== undefined).map((k) => args[k]);
+  inspeccionado = cmd.length > 0 ? aplanar(cmd) : aplanar(args);
+} else {
+  const rutas = CAMPOS_RUTA.filter((k) => args && args[k] !== undefined).map((k) => args[k]);
+  inspeccionado = rutas.length > 0 ? aplanar(rutas) : aplanar(args);
+}
+
+const texto = inspeccionado.join("\n");
 const golpe = PROTEGIDAS.find(([patron]) => patron.test(texto));
 
 if (!golpe) responder("allow", "guard: sin rutas protegidas en la operación");

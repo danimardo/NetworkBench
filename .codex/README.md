@@ -17,7 +17,7 @@ de ampliar permisos para desbloquear al agente.
 |---|---|
 | `config.toml` | `approval_policy = on-request`. **No fija `sandbox_mode`**: ver abajo |
 | `hooks/hooks.json` | Registra el hook `PreToolUse` |
-| `hooks/guard-protected-paths.mjs` | Deniega escrituras en rutas protegidas |
+| `hooks/hooks.json` → `scripts/agent/guard-protected-paths.mjs` | Deniega escrituras en rutas protegidas. **El guard es compartido con Claude Code**: un solo fichero, dos consumidores |
 
 ## Por qué no se fija `sandbox_mode`
 

@@ -59,16 +59,34 @@
       "Bash(pnpm add:*)",
       "Bash(cargo install:*)",
       "Bash(rustup:*)",
-      "Edit(./.specify/**)",
-      "Write(./.specify/**)",
-      "Edit(./.agents/skills/speckit-*/**)",
-      "Write(./.agents/skills/speckit-*/**)",
-      "Edit(./Design/**)",
-      "Write(./Design/**)",
-      "Edit(./Historias.md)",
-      "Write(./Historias.md)",
-      "Edit(./.logs/**)",
-      "Write(./.logs/**)"
+      "Edit(.specify/**)",
+      "Edit(**/.specify/**)",
+      "Edit(.agents/skills/speckit-*/**)",
+      "Edit(**/.agents/skills/speckit-*/**)",
+      "Edit(Design/**)",
+      "Edit(**/Design/**)",
+      "Edit(Historias.md)",
+      "Edit(**/Historias.md)",
+      "Edit(Especificacion.md)",
+      "Edit(**/Especificacion.md)",
+      "Edit(AUDITORIA_DISENO_V3.md)",
+      "Edit(**/AUDITORIA_DISENO_V3.md)",
+      "Edit(.logs/**)",
+      "Edit(**/.logs/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/agent/guard-protected-paths.mjs",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .codex/hooks/guard-protected-paths.mjs",
+            "command": "node scripts/agent/guard-protected-paths.mjs",
             "timeout": 10
           }
         ]

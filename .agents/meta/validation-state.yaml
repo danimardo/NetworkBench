@@ -51,6 +51,10 @@ no_ejecutado:
   - que: "pnpm check, lint, type-check, tests unitarios, integracion, E2E"
     motivo: "NO existen. La constitucion reconoce que pnpm check aun debe crearse"
     como_verificarlo_despues: "tras la primera implementacion que los introduzca"
+  - que: "Que Codex carga el hook y se le concede confianza"
+    motivo: "requiere una sesion real de Codex; el guard esta probado, su carga por Codex no"
+    estado_actual: INFERIDO
+    como_verificarlo_despues: "abrir Codex, aceptar la confianza de hooks y pedirle una escritura en el documento de requisitos"
   - que: "Que Codex vuelve a ejecutar comandos con normalidad tras retirar sandbox_mode"
     motivo: "requiere una sesion real de Codex"
     estado_actual: NO_VERIFICADO
@@ -79,6 +83,20 @@ no_ejecutado:
   - que: "Hooks de Claude Code y .claude/rules/"
     motivo: "capacidades no verificadas; el diseno no depende de ellas"
     estado_actual: NO_VERIFICABLE
+
+  - comando: "prueba real en Claude Code: intento de modificar el documento de requisitos (2026-09-21)"
+    resultado: >-
+      LA BARRERA FALLO y el fichero se modifico. Causa: las reglas deny usaban un prefijo
+      de directorio actual que no es una forma reconocida, asi que el glob no coincidia
+      con nada y fallaba en silencio. Corregido, y reforzado con un hook PreToolUse.
+    estado: VERIFICADO
+  - comando: "hook PreToolUse compartido, probado con 14 payloads"
+    resultado: "8 deny y 6 allow; 14/14 correcto. Distingue escribir en una ruta protegida de mencionarla"
+    estado: VERIFICADO
+    evidencia_adicional: >-
+      El hook bloqueo dos llamadas reales de la propia sesion, incluida una edicion de
+      documentacion que fue un falso positivo por confundir una flecha de prosa con una
+      redireccion. Corregido y reprobado.
 
 no_autorizado:
   - que: "Cualquier operacion de escritura de Git (add, commit, push, rama, PR)"

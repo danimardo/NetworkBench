@@ -37,9 +37,32 @@ herramientas:
         uso_en_este_repo: "10 stubs speckit-*. Las 2 skills propias se alcanzan por referencia desde AGENTS.md, no tienen stub"
       permisos:
         ruta: ".claude/settings.json (+ settings.local.json no versionado)"
-        clave: "permissions.allow / deny / defaultMode"
+        clave: "permissions.allow / ask / deny / defaultMode"
         estado: VERIFICADO
-        uso_en_este_repo: "allowlist de solo lectura; deny de operaciones de escritura de Git"
+        uso_en_este_repo: "allowlist de solo lectura; ask en escrituras de Git; deny en rutas protegidas"
+        sintaxis_de_rutas:
+          forma_correcta: "Edit(ruta), Edit(**/ruta), Edit(//absoluta), Edit(~/ruta)"
+          cobertura: "Edit(ruta) cubre Write, Edit y NotebookEdit"
+          estado: VERIFICADO
+          leccion_2026_09_21: >-
+            Las reglas se escribieron con prefijo de directorio actual y NO bloquearon
+            nada: esa forma no esta reconocida y el glob fallo EN SILENCIO. Claude Code
+            pudo modificar el documento de requisitos. Corregido y reforzado con un hook,
+            porque un glob mal escrito no avisa.
+        deny_absoluto: >-
+          Un deny no se puede levantar ni con autorizacion del propietario. Por eso las
+          escrituras de Git estan en 'ask': la regla es 'requiere permiso explicito cada
+          vez', no 'prohibido para siempre'.
+      hooks:
+        ruta: "settings.json del proyecto -> hooks.PreToolUse"
+        eventos: [PreToolUse, PostToolUse, PermissionRequest, UserPromptSubmit, SessionStart, SessionEnd, Stop]
+        esquema_de_salida: "hookSpecificOutput.{hookEventName, permissionDecision, permissionDecisionReason, updatedInput}"
+        decisiones: [allow, deny, ask, defer]
+        estado: VERIFICADO
+        evidencia: >-
+          2026-09-21: el hook bloqueo dos llamadas reales de la propia sesion. Se aplica
+          EN CALIENTE, sin reiniciar. Matcher usado:
+          Edit, Write, NotebookEdit, Bash y PowerShell.
       agents:
         ruta: ".claude/agents/"
         estado: VERIFICADO
@@ -52,9 +75,9 @@ herramientas:
       - nombre: ".claude/rules/*.md"
         estado: INFERIDO
         nota: "la cadena aparece en el binario y se describe como fichero cargado; no se ha comprobado su carga ni si admite @import. NO USADO"
-      - nombre: "hooks en settings.json"
+      - nombre: "@import dentro de SKILL.md o de reglas por directorio"
         estado: NO_VERIFICABLE
-        nota: "no comprobado en este proyecto. NO USADO: el diseno no depende de ellos"
+        nota: "no comprobado. NO USADO"
       - nombre: "@import dentro de SKILL.md o de .claude/rules/*.md"
         estado: NO_VERIFICABLE
         nota: "por eso los stubs instruyen leer el canonico en vez de importarlo"
@@ -135,7 +158,7 @@ herramientas:
       estado: INFERIDO
       evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus' en el binario"
       confianza: "Codex pide confirmar los hooks del repositorio la primera vez (HookTrustStatus). No usar --dangerously-bypass-hook-trust"
-      uso_en_este_repo: "PreToolUse -> .codex/hooks/guard-protected-paths.mjs; FALLA EN ABIERTO a proposito"
+      uso_en_este_repo: "PreToolUse, apuntando al guard COMPARTIDO con Claude Code; FALLA EN ABIERTO a proposito"
       criterio: >-
         Herramientas de fichero: cualquier mencion de ruta protegida -> deny.
         Herramientas de shell: ruta protegida MAS indicio de escritura -> deny; una
@@ -163,6 +186,20 @@ asimetria_declarada: >-
   reglas es prosa y depende de que el modelo decida leerla. Consecuencia de diseno: las
   reglas innegociables estan DENTRO de AGENTS.md; .agents/rules/ guarda solo las de ambito
   acotado, que se consultan al tocar ese ambito.
+
+guard_compartido:
+  fichero: "scripts/agent/guard-protected-paths.mjs"
+  consumidores: ["Claude Code, por su settings.json", "Codex, por su hooks.json"]
+  motivo: >-
+    Las dos herramientas usan el mismo esquema de salida, asi que un solo guard sirve para
+    ambas. Vive en scripts/agent/ para que ninguna parezca su dueña y no haya dos copias
+    que puedan divergir.
+  criterio: >-
+    Distingue escribir EN una ruta protegida de MENCIONARLA. En herramientas de fichero
+    solo inspecciona los campos de ruta, no el contenido; si no hay campo de ruta
+    reconocible (un parche que la lleva dentro), cae a todo el payload. En herramientas de
+    shell solo inspecciona el comando, no la descripcion, y exige un indicio de escritura.
+  probado: "14 casos el 2026-09-21: 8 deny y 6 allow, todos como se esperaba"
 
 duplicacion_inevitable:
   que: "name y description de cada skill, repetidos en el frontmatter del stub de Claude Code"
