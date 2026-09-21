@@ -1,0 +1,23 @@
+# Configuración de Codex para este repositorio.
+#
+# Existe porque la configuración global de esta máquina (~/.codex/config.toml) fija
+# approval_policy = "never" y sandbox_mode = "danger-full-access" para TODOS los
+# proyectos, y marca f:\apps\netbench como trusted. Aquí no queremos eso.
+#
+# Precedencia en Codex 0.155.1, según los mensajes del propio binario:
+#   enterprise-managed  >  user config  >  PROJECT CONFIG  >  session flags
+# Es decir, este fichero pisa a ~/.codex/config.toml.
+#
+# ESTADO: DOCUMENTADO, no ejecutado. Verificar abriendo una sesión de Codex en el
+# repositorio y comprobando que pide aprobación para escribir. Si NO la pidiera, este
+# fichero no sirve y la única barrera real es el hook pre-commit de Git: dilo y
+# actualiza .agents/meta/agent-capabilities.yaml.
+#
+# Validado contra: Codex CLI 0.155.1 — 2026-09-21
+
+# El modelo pide aprobación cuando la necesita, en vez de ejecutar sin preguntar.
+approval_policy = "on-request"
+
+# Escritura limitada al workspace. No "danger-full-access": el agente no tiene por qué
+# escribir fuera del repositorio para trabajar en este proyecto.
+sandbox_mode = "workspace-write"

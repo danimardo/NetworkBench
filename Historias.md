@@ -2,7 +2,8 @@
 
 **Estado:** Especificación de producto y técnica para desarrollo (derivada de `Historias.md` + decisiones del 20-09-2026)
 **Plataforma:** Windows 10 (1809+) y Windows 11, x64
-**Stack:** Tauri 2 + Rust · Svelte + TypeScript + Vite · WebView2
+**Stack:** Tauri 2 + Rust · Svelte + TypeScript + Vite · Tailwind CSS 4.3.3 + @tailwindcss/vite 4.3.3 · WebView2
+**Sistema de diseño:** `Design/` — reglas visuales, interacción, tokens y componentes de referencia obligatorios (§16.0).
 **Motor:** Microsoft NTTTCP (empaquetado)
 **Nombre:** NetworkBench (provisional; identificador interno `networkbench`)
 **Licencia:** GPL-3.0-or-later · **Repositorio:** `github.com/danimardo/networkbench` (público)
@@ -818,6 +819,16 @@ Obtenida en Rust con `GetAdaptersAddresses` + `GetIfEntry2` + WMI/`SetupAPI` par
 
 ## 16. Interfaz de usuario
 
+### 16.0. Sistema de diseño existente y Tailwind CSS [H1]
+
+- El proyecto dispone de un sistema de diseño en `Design/` (ruta local: `F:\Apps\NetBench\Design`). Sus reglas DEBEN consultarse antes de crear o modificar cualquier pantalla o componente. Las referencias del repositorio usan rutas relativas para funcionar en otros equipos.
+- Documentación obligatoria: `Design/README.md` (índice y componentes), `Design/DESIGN_TOKENS.md` (tokens), `Design/FLUJOS.md` (interacción), `Design/PANTALLAS-H1.md` (pantallas), `Design/RESPONSIVE-I18N.md` (responsive e idiomas) y `Design/AVISOS.md` (avisos). Los tokens y componentes de `Design/src/lib/` son la base de implementación; `Design/maqueta-navegable.html` es una referencia visual, no el protocolo ni la aplicación terminada.
+- La interfaz DEBE conservar la dirección Graphite Violet, reutilizar patrones y componentes existentes y documentar las ampliaciones del sistema. La constitución establece el marco; esta especificación define el producto; Design concreta la presentación. Las contradicciones se registran y resuelven según esa jerarquía, sin copiar decisiones desactualizadas de la maqueta.
+- **Tailwind CSS 4.3.3 es obligatorio**, integrado con **`@tailwindcss/vite` 4.3.3** en el build Vite. Ambos paquetes se fijan a esas versiones exactas y se incluyen en el lockfile. El CSS se compila y empaqueta localmente; no se usa CDN ni generación de estilos en runtime. El resto de versiones y su actualización se rigen por `.specify/memory/constitution.md`.
+- Tailwind DEBE consumir los tokens del sistema mediante un mapeo central de tema (`@theme`/`@theme inline` cuando corresponda). No introduce una segunda paleta ni escalas de espaciado, tipografía o radios independientes. Los breakpoints (§16.9) y el selector de tema (§16.10) se configuran explícitamente; no se sustituyen por los valores por defecto de Tailwind.
+- Se permite CSS propio para materiales `glass-*`, animaciones, estilos de impresión y componentes existentes. No se exige convertir todo el CSS a utilidades. Los valores arbitrarios solo pueden referenciar tokens o excepciones estructurales documentadas; las clases dinámicas se expresan con nombres completos en mapas detectables durante el build.
+- La integración DEBE revisar Preflight, orden de capas y resets para conservar controles, foco y accesibilidad. CI verifica que las utilidades respetan los tokens, y las pruebas visuales comprueban ambos temas, responsive, impresión y el WebView2 mínimo admitido. Añadir Tailwind no modifica el presupuesto de rendimiento ni las reglas de aspecto nativo.
+
 ### 16.1. Navegación [H1]
 
 Barra lateral compacta (iconos + etiqueta) con: **Inicio**, **Historial** [H3], **Ajustes**. Las pantallas de sesión (preparación, ejecución, resultado) se abren sobre Inicio y no permiten navegar fuera hasta terminar o cancelar (el resto de la barra se deshabilita con tooltip «Prueba en curso»).
@@ -911,7 +922,7 @@ Las animaciones nunca retrasan una acción del usuario: un clic responde de inme
 - La ventana es opaca (`transparent: false`); no se usan Mica/Acrylic del sistema. Funciona igual en Windows 10 y 11, en capturas de pantalla y con cualquier fondo de escritorio.
 - El texto denso (tooltips largos, detalles técnicos, XML) va sobre material opaco: el cristal es para superficies, no para lectura prolongada.
 
-**Tema**: automático (sigue Windows) / claro / oscuro. Todos los valores visuales (color, tipografía, espaciado, radios, blur, duraciones y curvas de animación) son tokens en `:root`, redefinidos para oscuro; ningún valor literal en componentes (verificable por script en CI). Estados éxito/advertencia/error siempre con icono + texto, nunca solo color.
+**Tema**: automático (sigue Windows) / claro / oscuro, con **Oscuro** como valor por defecto (§23) — la app nunca arranca en claro por seguir el sistema operativo; el modo claro solo se activa cuando el usuario lo selecciona explícitamente en Ajustes. Todos los valores visuales (color, tipografía, espaciado, radios, blur, duraciones y curvas de animación) son tokens en `:root`, redefinidos para oscuro; ningún valor literal en componentes (verificable por script en CI). Estados éxito/advertencia/error siempre con icono + texto, nunca solo color.
 
 ### 16.11. Accesibilidad [H2]
 
@@ -962,13 +973,46 @@ La app corre en una webview pero NO DEBE parecer una página web. Reglas verific
 | Sin arrastre de imágenes/texto | `draggable="false"` en imágenes; `dragDropEnabled: false` en la ventana. |
 | Sin atajos de navegador | F5/Ctrl+R, Ctrl+F, Ctrl+P, Ctrl+U, Ctrl+±/rueda con Ctrl (zoom), F12 y navegación atrás/adelante con ratón: cancelados en producción (en desarrollo, F12 permitido). |
 | Barras de desplazamiento | Finas (overlay) que aparecen al pasar el ratón o al desplazarse y se desvanecen, estilo Windows 11; nunca las del navegador. |
-| Controles | Conmutadores, casillas, botones de opción, desplegables, campos, deslizadores y tooltips con aspecto y comportamiento WinUI 3 (tamaños, radios, estados hover/pressed/disabled/focus). Nunca `<select>` nativo ni `alert`/`confirm` del navegador. |
+| Controles | Conmutadores, casillas, botones de opción, desplegables, campos, deslizadores y tooltips con aspecto y comportamiento WinUI 3 (tamaños, radios, estados hover/pressed/disabled/focus). Nunca `<select>` nativo ni `alert`/`confirm` del navegador. Contenido y cobertura de los tooltips explicativos: §16.15. |
 | Foco | Anillo de foco visible solo con navegación por teclado (`:focus-visible`), estilo Windows. |
 | Tipografía | La elige el diseñador (puede ser propia); DEBE tener aspecto de aplicación de escritorio y ser legible a tamaños pequeños con ClearType. Se embebe con la app, nunca desde Internet (§24.3). |
 | Diálogos | Modales propios centrados en la ventana, con animación de la §16.10, no ventanas nuevas del sistema salvo selectores de fichero (guardar PDF/CSV/JSON), que sí son los nativos. |
 | Texto | Sin «Cargando…» genéricos: esqueletos o estados de carga diseñados. Sin emojis como iconos. |
 
 Un script de CI (`verify-native.mjs`) comprueba las reglas mecanizables: ausencia de `text-decoration: underline`, de `cursor: pointer` fuera de la lista blanca, y de `<select>`/`alert(`/`confirm(`/`prompt(` en el código.
+
+### 16.15. Ayuda contextual: tooltips explicativos [H1] (cobertura completa según el hito de cada pantalla)
+
+NetworkBench lo usará sobre todo personal técnico, pero también técnicos junior que pueden no dominar el vocabulario de red (retransmisiones, MTU, streams, asimetría…). Por eso las magnitudes, los datos y los controles cuyo significado no sea evidente DEBEN explicarse en la propia interfaz, sin obligar a buscar el término fuera de la app. El mecanismo es el tooltip de la §16.14, ampliado de simple aviso de interfaz a **explicación de dominio**.
+
+**Qué debe llevar explicación.** Cada pantalla incorpora sus tooltips en el hito en que se entrega. Como mínimo:
+
+| Área | Elementos |
+|---|---|
+| Inicio y equipos (§7, §16.2) | Niveles de confianza (Desconocido / Conocido / De confianza); estados de disponibilidad (ocupado, versión incompatible, no accesible); tipo de adaptador (`ethernet`, `wifi`, `virtual`, `vpn`, §15) y velocidad de enlace; «Visible en la red» / «Descubrimiento desactivado»; nombres y direcciones truncados (el tooltip muestra el valor completo). |
+| Emparejamiento y aceptación (§9, §10.4) | Código de verificación (para qué sirve y qué hay que comprobar); «Confiar siempre en este equipo»; aceptación automática; huella abreviada. |
+| Preparación (§10.5) | Cada comprobación de la lista: qué verifica y por qué hace falta. |
+| Ejecución (§16.4) | Velocidad instantánea; calentamiento y enfriamiento; «Tiempo restante aproximado»; «Reconectando…»; sentido A→B / B→A. |
+| Resultado (§16.5, §13) — métricas del motor [H2] | Velocidad (mínimo de ambas direcciones); «% de un enlace de X» y capacidad de referencia con su origen (negociada, orientativa, manual, no determinable); Estabilidad; Asimetría; Impacto en CPU; Retransmisiones; estado del veredicto; elementos de la gráfica (series, zonas de calentamiento/enfriamiento, huecos). |
+| Detalles técnicos (§16.6) [H2] | Todo valor con unidad o término técnico (p. ej. MTU, percentiles, versión de driver). |
+| Opciones avanzadas y Ajustes (§17, §23) [H3] | Cada parámetro no evidente (generaliza la regla ya fijada en §17). |
+| Controles deshabilitados | El motivo por el que lo están (p. ej. «Prueba en curso» en la barra lateral). |
+
+**Contenido de los textos**
+
+- Breves: de una a tres frases, sin jerga sin explicar. Primero qué es; si el valor tiene rangos, cómo interpretarlo.
+- Nunca afirman una causa única (§13.7); usan los mismos verbos prudentes que el motor de interpretación.
+- Los umbrales o cifras de referencia que citen proceden de `thresholds.json` como parámetros del texto, nunca escritos a mano, para que no se desincronicen con el motor cuando V-06 los ajuste (§13, §27).
+- Externalizados en `locales/es.json` y `locales/en.json` bajo claves `help.*`, con el mismo criterio que el resto de textos (§4); cada clave existe en los dos idiomas.
+- No contienen «NTTTCP» ni `ntttcp.exe`, salvo en Detalles técnicos y Acerca de (criterio global de §26).
+- Solo texto: sin enlaces, botones ni contenido interactivo. Lo que requiera más explicación va en el texto visible de la pantalla (p. ej. «Hechos / Observaciones» de §16.5), no en el tooltip.
+
+**Comportamiento y accesibilidad**
+
+- Aparece al pasar el ratón (con un breve retardo, para no dispararse al cruzar la interfaz) **y** al recibir el foco de teclado. Se cierra con Escape sin perder el foco y al salir el puntero o el foco; el puntero puede moverse sobre el propio tooltip sin que se cierre.
+- Todo elemento con tooltip explicativo es alcanzable por teclado y su texto queda asociado a él para lectores de pantalla (`aria-describedby`).
+- El hecho de que algo tenga explicación no puede depender solo del ratón para descubrirse: el diseñador define una señal visual discreta (p. ej. un icono de información junto a la etiqueta) que no sea subrayado (§16.14) ni solo color (§16.10), y la documenta en el sistema de diseño.
+- Al ser más largos que los avisos breves de interfaz, van sobre material opaco (texto denso, §16.10). Retardo, duración y ancho máximo son tokens; sin animación con `prefers-reduced-motion` o «Reducir animaciones» (§23).
 
 ---
 
@@ -1131,7 +1175,7 @@ Ajustes → Acerca de → **Copiar información de diagnóstico** (y Ayuda del m
 |---|---|---|---|
 | General | Nombre visible | texto 1–48 | hostname |
 | | Idioma | Auto / es / en | Auto |
-| | Tema | Sistema / Claro / Oscuro | Sistema |
+| | Tema | Sistema / Claro / Oscuro | Oscuro |
 | | Tamaño de texto | 100 / 115 / 130 % | 100 |
 | | Reducir animaciones | Automático (sigue Windows) / Sí / No | Automático |
 | | Arrancar con Windows | bool | off |
@@ -1178,7 +1222,7 @@ Todo texto recibido (`displayName`, descripción de NIC, driver, stderr de NTTTC
 ## 25. Arquitectura software [H1]
 
 ```
-src/                     Svelte + TS
+src/                     Svelte + TS + Tailwind CSS (plugin Vite)
   lib/api/               wrappers de comandos Tauri y eventos
   lib/stores/            estado de sesión, ajustes, historial
   lib/components/        tarjetas, gráficas, diálogos, TitleBar (§16.13), CloseDialog (§5.2)
@@ -1226,6 +1270,7 @@ locales/                 es.json, en.json
 - Barra de título propia fundida con la interfaz; arrastre, doble clic, Snap por arrastre y Win+flechas funcionan; escalado 100–200 % correcto.
 - La ventana se reabre con el mismo tamaño, posición y estado; con el monitor secundario desconectado se recoloca en el principal.
 - Reglas de aspecto nativo (§16.14) verificadas por script en CI.
+- Tooltips explicativos (§16.15) en los elementos de las pantallas H1 que figuran en su catálogo, en español e inglés, alcanzables por teclado.
 - Repositorio público con `LICENSE` GPL-3.0-or-later, `THIRD_PARTY_NOTICES.md`, CI verde y una Release de prueba `v0.1.0` publicada por etiqueta con `networkbench-setup.exe` y `latest.json` descargables desde el enlace fijo.
 
 ### [H2]
@@ -1235,11 +1280,13 @@ locales/                 es.json, en.json
 - Firewall: detección de los tres escenarios de §14.4, creación de reglas con consentimiento y UAC, eliminación, detección de directiva corporativa.
 - Catálogo de errores completo (§21.2).
 - Tema claro/oscuro; estados de éxito/advertencia/error; accesibilidad §16.11.
+- Tooltips explicativos (§16.15) de las métricas del motor, la gráfica y Detalles técnicos, con los umbrales citados tomados de `thresholds.json`.
 
 ### [H3]
 - Historial con filtros, reapertura de sesiones con gráfica, evolución por peer y comparación con la media reciente.
 - Exportación PDF, JSON y CSV (resumen + muestras), individual y múltiple, con aviso de contenido.
 - Opciones avanzadas completas y UDP con pérdida.
+- Tooltips explicativos (§16.15) en Historial, Opciones avanzadas y Ajustes.
 - Ajustes completos; bandeja; arranque con Windows; toasts; actualizador funcionando contra `latest.json` de una Release real.
 - Diálogo de cierre con «Recordar mi decisión», ajuste «Al cerrar la ventana» y confirmación cuando hay prueba en curso; Alt+F4 y el botón de la barra se comportan igual.
 - Animaciones atrevidas en transiciones y resultado; ajuste «Reducir animaciones» y `prefers-reduced-motion` respetados; consumo de la app durante `RUNNING_*` dentro del presupuesto de V-04.
@@ -1276,6 +1323,659 @@ Cada verificación produce un ajuste de `thresholds.json` o de esta spec, y se d
 
 - `Historias.md` (documento de origen).
 - Tauri 2 — https://tauri.app/
+- Tailwind CSS (integración Vite) — https://tailwindcss.com/docs/installation/using-vite
+- Tailwind CSS (mapeo de tokens) — https://tailwindcss.com/docs/theme
+- Sistema de diseño del proyecto — `Design/README.md` y documentación indicada en §16.0.
 - NTTTCP — https://github.com/microsoft/ntttcp y ayuda de línea de comandos.
 - Microsoft Network-Performance-Visualization — https://github.com/microsoft/Network-Performance-Visualization (refuerza que la interpretación es el valor del producto).
 - DNS-SD — RFC 6763; mDNS — RFC 6762.
+
+
+---
+
+## Estrategia integral de testing para SvelteKit
+
+### Alcance, clasificación y estado de la inspección
+
+El título se conserva como convención solicitada; **NetworkBench no es actualmente un proyecto
+SvelteKit**. Es una aplicación de escritorio Windows con frontend Svelte/TypeScript renderizado
+en cliente mediante Vite, alojado en Tauri/WebView2, y backend nativo Rust. Esta estrategia se
+adapta a esa arquitectura; no introduce SSR, servidor Node, cuentas ni endpoints HTTP nuevos.
+
+Inspección del repositorio realizada el 2026-09-21:
+
+| Área | Evidencia encontrada | Consecuencia |
+|---|---|---|
+| Producto | Historias.md §§1–28 y constitución en .specify/memory/constitution.md | Requisitos y marco de calidad disponibles; distinguir propuestas pendientes de decisiones ratificadas |
+| Diseño | Design/README.md, DESIGN_TOKENS.md, FLUJOS.md, PANTALLAS-H1.md, RESPONSIVE-I18N.md, AVISOS.md | Referencias de comportamiento y apariencia; no sustituyen app o pruebas |
+| Código existente | Design/src/lib/components, tokens.css y theme.svelte.ts con runes | Código de referencia, aún sin build de aplicación |
+| Persistencia de maqueta | theme.svelte.ts usa localStorage y documenta su sustitución por settings.json | Probar la integración definitiva; no consolidar el placeholder como contrato |
+| Verificador existente | Design/scripts/verify-tokens.mjs | Reutilizarlo tras revisar alcance y compatibilidad con Tailwind; no demuestra accesibilidad ni corrección funcional |
+| Manifiestos y lockfiles | No existen package.json, lockfiles JS, Cargo.toml ni rust-toolchain | No hay versiones instaladas del proyecto comprobables |
+| Configuración | No existen svelte.config, vite.config, vitest.config, playwright.config, tsconfig/jsconfig ni eslint.config | No declarar disponibles scripts o suites todavía inexistentes |
+| Aplicación e infraestructura | No existen src/, src-tauri/, static/, tests/, e2e/ ni .github/workflows/ | Arquitectura de §25 prevista, no implementada |
+| Spec Kit | .specify/ y .agents/ presentes; no hay specs/ con features planificadas | Integrar la estrategia en los futuros spec, plan y tasks |
+| Herramientas locales | Node y pnpm presentes, distintos de la línea base documental | Herramientas del equipo no equivalen a versiones del proyecto |
+| Resultados | Sin cobertura, tiempos, matriz de navegadores, cachés o historial de flakiness | Medir al implementar; no inventar cifras o tests aprobados |
+
+Antes de configurar infraestructura, repetir el inventario de manifiestos, lockfiles,
+configuraciones, scripts, hooks, rutas, adapters, tests y workflows. Inspeccionar versiones
+realmente resueltas y compararlas con la constitución; esta sección no fija versiones nuevas
+ni modifica las existentes. No instalar herramientas por aparecer aquí. Registrar compatibilidad,
+mantenimiento, coste, ejecución Windows/CI y alternativas existentes antes de incorporarlas.
+
+Se conserva íntegro el contenido precedente. Sus discrepancias con la constitución (puertos
+simultáneos, logging, tema, accesibilidad, persistencia por hito y actualizador) DEBEN resolverse
+explícitamente al planificar las pruebas afectadas. No codificar ambas interpretaciones como
+oráculos simultáneos ni usar un test para decidir silenciosamente el producto.
+
+### Arquitectura, fronteras y aplicabilidad
+
+| Zona | Módulos previstos de §25 | Runtime de ejecución | Entorno de prueba |
+|---|---|---|---|
+| Presentación | componentes, pantallas, stores/runes, i18n y diseño | WebView2, sin servidor SvelteKit | Vitest DOM para comportamiento simple; navegador real para foco, CSS, layout y APIs |
+| Adaptador de cliente | lib/api, eventos Tauri, configuración y logging | TypeScript en WebView2 | Vitest con fake tipado; contratos compartidos; integración nativa |
+| Dominio | control/estados, pairing, engine/args/parser, diagnostic, validación | Rust | cargo test, reloj y dependencias inyectadas |
+| Infraestructura | history, identity, discovery, sampling, netinfo, firewall, export | Rust y APIs Windows | Integración con SQLite temporal; harness Windows; laboratorio para hardware/red |
+| Privilegios | helper firewall, instalación y desinstalación | Windows elevado bajo consentimiento | VM/usuarios dedicados; pruebas nativas y verificación manual de UAC |
+| Contratos compartidos | planes, resultados, errores, esquemas Zod/Serde | Implementaciones TS y Rust separadas | Fixtures equivalentes y casos inválidos cruzados |
+| Servicios externos permitidos | descarga/consulta de actualización | Rust/infraestructura de publicación | Servidor controlado en suites; ensayo real de release en checkpoint autorizado |
+
+No existe código SvelteKit server-only, adapter de despliegue, +page.server, +server, load,
+Server Actions, cookies de login, SSR, hidratación o prerendering que probar hoy.
+src/routes de la arquitectura representa pantallas, no confirma un router SvelteKit.
+La autenticación real es mTLS/emparejamiento de peers; autorización es consentimiento,
+confianza por peer y capacidades IPC. Una sesión de benchmark no es una sesión web de usuario.
+
+### Herramientas y pirámide de pruebas
+
+Reutilizar la pila prevista por la constitución sin presumir instalación: Vitest, Testing Library
+para Svelte, Playwright, axe-core, cargo test y herramientas de cobertura. Validar la combinación
+real antes del primer lote. Evaluar Browser Mode solo si aporta capacidades necesarias:
+elegir un entorno principal por familia de componentes y no duplicar toda la suite en DOM simulado
+y navegador. No introducir Cucumber por usar criterios Given/When/Then.
+
+| Nivel | Riesgo que demuestra | Herramienta/entorno previsto | No demuestra |
+|---|---|---|---|
+| 0: estático | Tipos, diagnósticos Svelte, imports, formato, contratos y configuración | pnpm check, lint, comprobaciones propias, Rust fmt/Clippy | Conducta runtime; compilar no ejecuta casos de uso |
+| 0: compilación | Bundle y binarios construibles con toolchain y recursos reales | Build Vite/Rust; empaquetado en checkpoint nativo | Corrección de reglas, accesibilidad o rendimiento |
+| 1: unitario | Reglas puras, parser, cálculos, serialización, límites | Vitest en Node para TS; cargo test para Rust | Layout, IPC real o garantías del SO |
+| 2: componentes | Contratos públicos, estados, formularios, callbacks y semántica | Testing Library/Svelte; DOM o navegador según riesgo | NTTTCP, firewall ni todo el flujo distribuido |
+| 3: integración | Colaboración de servicios, SQLite, TLS, IPC y estados | Rust real con recursos aislados; TS con adaptadores controlados | Rendimiento de una LAN física si usa loopback |
+| 4: aceptación | Criterio de producto observable | Nivel más barato suficiente, enlazado a requisito | No exige un E2E por cada criterio |
+| 5: UI/E2E | Recorridos críticos y navegación | Playwright para frontend; harness nativo para producto completo | Un bridge simulado no demuestra Tauri real |
+| 6: transversal | Accesibilidad, responsive, visuales, seguridad y rendimiento | Navegador, Windows y laboratorio según riesgo | Una captura no prueba reglas o consentimiento |
+
+Mutation testing evalúa la eficacia de pruebas ya existentes; no es una capa adicional.
+Cobertura es una señal de ejecución, no un nivel de testing ni una medida suficiente de calidad.
+
+### Lotes funcionales y momento de escritura
+
+La unidad de trabajo es un lote coherente con contrato y checkpoint: pantalla, flujo o caso de uso.
+Puede agrupar varias tareas; no hay cuota de tareas ni test por función/fichero/componente.
+El número de lotes no debe impedir dividir seguridad, migraciones, concurrencia o bugs de producción
+en unidades menores. No implementar toda la app antes de empezar los tests.
+
+Secuencia obligatoria:
+
+1. Leer historia, reglas y aceptación; identificar conducta antes de olvidarla.
+2. Definir riesgos, datos, niveles, dobles y evidencia de cierre.
+3. Implementar el lote y estabilizar sus contratos públicos.
+4. Completar sus tests y ejecutar primero las suites próximas al cambio.
+5. Corregir fallos, ejecutar su checkpoint y registrar evidencia.
+6. Cerrar el lote sin deuda temporal de tests y continuar.
+
+TDD es selectivo. Para regresiones, autenticación, autorización, validación hostil, pérdida de datos,
+máquinas de estados y contratos ambiguos, escribir el test antes o inmediatamente después del cambio.
+Componentes, integración y recorridos pueden completarse al cerrar el lote. No cerrar varios lotes
+con tests pendientes ni aplazar los E2E críticos que ya pueden ejecutarse.
+
+### Ficha previa obligatoria de lote
+
+Cada lote en el plan/tasks DEBE registrar:
+
+- ID, hito, historia o secciones fuente y objetivo observable.
+- Módulos, pantallas/componentes, código TS/Rust y contratos afectados.
+- Estados iniciales, acciones, resultados, límites, fallos y riesgos.
+- Pruebas previstas por nivel y motivo de usar navegador, backend real, BD o aplicación completa.
+- Fixtures/builders, reloj, seeds, identidades, puertos, perfiles y limpieza.
+- Dependencias reales y sustituidas: fake, stub, spy o mock, y qué garantía no cubre la sustitución.
+- Suite selectiva, suite de cierre, accesibilidad/responsive/visual/E2E aplicables.
+- Prioridad, frecuencia, bloqueos, responsable de validación y evidencia.
+- Decisiones pendientes y prueba empírica necesaria antes de congelar un contrato.
+
+No hace falta crear todos los archivos al abrir el lote. Un requisito ambiguo se aclara en su
+contrato antes de establecer aserciones; las hipótesis provisionales se etiquetan como tales.
+
+### Catálogo de lotes y dependencias
+
+Los IDs siguientes organizan testing; no inventan nuevas historias ni sustituyen los hitos.
+
+| Lote | Hito y alcance | Dependencia | Checkpoint mínimo |
+|---|---|---|---|
+| L00 | Base compilable, contratos, configuración, logger y harness de tests | G5/arquitectura de constitución | Estático/build, aislamiento y primer smoke real del frontend |
+| L01 | H1: shell, navegación, temas, i18n, componentes, ventana y geometría | L00 | Componentes + UI smoke; ventana en Tauri real |
+| L02 | H1: identidad, descubrimiento, dirección manual, confianza y consentimiento | L00, UI mínima L01 | Unitarios + TLS/peers reales controlados + aceptación |
+| L03 | H1: planes, parser, motor, sesión, cancelación y resultados básicos | L02 y G1–G3 | Dominio + dos instancias + recorrido nativo crítico |
+| L04 | H1: persistencia de identidad/peers/resultados y recuperación | L00, contratos L02/L03 | SQLite real temporal, migraciones y reinicio |
+| L05 | H2: métricas, muestreo, diagnóstico, gráficas y detalles | L03/L04 | Reglas + UI con datos fijos + V-04/V-06/V-07 aplicables |
+| L06 | H2: firewall, errores y perfiles Windows | L02/L03 | Contrato helper + Windows aislado + consentimiento UAC |
+| L07 | H3: historial, evolución, eliminación y exportaciones | L04/L05 | BD, aceptación UI y PDF/CSV/JSON reales |
+| L08 | H3: UDP y opciones avanzadas/simultáneas | L03/L06, V-01/V-02/V-03 | Límites, puertos, motor real y laboratorio UDP |
+| L09 | H3: ajustes completos, bandeja, cierre, autoarranque y updater | L01/L04/L06 | Persistencia + lifecycle nativo + actualizaciones controladas |
+| L10 | H1 distribución inicial; H3/v1 cierre de distribución | L00 y lotes del artefacto | Instalador real; antes de v1 todos los hitos y verificaciones |
+
+L04 se desarrolla cuando sus contratos estén disponibles y antes de cerrar H1; no se pospone
+por el número de lote. El instalador se valida desde H1 y vuelve a validarse en releases.
+Accesibilidad, errores, configuración y logging son obligaciones de cada lote, no tareas finales.
+
+### Unit Testing de dominio y contratos
+
+Rust es el lugar principal para probar reglas de negocio; no duplicarlas en TypeScript.
+Priorizar tablas de casos para:
+
+- Cifra oficial del receptor; ausencia de datos frente a cero; unidades y precisión u64.
+- Umbrales de capacidad, estabilidad, asimetría, retransmisión y CPU, incluidos igualdad exacta,
+  denominador cero, huecos, muestras insuficientes y «no evaluable».
+- Parser con XML auténtico de la versión empaquetada, campos opcionales/desconocidos,
+  datos corruptos, contenido sobredimensionado y entidades prohibidas.
+- Planes, argumentos estructurados, overflow, rangos de puertos y sentidos simultáneos.
+- Máquina de estados: transiciones válidas/ilegales, cancelación idempotente, timeout,
+  reconexión, duplicados y mensajes fuera de sesión.
+- Normalización Unicode, control/bidi, límites de nombres, serialización y anonimización anidada.
+- Cohortes de evolución compatibles: no comparar planes/adaptadores incompatibles.
+- En TS: Zod, formatos es/en, estados presentacionales y adaptación de errores; no volver
+  a calcular el diagnóstico que debe entregar Rust.
+
+Usar relojes inyectados, fixtures y fakes pequeños. Un stub devuelve respuestas preparadas;
+un fake modela una dependencia (por ejemplo BenchmarkEngine); un spy verifica un efecto
+observable (solicitar cancelación una vez). Evitar mocks del interior del módulo probado.
+
+No Internet, credenciales reales, reloj real o esperas de segundos en suites unitarias.
+Comparar con resultados conocidos calculados independientemente, no reimplementar el algoritmo
+dentro del test. Una ausencia de excepción no basta cuando existe un resultado verificable.
+
+### Component Testing y contrato de testabilidad
+
+Adaptar primero los componentes de Design al runtime real. Probar grupos con conducta:
+Dialog + TextField + botones, lista de peers + estados, aceptación + código, resultado + ayudas.
+No crear una prueba trivial por cada wrapper o icono.
+
+Coberturas prioritarias: props públicas/callbacks; estados vacío, ocupado, cargando, incompatible,
+error y parcial; habilitado/deshabilitado; validación y conservación de valores; doble envío;
+cierre permitido/prohibido; foco inicial y retorno; Tab/Shift+Tab; Escape; tooltip por teclado;
+cancelación visible; es/en y reducción de movimiento.
+
+Las runes se prueban por cambios visibles y limpieza de suscripciones, no por número de
+actualizaciones ni variables privadas. Sustituir matchMedia/reloj/IPC solo donde el entorno
+simulado lo requiera. Geometría, CSS, foco efectivo e interacción con sistema requieren navegador
+o Tauri real: jsdom no aporta esas garantías.
+
+Localizadores: rol y nombre accesible, label, texto estable, estado semántico; data-testid
+solo cuando no basten. No clases Tailwind, selectores DOM profundos, índices o IDs generados.
+Fixtures por idioma evitan depender accidentalmente del idioma del equipo.
+
+### Integration Testing, APIs y código nativo
+
+- SQLite: usar archivos temporales por prueba/worker con WAL y claves foráneas reales.
+  Fake de repositorio para dominio; SQLite real para transacciones, restricciones y migraciones.
+  Probar commit/rollback, duplicados de sessionId, reinicio, esquema antiguo/nuevo, backup coherente,
+  corrupción y disco/permisos mediante inyección o entorno controlado. Una BD en memoria no
+  demuestra recuperación WAL ni bloqueo entre conexiones.
+- Canal: dos peers con TLS real en loopback y certificados exclusivos de test. Probar mTLS,
+  framing, compatibilidad, límites, reordenación permitida, corte y restauración. Reloj fake
+  para política de reintentos; una integración real confirma la coordinación de transportes.
+- IPC: verificar comandos/eventos, esquemas Zod/Serde y capacidades con casos válidos e inválidos.
+  El test de un wrapper fake no demuestra permisos reales de Tauri.
+- Procesos: fake del motor para máquina de estados; ejecutable de prueba controlado para Job
+  Objects, salida, timeout y cleanup; NTTTCP real en suite Windows para argumentos/XML/readiness.
+  Confirmar que no mueren procesos ajenos y no quedan procesos/puertos propios.
+- Windows: fakes para decisiones de NIC/firewall/monitor y prueba nativa para COM, DPAPI,
+  selección de interfaz, notificaciones, UAC y geometría. No cambiar firewall del puesto del
+  desarrollador automáticamente; usar VM/laboratorio aislado y restaurar únicamente recursos propios.
+- Updater: servidor local controlado con manifiesto válido/incorrecto, firma inválida, timeout,
+  descarga incompleta, versión anterior, sin release estable y confirmación durante prueba activa.
+  Una excepción de transporte HTTP local, si fuese necesaria para tests, no llega a producción.
+- No hay API HTTP de negocio: probar método/comando, payload, respuesta, error, autorización
+  y serialización en IPC/protocolo; no inventar +server para imitar un backend web.
+
+### SvelteKit, SSR, hidratación, CSR y prerendering
+
+**Aplicabilidad actual:** CSR local en WebView2; SSR, hidratación de HTML de servidor,
+prerendering, load, hooks y Server Actions son no aplicables. Probar arranque, navegación interna,
+montaje/desmontaje, acceso browser-only y reactividad. No llamar «hidratación» al simple montaje.
+
+Solo si una decisión futura incorpora SvelteKit, inventariar adapter/runtime y rutas y ampliar el
+plan: +page/+layout y sus load; variantes .server; +server; hooks; redirects/errores/status/headers;
+FormData y Server Actions con y sin mejora progresiva si ese comportamiento es requisito.
+Separar unitarios de reglas de integración con el servidor SvelteKit real.
+Comprobar HTML inicial SSR y resultado hidratado, ausencia de mismatch, navegación directa frente
+a client-side, imports privados, window/document en contexto adecuado y salida prerenderizada.
+No exigir funcionamiento sin JavaScript ni cookies/login sin requisitos explícitos.
+Esta rama condicional no autoriza migración ni instalación de SvelteKit.
+
+### Formularios, autenticación, autorización y sesiones
+
+Formularios reales: conexión manual, alias/nombre, opciones avanzadas, puertos, ajustes y
+confirmaciones de exportación/borrado. Separar validación pura, integración del comando Rust,
+feedback visible y un recorrido crítico. Casos: vacío, inválido, IPv4/IPv6/DNS, límites,
+doble clic, espera, error recuperable, reintento, rechazo y conservación de datos introducidos.
+
+Seguridad real del proyecto:
+
+- Peer desconocido/conocido/de confianza/autoaceptación; confianza no equivale a favorito.
+- Código coincide/no coincide, timeout, huella cambiada y solicitud sin consentimiento.
+- Plan fuera de límites incluso de peer confiable; capacidad IPC denegada; helper manipulado.
+- Sesión inexistente/terminada, reconexión por peer incorrecto y comandos duplicados.
+- Rechazo de UAC y políticas corporativas; no elevar app completa.
+- Certificados/identidades sintéticos; no proveedores OAuth, roles web o cookies ficticias.
+
+Fixtures pueden preparar pares ya conocidos para pruebas posteriores, pero mantener pruebas
+específicas de emparejamiento real. No repetir el emparejamiento UI en todo E2E.
+storageState de Playwright no representa identidad DPAPI o confianza SQLite del backend.
+
+### Tests funcionales derivados de historias de usuario
+
+IDs AC-NB son agrupaciones nuevas de pruebas sobre requisitos existentes, no nuevas features.
+P0 bloquea seguridad, integridad o flujo principal; P1 cubre función importante; P2 mejora secundaria.
+CP-Lxx es el checkpoint del lote. Por defecto cada fila se ejecuta en su lote y PR afectada,
+bloquea lote/historia/PR si falla y vuelve a validarse en release. La evidencia de laboratorio
+bloquea el hito/release correspondiente; si una historia exige esa garantía no se marca terminada
+sin ella. «PW» significa Playwright frontend; «WIN» producto nativo; nunca son equivalentes.
+
+| ID / requisito / prioridad | Dado → cuando → entonces; riesgo | Lote y suite mínima | Recursos y sustituciones; evidencia |
+|---|---|---|---|
+| AC-NB-01 §§4,16,23 P1 | App sin preferencias → abrir y navegar → shell visible, acción principal y textos correctos; sin pantalla en blanco | L01, CP-L01, comp + pw-smoke | Navegador sí, SvelteKit no, BD no; IPC fake explícito. WIN confirma arranque instalado |
+| AC-NB-02 §§7,15 P1 | Sin peers/NIC caída o peers disponibles → descubrir/conectar → vacío útil o lista y dirección correcta; validar IP/DNS/IPv6 | L02, unit + int + pw-session | DNS/mDNS/NIC fakes para errores; Rust real para resolución; LAN real V-08 para descubrimiento |
+| AC-NB-03 §§6,9,24 P0 | Peer nuevo o huella cambiada → confirmar/rechazar/caducar → solo consentimiento válido permite continuar | L02, unit + int-security + win-session | Dos identidades de test, TLS/SQLite aislados; diálogo PW y recorrido WIN. No servidor web |
+| AC-NB-04 §§5.5,8,10 P0 | Sesión activa o mensaje ilegítimo → segunda solicitud/duplicado/reconexión errónea → rechazo sin nuevo proceso | L02/L03, unit + int-security | Reloj/engine fake, pares Rust reales para framing; BD solo para confianza; comprobar ausencia de efectos |
+| AC-NB-05 §§10–11,26 H1 P0 | Dos peers autorizados → TCP ambos sentidos → cifra del receptor y resultados consistentes tras ACK | L03/L04, int-session + win-session | App completa, dos peers, NTTTCP/BD reales; fixtures XML para variantes. PW solo comprueba presentación |
+| AC-NB-06 §§8.5,10.8,11.5 P0 | Ejecución activa → cancelar/cortar canal/matar app → cleanup y parcial explícito cuando corresponda | L03/L04, unit + int-session + win-lifecycle | Reloj/engine fakes para fronteras temporales; Job Object real y dos procesos; aserciones de puertos/BD |
+| AC-NB-07 §§11.6,13,18 P0 | XML y métricas conocidos, nulos o incoherentes → analizar → cifra/umbrales correctos y sin causa inventada | L03/L05/L08, unit-diagnostic + acceptance | Rust sin navegador/BD, fixtures del motor y tablas independientes; comp para texto y no evaluable |
+| AC-NB-08 §§12,16.4,16.7 P1 | Muestras, huecos y tráfico ajeno → ejecutar → gráfica informa limitaciones y respeta refresco | L05, comp + pw-session + lab-performance | Series fijas y reloj controlado; navegador sí; CPU app/WebView2 real V-04/V-12 sin instrumentación pesada |
+| AC-NB-09 §14 P0 | Regla ausente/modificada o red pública → solicitar arreglo → consentimiento local, UAC y mínimo alcance | L06, unit + int-firewall + win-firewall | COM fake para política; helper/VM real para aplicación. UAC manual o automatización validada; no PW puro |
+| AC-NB-10 §§19,25 P0 | Datos existentes o esquema antiguo → guardar/migrar/reabrir con fallo → integridad, backup y recuperación | L04, int-storage | SQLite en archivo real y fallos inyectados; sin navegador. Reinicio WIN verifica configuración de producción |
+| AC-NB-11 §§19.2–19.4 P1 | Historial vacío/múltiple/parcial → filtrar/comparar/eliminar → resultados correctos y borrado confirmado | L07, unit + int-storage + pw-history | BD real en integración, fake de consultas en PW; WIN confirma extremo a extremo de persistencia |
+| AC-NB-12 §20 P0 | Sesión con datos identificativos anidados → exportar anonimizada → PDF/JSON/CSV válidos sin fugas | L07, unit + int-export + win-export | Datos sintéticos, archivos temporales; PrintToPdf real V-09; CSV fórmulas y locales; no snapshot de bytes PDF |
+| AC-NB-13 §§17–18 P0 | Plan avanzado al límite/ilegal → solicitar UDP/simultáneo → validación en ambos, sin solapamiento ni tasa ficticia | L08, unit-plan + int-engine + lab-udp | Rust/NTTTCP real, rangos reservados, dos equipos; V-01/V-02 resueltas antes del oráculo |
+| AC-NB-14 §§5.2,16.9,16.13 P0 | Sesión activa/monitor retirado → cerrar/minimizar/reabrir → confirmación, geometría accesible y cleanup | L01/L09, comp + win-lifecycle | Estado fake para UI; Windows real para bandeja, Snap, DPI y cierre. Capturas no bastan |
+| AC-NB-15 §§3,23 P0 | Release firmada o corrupta → actualizar/instalar/desinstalar → confirmación, firma y datos preservados | L10/L09, int-update + win-package | Servidor de test, certificados de test, VM snapshots; artefacto exacto de release en ensayo final |
+| AC-NB-16 §§16,24 y constitución VI P1 | Teclado/lector, claro/oscuro, es/en y ventana compacta → interactuar → acciones accesibles sin pérdidas | Todos los lotes UI, comp + pw-a11y + pw-visual + WIN manual | Datos fijos, navegador real y Narrador; no BD para UI; screenshot por riesgo, no por componente |
+| AC-NB-17 §§21–24 y constitución XI–XIII P0 | Configuración/logs/inputs hostiles → iniciar o fallar → error estructurado sin secreto y sin efectos inválidos | L00 y lote afectado, unit + int-contract + pw-errors | Zod/Serde, env aislado, sink fake; matrices inválidas. No volcar payloads reales en artefactos |
+
+Al desglosar una fila en tareas, registrar nombres de tests y rutas definitivas del código,
+datos Given/When/Then, modalidad real/simulada y punto de cierre. No afirmar trazabilidad solo
+por escribir un ID en el nombre: las aserciones deben demostrar el criterio.
+No es necesario que cada variante sea un archivo ni que cada fila sea un E2E.
+
+### Playwright: alcance, entorno y smoke
+
+Playwright es preferente para frontend en navegador real: navegación, formularios, foco,
+temas, responsive y aceptación UI. La suite `pw-ui` usa el bundle de producción servido
+localmente y un bridge Tauri fake determinista, activado solo por el harness de test.
+Debe importar el mismo código UI de producción; no una maqueta paralela.
+
+En desarrollo puede usarse Vite dev para feedback rápido. En CI/PR críticos ejecutar contra
+build de producción y preview configurados explícitamente. Descubrir primero scripts/puertos;
+usar readiness real, no esperar un número fijo de segundos ni reutilizar un servidor ajeno en CI.
+El fake no se empaqueta ni habilita mediante una bandera controlable en la app distribuida.
+
+Smoke pequeño desde L01: contenido principal visible, shell y acción principal, CSS/tokens
+cargados, recursos esenciales disponibles, navegación básica y ausencia de excepciones no
+gestionadas. En esta arquitectura no hay errores de hidratación que buscar como requisito.
+
+Capturar pageerror, errores relevantes de consola y peticiones fallidas de recursos propios.
+La captura de consola del runner no autoriza console directo en código de aplicación.
+Separar fallo esperado provocado por test, funcional e infraestructura. Allowlist mínima
+por motivo/propietario/condición de retirada; no ignorar todo console.error ni fallar por todo
+mensaje de terceros. Un error mostrado deliberadamente debe tener aserción del estado esperado.
+
+### E2E nativo: Tauri, WebView2 y dos equipos
+
+El E2E completo exige binario Tauri, backend Rust, SQLite y procesos reales. No denominar
+«E2E del producto» a PW con IPC fake. Evaluar primero el soporte WebDriver de Tauri en Windows
+y compatibilidad de driver/WebView2; la elección se justifica como cobertura nativa adicional,
+no como duplicación de la suite de navegador.
+
+Si se evalúa conectar Playwright a WebView2 mediante un canal de depuración, demostrar primero
+su fiabilidad y aislamiento; no asumir que Playwright controla Tauri como una página normal.
+Ese canal no se activa en el instalador de producción. UAC, instalador, bandeja y ventanas
+del sistema pueden necesitar harness nativo o evidencia manual reproducible.
+
+El harness debe gestionar dos perfiles de test y puertos propios sin debilitar instancia única
+de producción. Para ensayos release usar dos VMs/equipos con usuarios aislados. Loopback prueba
+coordinación, no capacidad de enlace, mDNS multitarjeta ni exactitud del diagnóstico físico.
+Los recorridos nativos imprescindibles se incorporan con el lote que los habilita, no todos al final.
+
+### Datos, dobles y aislamiento
+
+- Builders de PeerInfo, BenchmarkPlan, EngineResult y SessionResult con defaults válidos;
+  sobrescribir solo los campos relevantes. XML reales saneados y versionados junto a su motor.
+- Por worker: directorio de datos/TEMP, BD, identidades, sesión de test, sockets/puertos y
+  procesos propios. Asignar puertos de forma coordinada; no confiar en «buscar libre» y
+  liberarlo mucho antes de usarlo. Serializar las suites que cambian firewall/instalación.
+- Fixtures distinguen peer desconocido, conocido, confiable y autoaceptación. Nunca claves
+  reales; DPAPI se prueba en usuario de Windows de laboratorio, no mediante una identidad compartida.
+- Fake de BenchmarkEngine para resultados/errores; stub DNS/NIC para topologías; fake de
+  repositorio para dominio; SQLite real para almacenamiento; spy solo sobre efectos públicos.
+- Preparación y cleanup con try/finally o fixtures; tras fallo matar solo procesos propios,
+  restaurar reglas propias y cerrar conexiones. No depender del test anterior ni del orden.
+- Interceptación HTTP solo para updater/recursos que realmente usan HTTP. Para IPC usar
+  el adaptador de pruebas, no fingir que page.route intercepta comandos Tauri.
+- No Internet en suites rápidas. La release real y el laboratorio usan recursos dedicados
+  y su evidencia se separa de las pruebas deterministas de software.
+
+### Selectores, esperas y determinismo
+
+Preferir getByRole/getByLabel y nombres traducidos conocidos; placeholder solo cuando sea
+un contrato estable, nunca sustituto de label. data-testid con semántica del dominio cuando
+sea necesario (por ejemplo session-result o peer-list); no selectores Tailwind ni nth arbitrario.
+
+Sin waitForTimeout, sleeps o bucles manuales para sincronizar UI. Usar expect con retry y
+eventos/estados observables, fin de proceso y readiness del canal. Timeouts explícitos acotan
+fallos; no se aumentan para ocultar carreras. Temporizadores fake no simulan el planificador
+del SO: separar tests temporales puros de ensayo nativo.
+
+Inyectar fecha, tiempo monotónico, IDs y aleatoriedad. Reiniciar timers y mocks al terminar.
+Fijar locale, zona, viewport, fuentes y estado; probar cambios de día y DST de Madrid en
+logging, timeout/reconexión y fechas históricas. No sobreescribir globalmente el reloj de Windows
+ni la criptografía de producción para conseguir determinismo.
+
+### Responsive, navegadores y accesibilidad
+
+Esta app es de escritorio: no añadir soporte móvil ni una matriz Firefox/WebKit sin requisitos.
+Principal para PW: Chromium, aproximación útil pero no garantía de WebView2.
+Matriz distribuida: Windows/WebView2 mínimo y versiones admitidas, con builds exactas en QA.
+Navegadores adicionales solo por riesgo demostrado o ampliación de plataforma autorizada.
+
+Viewports en píxeles lógicos: mínimo 800×600, inicial 1100×760 y ancho amplio >1400.
+Para cambios de layout añadir fronteras 999/1000 y 1400/1401, no decenas de resoluciones.
+DPI Windows y viewport CSS son dimensiones distintas: probar DPI 100/150/200 % y monitores
+en suite nativa, no declararlos cubiertos cambiando solo deviceScaleFactor de Playwright.
+
+Comprobar controles visibles/utilizables, diálogos y acciones sin solapamientos, listas, texto
+largo es/en, ventana mínima, texto ampliado, gráficos y detalles.
+Aplicar la accesibilidad de la constitución desde cada pantalla: roles/nombres, foco, teclado,
+labels, feedback de error, live regions sin anuncios por cada muestra, alto contraste,
+reducción de movimiento y texto hasta 200 % según la propuesta constitucional.
+
+axe-core complementa aserciones y teclado; Narrador y revisión humana cierran lo no automático.
+No declarar conformidad completa por pasar axe. Las decisiones pendientes Q4 y discrepancias
+de tema se resuelven antes de aprobar baselines, manteniendo pruebas explícitas de claro/oscuro.
+
+### CSS, Tailwind y regresión visual
+
+Probar resultados: CSS cargado, tokens críticos resueltos, cambio de tema observable,
+materiales/fallback opaco, legibilidad y controles utilizables. getComputedStyle se reserva a
+contratos relevantes (color de superficie, visibilidad, fuente o geometría crítica); no probar
+que una clase Tailwind individual funciona ni duplicar todo el sistema de diseño.
+
+Snapshots seleccionados: Inicio, diálogo de aceptación, ejecución con muestras fijas, resultado
+completo/parcial, vacío/error y exportación visual si aporta valor. Ventana compacta y estándar,
+ambos temas donde exista riesgo; sin «móvil» inventado.
+
+Fijar navegador/SO/fuentes, viewport, locale, fecha, datos e IDs; esperar fuentes/recursos.
+Desactivar movimiento para snapshots estables y probar el respeto de reducción de movimiento
+por separado. Enmascarar solo regiones legítimamente dinámicas, nunca errores o acciones clave.
+No comparar a ciegas imágenes producidas en sistemas distintos.
+
+Una diferencia falla hasta revisión. Actualizar baseline solo por cambio intencionado revisado,
+en el mismo cambio funcional, nunca mediante aceptación automática de snapshots fallidos.
+Las imágenes de Design orientan la revisión; no son baselines funcionales por sí solas.
+
+### Artefactos de diagnóstico y fallos
+
+En CI conservar captura y trace de fallos PW; vídeo solo si ayuda a entender interacción.
+Registrar revisión, suite, test, seed, navegador/WebView2, Windows, modo de build, resultado,
+primer fallo y reintentos. Logs estructurados según constitución, sin secretos ni sessionId real.
+
+Traces pueden contener DOM y tráfico: solo datos sintéticos, acceso restringido y retención
+documentada en CI. No subir volcados de identidad, credenciales de firma o bases personales.
+Resultados exitosos necesitan informe, no vídeo/capturas masivos. Adjuntar evidencia manual
+de pruebas nativas con pasos, entorno, resultado y limitaciones.
+
+### Property-Based Testing
+
+Aporta valor en parser, normalización, serialización, rangos de planes y máquina de estados:
+normalizar dos veces equivale a una; round-trip conserva valores válidos y precisión;
+un plan aceptado no desborda ni solapa puertos; cancelar repetidamente no repite efectos;
+un frame inválido jamás inicia motor; anonimización no deja los valores sintéticos prohibidos.
+
+Evaluar generadores Rust para reglas Rust y una herramienta TS como fast-check solo para
+contratos TS que lo justifiquen. No duplicar generadores si fixtures cruzados cubren el contrato.
+Registrar seed, tamaño y caso reducido que falla; añadir ese caso a regresión.
+No sustituye tablas de umbrales ni XML real. Sin generación aleatoria no reproducible en CI.
+
+### Mutation Testing
+
+Hacer piloto tras estabilizar pruebas deterministas. Prioridad: validación de planes,
+autorización de peers, reglas de diagnóstico, parser y recuperación de datos.
+Como la lógica principal está en Rust, evaluar herramienta compatible Rust (por ejemplo
+cargo-mutants); StrykerJS se evalúa solo para TS crítico, no para «cubrir» código Rust.
+
+Antes de instalar verificar runner, ESM, TS, Vite, Svelte, Vitest, Browser Mode y Windows/CI.
+No asumir soporte de componentes o Browser Mode; limitar piloto a módulos puros compatibles.
+Excluir inicialmente CSS, presentación trivial, generado, terceros, logger y wrappers simples.
+
+Ejecutar sobre código crítico cambiado al cerrar historia/PR de riesgo y programadamente,
+no por función ni cada commit. Registrar killed, survived, no coverage, equivalentes justificados,
+timeouts, errores y duración. Revisar supervivientes por falta de caso/aserción, código muerto
+o equivalencia real. Timeout/error de infraestructura no prueba calidad de la aserción.
+
+Crear línea base antes de acordar un umbral; no exigir 100 %. No aceptar supervivientes críticos
+sin análisis y resolución. Solo bloquea donde el plan lo haya establecido por riesgo, coste
+y fiabilidad, sin sustituir tests de aceptación o cobertura.
+
+### Cobertura y calidad de las aserciones
+
+Respetar los umbrales de la constitución según su estado de ratificación: propuesta de 80 %
+en líneas Rust y en líneas/sentencias/funciones/ramas TS, y 90 % de líneas por módulo crítico
+Rust. Q2 sigue pendiente: esta sección no la ratifica ni rebaja. Registrar una línea base real
+al crear la infraestructura; una cifra inferior no autoriza a reducir el requisito silenciosamente.
+
+Medir lenguajes por separado, incluir código propio no ejecutado y excluir únicamente lo
+permitido. El código de Design incorporado a producción sí cuenta. No promediar capas ni
+comparar un reporte selectivo parcial contra el global; al medir selectivamente etiquetar alcance.
+Revisar especialmente ramas de errores, permisos, límites y rollback, aunque el porcentaje pase.
+
+Evitar tests por fichero, aserciones genéricas, snapshots de objetos enormes o implementación
+repetida en el esperado. Cada test debe fallar por una conducta comprensible y permitir
+refactorizar internamente. Aceptación, seguridad y E2E necesarios siguen siendo obligatorios
+con cobertura alta.
+
+### Suites, frecuencia y bloqueos
+
+Estos son nombres lógicos propuestos, no scripts ya existentes.
+
+| Suite | Coste relativo | Cuándo | Bloqueo |
+|---|---|---|---|
+| static/check | Rápido | Cambios Svelte/TS/config; antes de validación completa | Checkpoint y CI |
+| unit-ts / unit-rust | Bajo, sin red | Tests próximos durante edición; lote afectado | Lote/historia |
+| comp | Bajo/medio | Componentes y estados afectados | Lote UI |
+| int-contract / int-security / int-storage / int-session | Medio | Lote e interfaces afectadas | Lote/historia/PR |
+| pw-smoke / pw-session / pw-history | Medio | Primer frontend; lote UI crítico; PR relevante | Lote que requiere navegador y PR |
+| pw-a11y / pw-visual | Medio/alto según matriz | Cambios UI/tokens/temas; checkpoint correspondiente | Historia afectada y release |
+| win-session / win-lifecycle / win-firewall / win-export | Alto | Checkpoint nativo y cambios de adaptador | Historia que exige garantía nativa, hito y release |
+| win-package | Alto | Distribución H1 y cada release | Publicación |
+| lab-performance / lab-udp / lab-network | Alto, hardware | Cambios de medición/motor; cierre hito; release | Criterios V-* e hito/release |
+| mutation-selective | Alto | Piloto, crítico estabilizado, programación | Solo según plan explícito |
+
+Durante edición ejecutar primero test/módulo afectado; al checkpoint pnpm check, build aplicable
+y suites del lote. Si no hay nuevos cambios o dudas tras pasar, no repetir validación por rutina.
+La suite completa de release no se ejecuta tras cada pequeño cambio.
+
+La constitución exige baseline de CI en cada push/PR: checks, tests/cobertura exigidos y build.
+Esta estrategia optimiza iteración local y selección de suites caras; NO elimina ese baseline.
+Tests de diagnóstico muy próximos pueden ejecutarse aisladamente durante edición, pero no
+sustituyen el checkpoint con check previo a tests/build/E2E. No declarar un E2E omitido como pasado.
+
+### Selección de pruebas afectadas
+
+Registrar mapa requisito → contrato/módulo → suites, mantenido en el plan.
+Cambios de copy acotado: comp/i18n y visual relevante; regla Rust: tabla de casos y consumidores
+del resultado; repositorio/migración: int-storage y reapertura; parser: fixtures + engine;
+TLS/confianza: int-security y recorrido de consentimiento; tokens/Tailwind/diálogo: componentes,
+a11y, responsive y visuales; lifecycle/firewall: suites Windows; toolchain/dependencias/IPC:
+ampliar smoke/build e integración transversal.
+
+No depender solo del grafo de imports de Vitest: no ve contratos Rust, assets, CSS global,
+esquemas o efectos en la otra máquina. Ante alcance incierto ejecutar la suite del módulo
+y sus consumidores, documentando la ampliación. Sharding no debe fragmentar un caso indivisible.
+
+### Estructura y comandos reproducibles
+
+Respetar la estructura que se cree. Orientación mínima: unitarios TS junto al código;
+unitarios Rust en módulos; integración Rust en src-tauri/tests; contratos/fixtures en
+tests/fixtures y tests/contracts; E2E UI en e2e con fixtures propios; casos Windows/laboratorio
+separados de suites Node. No crear una carpeta por cada técnica si no aporta claridad.
+
+**Comando existente comprobable:** `node Design/scripts/verify-tokens.mjs`.
+Su alcance es Design; no equivale al check del futuro frontend.
+No se ha ejecutado como prueba de esta edición documental.
+
+**Contrato pendiente de implementación:** `pnpm check`, definido en la constitución,
+debe usar svelte-check local y tsconfig real, con warnings como fallo. Sin SvelteKit no hay
+svelte-kit sync. Hoy no existe package.json; no afirmar que ningún pnpm test/build funciona.
+
+Al configurar L00, documentar los comandos reales y comprobar su salida desde checkout limpio.
+Nombres ilustrativos, sujetos a la convención final:
+
+| Necesidad | Comando/interfaz que debe documentarse |
+|---|---|
+| Unit individual/archivo/relacionados | pnpm exec vitest run con archivo/filtro/proyecto reales; verificar soporte de selección |
+| Componentes/integración/aceptación | Proyectos o scripts separados, sin solapar glob de E2E |
+| Rust individual/módulo/integración | cargo test --locked con manifest y filtro real del workspace |
+| Lote | Selección de suites del CP-Lxx documentada en tasks; no requiere runner propio |
+| Cobertura | Script TS y cargo-llvm-cov separados con inclusiones/exclusiones explícitas |
+| E2E/smoke | test:e2e y test:e2e:smoke si no existe convención equivalente |
+| Un navegador / matriz autorizada | Playwright --project con nombres reales; no inventar proyectos Firefox/WebKit |
+| UI / headed / debug | Playwright --ui, --headed y --debug mediante scripts o invocación documentada |
+| Visual / accesibilidad | Selección dedicada; actualización de snapshots como acción revisada separada |
+| Nativo / laboratorio | Comandos de harness, requisitos VM/hardware y pasos manuales reproducibles |
+| Mutation | Comando del piloto elegido, alcance, seed si aplica y tiempo máximo diagnóstico |
+| Build/lint/estático | Scripts reales y target Rust; paquetes/artifact paths documentados |
+
+Estos ejemplos no son evidencia de ejecución ni implican instalar herramientas.
+Versiones proceden de manifiestos/lockfiles compatibles con la constitución, no de este apéndice.
+
+### CI, coste y optimización
+
+Orden de dependencias: checkout/instalación reproducible → estático/pnpm check → tests/build
+según dependencias → PW contra build → empaquetado/harness aplicables.
+Sin pnpm check correcto no arrancan etapas dependientes. Los jobs de formatos independientes
+pueden ejecutarse en paralelo; paralelizar no debe eludir controles.
+
+PR/push: baseline constitucional y suites seleccionadas por riesgo; PR crítica añade E2E
+correspondiente. Main puede ampliar recorridos y visuales. Programada: matriz soportada,
+laboratorio disponible y mutation seleccionado. Release: controles sobre commit etiquetado,
+artefacto distribuible real, instalación/actualización, firma, limpieza y evidencia de §26/§27.
+Un runner sin UAC interactivo, NIC o segundo equipo no registra esas pruebas como aprobadas:
+usar laboratorio adecuado y bloquear la condición afectada hasta obtener evidencia.
+
+Cachear dependencias/compilación con claves de SO/target/toolchain/lockfile; no reutilizar
+BDs, credenciales o resultados de tests como si fueran ejecuciones actuales. Paralelizar tests
+aislados; serializar recursos globales Windows y benchmarks para no contaminar throughput.
+Sharding solo cuando la medición demuestre beneficio y cada worker tenga recursos propios.
+
+Medir tiempo de arranque, duración por test/suite, percentiles de ejecuciones y ratio flaky.
+Objetivos de coste relativos: unitarios en segundos; lote en segundos/pocos minutos;
+historia/PR en minutos; nativo, visual completo y mutation en checkpoints superiores.
+Son orientaciones, no SLA inventados. Acordar presupuesto al tener línea base.
+
+Para suites lentas: perfilar, reducir infraestructura, reutilizar fixtures inmutables, dividir por
+coste y mover comprobaciones caras al checkpoint apropiado sin dejar historias sin evidencia.
+No eliminar un test útil solo por lento ni duplicar toda combinación en cada capa.
+Rendimiento V-04 se mide sin cobertura/traces/instrumentación pesada; los runs diagnósticos
+se registran aparte y no se confunden con la medición de aceptación.
+
+### Tests inestables y diagnóstico de fallos
+
+Flaky es un defecto. Investigar estado compartido, procesos huérfanos, reloj, animación,
+puertos, carreras, red, orden, recursos insuficientes y paralelización.
+Registrar primera ejecución fallida aunque un retry pase; retries limitados sirven para
+diagnóstico, no convierten el resultado original en éxito limpio.
+
+No arreglar con sleeps o aumentos de timeout sin causa. Una cuarentena excepcional debe tener
+responsable, incidencia, fecha de revisión y evidencia alternativa; no cierra una historia
+crítica ni elimina un bloqueo sin resolver el riesgo. Fallos preexistentes se documentan,
+sin ocultarlos o corregir fuera del alcance autorizado.
+
+### Integración con Spec Kit y tareas sugeridas
+
+spec.md: criterios observables, datos, permisos, límites, errores, estados y referencias AC-NB.
+plan.md: runtimes, fronteras reales/simuladas, herramientas compatibles, fixtures, lotes,
+suites, riesgos, cobertura y decisiones pendientes; Constitution Check explícito.
+tasks.md: agrupar implementación y prueba por lote, con checkpoint y evidencia; no una tarea
+por función seguida de otra por su test.
+
+Patrón de tareas que debe adaptarse, no generarse íntegro de forma automática:
+
+- T-TEST-BASE: inventariar manifiestos, cerrar G5 y elegir entornos; configurar solo suites necesarias.
+- T-TEST-CONTRACT: crear fixtures/builders, reloj y fakes de contratos compartidos.
+- T-QUAL-CHECK: comando check y gates/coverage conforme a constitución.
+- T-PLAY-SMOKE: build frontend, bridge de test y smoke con captura de errores.
+- T-INT-NATIVE: piloto de harness Windows, dos perfiles y aislamiento de puertos/procesos/BD.
+- T-ACC-Lxx: implementar el comportamiento del lote y completar sus pruebas AC-NB relacionadas.
+- T-QUAL-CP-Lxx: ejecutar check/build/suites de cierre, corregir y registrar evidencia.
+- T-A11Y-VIS: cubrir riesgos UI del lote, sin duplicar todos los estados de todos los componentes.
+- T-MUT-PILOT: evaluar TS/Rust, ejecutar piloto crítico, revisar supervivientes y acordar alcance.
+- T-QUAL-COST: medir tiempos/flakiness y ajustar selección/paralelismo.
+- T-QUAL-RELEASE: verificar instalador real y V-* con entorno y artefacto identificados.
+
+No se han creado tasks.md ni infraestructura al añadir esta estrategia. El agente de planificación
+debe materializar las tareas aplicables y sus dependencias en la feature correspondiente.
+
+### Definition of Checkpoint
+
+Un lote cierra cuando implementación/contratos previstos están estables, pnpm check y build
+aplicables pasan, pruebas obligatorias existen y pasan, aceptación relacionada es trazable,
+fixtures/fakes están identificados y no queda deuda temporal del lote.
+Registrar revisión, comandos, resultados, pruebas manuales y limitaciones.
+
+No exige todos los navegadores, viewports, visuales, E2E o mutantes del proyecto. Sí exige los
+seleccionados por riesgo para ese lote y toda evidencia necesaria para sus afirmaciones.
+Una prueba no ejecutable por infraestructura es pendiente/bloqueada, nunca aprobada.
+
+### Definition of Done de historia y de Playwright
+
+Una historia está terminada con todos sus lotes cerrados, criterios y errores/límites cubiertos,
+suite de historia/PR correcta, contratos reales comprobados, pruebas deterministas/aisladas,
+sin deuda ni omisiones injustificadas, comandos documentados y controles acordados en CI.
+Cobertura cumple el requisito aplicable sin deterioro oculto; mutation solo cuando el plan
+lo exige por criticidad, coste y fiabilidad. No cerrar por funcionamiento manual aislado.
+
+Si requiere Playwright: smoke/recorridos pasan, sin errores JS o consola críticos inesperados,
+navegador/viewport requeridos verificados, mocks/fixtures explícitos, snapshots revisados,
+sin esperas arbitrarias, tests independientes y artefactos de fallo configurados.
+Si la historia promete comportamiento nativo, además debe pasar la evidencia WIN/laboratorio;
+PW simulado no satisface ese criterio.
+
+### Preguntas abiertas sobre testing
+
+El resto del trabajo continúa con hipótesis conservadoras; ninguna hipótesis equivale a
+ratificación o autoriza herramientas incompatibles.
+
+| Pendiente | Hipótesis provisional / acción | Tarea y cierre |
+|---|---|---|
+| ¿Qué decisiones Q1–Q4 se ratifican? | Mantener alcance documentado y propuestas identificadas; no inventar nueva cobertura/tema/Windows | T-TEST-BASE, decisión del propietario antes de cerrar criterios afectados |
+| ¿Qué versiones se resuelven realmente? | La constitución es propuesta de stack; no hay manifiestos aún | T-TEST-BASE, lockfiles y build reproducible |
+| ¿DOM simulado o Browser Mode para componentes? | DOM para conducta simple y PW para capacidades reales; cambiar solo con piloto justificado | T-TEST-BASE, piloto con Dialog/foco y compatibilidad |
+| ¿Qué harness nativo funciona en CI? | Evaluar WebDriver Tauri/Windows primero; PW permanece suite UI con bridge explícito | T-INT-NATIVE, recorrido instalado y logs de aislamiento |
+| ¿Hay dos equipos/VMs y hardware de referencia? | No dar por ejecutadas V-*; usar fakes/loopback para progreso independiente | T-QUAL-RELEASE, reservar entorno antes del hito afectado |
+| ¿Cómo se resuelven G1–G4 y referencias antiguas G6? | No congelar asserts sobre comportamiento ambiguo del motor/protocolo | L02/L03/L05/L08, contrato validado y evidencia |
+| ¿Cuál es el presupuesto real de PR y retención de artefactos? | Suites por coste; solo artefactos sintéticos necesarios | T-QUAL-COST, medición y política de CI |
+| ¿Qué mutation runner es fiable y rentable? | Piloto sobre dominio Rust y TS puro; sin umbral inventado | T-MUT-PILOT, informe y decisión del plan |
+
+### Referencias técnicas de la estrategia
+
+- [Testing de Tauri](https://v2.tauri.app/develop/tests/) y
+  [WebDriver en Tauri](https://v2.tauri.app/develop/tests/webdriver/):
+  distinguir runtime simulado de ejecución nativa.
+- [Servidor de pruebas Playwright](https://playwright.dev/docs/test-webserver):
+  ciclo de vida del servidor usado por las pruebas de navegador.
+- [Vitest Browser Mode](https://vitest.dev/guide/browser/):
+  evaluar entorno real según necesidades de componentes.
+- [Runner Vitest de StrykerJS](https://stryker-mutator.io/docs/stryker-js/vitest-runner/):
+  comprobar compatibilidad antes del piloto.
+- [GitHub Spec Kit](https://github.com/github/spec-kit):
+  trasladar requisitos y estrategia a especificación, plan y tareas trazables.

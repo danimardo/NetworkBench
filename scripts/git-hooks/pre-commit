@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Barrera independiente de la herramienta de agentes.
+#
+# Se ejecuta en cada commit, venga de Claude Code, de Codex o de tu terminal, y sin
+# que importe cómo esté configurada la política de aprobación de ninguna de ellas.
+# Esa es su razón de ser: la configuración global de Codex de esta máquina
+# (approval_policy = never, sandbox_mode = danger-full-access) no la alcanza.
+#
+# Instalación, una vez por clon:
+#   git config core.hooksPath scripts/git-hooks
+#
+# Comprobar que está activo:
+#   git config --get core.hooksPath      -> scripts/git-hooks
+#
+# Salida de emergencia, solo con autorización del propietario y declarándolo
+# en el mensaje del commit:
+#   git commit --no-verify
+#
+set -e
+
+RAIZ="$(git rev-parse --show-toplevel)"
+cd "$RAIZ"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node no está disponible; no se puede verificar." >&2
+  echo "Instala Node o usa 'git commit --no-verify' bajo tu responsabilidad." >&2
+  exit 1
+fi
+
+echo "pre-commit: verificando rutas protegidas..."
+node scripts/agent/check-protected-paths.mjs --staged || exit 1
+
+echo "pre-commit: verificando el sistema de instrucciones..."
+node scripts/agent/verify.mjs >/dev/null || {
+  echo "pre-commit: verify.mjs ha fallado. Ejecútalo para ver el detalle:" >&2
+  echo "  node scripts/agent/verify.mjs" >&2
+  exit 1
+}
+
+echo "pre-commit: correcto."

@@ -1,0 +1,126 @@
+# Stack detectado en NetworkBench.
+# Caché de la auditoría del 2026-09-21. NO sustituye una verificación cuando hay
+# evidencia de cambios. Repetir la inspección en cuanto aparezca el primer manifiesto.
+#
+# estados: VERIFICADO | DOCUMENTADO | INFERIDO | NO_VERIFICABLE | NO_PRESENTE
+
+fecha_deteccion: "2026-09-21"
+repositorio:
+  raiz: "F:/Apps/NetBench"
+  rama: "main"
+  commits: 1
+  head: "0bb03cb"
+  remoto: "https://github.com/danimardo/NetworkBench.git"
+  submodulos: NO_PRESENTE
+  worktrees: 1
+  monorepo: NO_PRESENTE
+
+resumen: >-
+  Fase documental previa a la implementación. Existe documentación normativa y un sistema
+  de diseño de referencia. No existe aplicación: ningún manifiesto de proyecto, ningún
+  comando de build, test o lint.
+
+manifiestos:
+  estado: NO_PRESENTE
+  comprobados:
+    - package.json
+    - pnpm-lock.yaml / package-lock.json / yarn.lock / bun.lock
+    - Cargo.toml / Cargo.lock / rust-toolchain.toml
+    - tsconfig.json
+    - vite.config.* / svelte.config.* / vitest.config.* / playwright.config.*
+    - eslint.config.* / prettier* / biome.json
+    - tauri.conf.* / src-tauri/
+    - Dockerfile / compose.yaml
+    - .github/ / .gitlab-ci.yml
+  unico_yaml_existente: ".specify/workflows/speckit/workflow.yml"
+
+tecnologias:
+  - area: requisitos
+    nombre: "Markdown normativo"
+    estado: VERIFICADO
+    evidencia: "Historias.md, 1981 lineas"
+  - area: metodologia
+    nombre: "SpecKit"
+    version: "1.0.9.dev0"
+    estado: VERIFICADO
+    evidencia: ".specify/init-options.json; manifiestos SHA-256"
+    detalle: "integracion codex; scripts PowerShell; numeracion sequential; sin specs/"
+  - area: diseno
+    nombre: "Svelte 5 (runes) como codigo de referencia"
+    version_fijada: "5.57.1"
+    estado: VERIFICADO_CODIGO / DOCUMENTADO_VERSION
+    evidencia: "Design/src/lib/ 18 componentes; theme.svelte.ts usa runes; sin build"
+  - area: scripting
+    nombre: "Node.js"
+    version_local: "24.4.1"
+    version_exigida: "24.21.0"
+    estado: VERIFICADO
+  - area: scripting
+    nombre: "pnpm"
+    version_local: "11.6.0"
+    version_exigida: "12.5.1"
+    estado: VERIFICADO
+  - area: toolchain
+    nombre: "Rust / Cargo"
+    version_local: "1.94.0"
+    version_exigida: "1.98.1"
+    estado: VERIFICADO
+  - area: scripts_speckit
+    nombre: "Windows PowerShell"
+    version: "5.1"
+    estado: VERIFICADO
+    detalle: "pwsh NO_PRESENTE: no asumir PowerShell 7"
+  - area: vcs
+    nombre: "Git"
+    version: "2.55.0.windows.3"
+    estado: VERIFICADO
+
+planificado_no_presente:
+  descripcion: >-
+    Fijado en .specify/memory/constitution.md con version exacta, pero NO instalado ni
+    configurado. No generar reglas ni comandos para estos hasta que exista codigo real
+    (puerta G5 de la constitucion).
+  componentes:
+    - { nombre: "Tauri", version: "2.11.6 / CLI 2.11.5" }
+    - { nombre: "Rust edicion 2024", version: "toolchain 1.98.1" }
+    - { nombre: "TypeScript", version: "6.0.3" }
+    - { nombre: "Vite / vite-plugin-svelte", version: "8.3.0 / 7.3.0" }
+    - { nombre: "Tailwind CSS", version: "4.3.3" }
+    - { nombre: "Zod", version: "4.6.5" }
+    - { nombre: "Vitest / coverage-v8", version: "5.0.1" }
+    - { nombre: "Playwright / axe-core", version: "1.63.0 / 4.13.0" }
+    - { nombre: "tracing / tracing-subscriber", version: "0.1.44 / 0.3.23" }
+    - { nombre: "rusqlite / SQLite", version: "0.40.2 / 3.53.2" }
+    - { nombre: "NTTTCP Windows", version: "5.40 x64" }
+
+excluido_expresamente:
+  - { nombre: "SvelteKit / SSR", motivo: "constitucion: 'Sin SvelteKit/SSR'; Historias.md lo aclara pese al titulo de su seccion de pruebas" }
+  - { nombre: "Electron", motivo: "la capa desktop es Tauri 2" }
+  - { nombre: "Librerias de graficas o iconos", motivo: "SVG y componentes propios" }
+  - { nombre: "Cloud, ARM64, Linux, macOS", motivo: "fuera de alcance v1" }
+
+garantias_existentes:
+  - comando: "node Design/scripts/verify-tokens.mjs"
+    estado: VERIFICADO
+    resultado_2026_09_21: "EXIT=0 — Sin colores literales fuera de tokens.css"
+    no_demuestra: "accesibilidad, correccion funcional, tokenizacion de dimensiones/tipografia/animacion"
+  - comando: "node scripts/agent/verify.mjs"
+    estado: VERIFICADO
+    ambito: "sistema de instrucciones, no el producto"
+
+ci:
+  estado: NO_PRESENTE
+  nota: >-
+    La constitucion define un Definition of Done de CI en 5 pasos. Hoy es inejecutable:
+    no existen pnpm check, build ni tests. No crear un CI que no puede pasar sus propias puertas.
+
+ruido_a_ignorar:
+  - ruta: ".logs/app.jsonl"
+    estado: VERIFICADO
+    motivo: "logs del servidor MCP mcp-coolify escritos en el directorio de trabajo; ajenos al proyecto; ya en .gitignore"
+
+limitaciones_del_entorno:
+  - "Sin VS Build Tools, Windows SDK ni NTTTCP en el repositorio: no se puede compilar ni empaquetar"
+  - "Sin navegador conectado: sin validacion visual, de interaccion ni con lector de pantalla"
+  - "Una sola maquina Windows: sin matriz 10 1809 / 22H2 / 11, DPI ni GPU"
+  - "pwsh y strings NO_PRESENTE"

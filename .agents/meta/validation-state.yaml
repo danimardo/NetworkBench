@@ -1,0 +1,109 @@
+# Que se ejecuto realmente, que no, y por que.
+# Este fichero existe para que nadie confunda inspeccionar con probar.
+# Se actualiza en cada tarea que toque el sistema de agentes.
+
+fecha: "2026-09-21"
+version_constitucion_vigente: "0.4.0 (NO ratificada)"
+herramienta_que_realizo_la_validacion: "Claude Code 2.1.278"
+
+ejecutado:
+  - comando: "git rev-parse --show-toplevel / branch / status / remote -v / worktree list / log"
+    resultado: "raiz F:/Apps/NetBench; rama main; 1 commit 0bb03cb; origin configurado; 1 worktree"
+    estado: VERIFICADO
+  - comando: "node Design/scripts/verify-tokens.mjs"
+    resultado: "EXIT=0 — 'Sin colores literales fuera de tokens.css'"
+    estado: VERIFICADO
+  - comando: "claude --version / codex --version / node / pnpm / npm / rustc / cargo / git"
+    resultado: "2.1.278 / 0.155.1 / 24.4.1 / 11.6.0 / 11.4.2 / 1.94.0 / 1.94.0 / 2.55.0"
+    estado: VERIFICADO
+  - comando: "claude --help; codex --help"
+    resultado: "capacidades de CLI inventariadas"
+    estado: VERIFICADO
+  - comando: "busqueda de cadenas en los binarios de claude y codex"
+    resultado: "rutas de instrucciones, reglas, skills, agents, commands y settings confirmadas"
+    estado: VERIFICADO
+  - comando: "node scripts/agent/verify.mjs"
+    resultado: "6 comprobaciones correctas; avisos por las 28 referencias a Especificacion.md, por .specify/ sin versionar y por los 2 historicos borrados"
+    estado: VERIFICADO
+  - comando: "pruebas negativas de las 5 garantias (stub huerfano, description divergente, referencia colgante, AGENTS.md inflado, historico reescrito)"
+    resultado: "las 5 fallaron cuando debian; estado restaurado y comprobado con diff y git status"
+    estado: VERIFICADO
+  - comando: "pruebas del hook PreToolUse de Codex con 5 payloads simulados"
+    resultado: "deny en Historias.md y Design/; allow en AGENTS.md, en lectura y ante entrada no-JSON"
+    estado: VERIFICADO
+    matiz: "payloads simulados por nosotros; el esquema real de entrada de Codex NO esta verificado"
+  - comando: "listado de skills de la sesion de Claude Code"
+    resultado: "las 10 skills speckit-* aparecen; los stubs de .claude/skills/ cargan"
+    estado: VERIFICADO
+
+no_ejecutado:
+  - que: "Compilar, empaquetar o arrancar la aplicacion"
+    motivo: "NO existe proyecto: sin manifiestos, sin toolchain completo, sin NTTTCP"
+    como_verificarlo_despues: "cerrar la puerta G5 de la constitucion; primer plan con package.json y Cargo.toml reales"
+  - que: "pnpm check, lint, type-check, tests unitarios, integracion, E2E"
+    motivo: "NO existen. La constitucion reconoce que pnpm check aun debe crearse"
+    como_verificarlo_despues: "tras la primera implementacion que los introduzca"
+  - que: "Precedencia real de .codex/config.toml sobre ~/.codex/config.toml"
+    motivo: "requiere ejecutar Codex"
+    estado_actual: DOCUMENTADO
+    como_verificarlo_despues: "abrir Codex en el repo y pedirle una escritura; debe pedir aprobacion en vez de ejecutar"
+  - que: "Formato real de .codex/hooks/hooks.json y esquema de entrada del hook"
+    motivo: "reconstruido de cadenas del binario, no de documentacion ni de ejecucion"
+    estado_actual: INFERIDO
+    como_verificarlo_despues: "abrir Codex, aceptar la confianza de hooks y pedirle que escriba en Historias.md; debe denegarlo"
+  - que: "Carga real de .agents/skills/ por Codex"
+    motivo: "requiere ejecutar Codex: operacion de red y consumo, fuera del alcance autorizado"
+    estado_actual: INFERIDO
+    como_verificarlo_despues: "abrir sesion de Codex en el repo y pedirle que liste sus skills, o invocar speckit-specify"
+  - que: "Carga real de CLAUDE.md y de los stubs por Claude Code"
+    motivo: "los ficheros se crearon en esta misma sesion; Claude Code requiere sesion nueva"
+    como_verificarlo_despues: "sesion nueva en F:/Apps/NetBench; /memory debe listar CLAUDE.md; / debe listar las skills"
+  - que: "Validacion visual, de interaccion y con lector de pantalla de Design/"
+    motivo: "sin navegador conectado; ya pendiente desde la auditoria v3"
+    estado_actual: NO_VERIFICABLE
+  - que: "Matriz Windows 10 1809 / 22H2 / 11, DPI 100-150-200, monitor desconectado, GPU integrada"
+    motivo: "una sola maquina disponible"
+    estado_actual: NO_VERIFICABLE
+  - que: "Hooks de Claude Code y .claude/rules/"
+    motivo: "capacidades no verificadas; el diseno no depende de ellas"
+    estado_actual: NO_VERIFICABLE
+
+no_autorizado:
+  - que: "Cualquier operacion de escritura de Git (add, commit, push, rama, PR)"
+    nota: "la aprobacion de la propuesta de arquitectura NO la autoriza. Pendiente de permiso especifico"
+  - que: "Modificar .specify/memory/constitution.md"
+    nota: "requiere autorizacion especifica. Hay observaciones pendientes: ratificacion, Q1-Q4, puerta G6"
+  - que: "Crear .github/workflows/"
+    nota: "descartado a proposito: el DoD de CI de la constitucion es hoy inejecutable"
+  - que: "Modificar Design/** o Historias.md"
+    nota: "entrega del disenador y requisitos de producto"
+  - que: "Modificar ~/.codex/config.toml"
+    nota: "configuracion global, fuera del repositorio"
+
+riesgos_abiertos:
+  - id: R1
+    descripcion: "La constitucion no ratificada es la norma de facto; Q1-Q4 pueden invalidar reglas escritas hoy"
+  - id: R2
+    descripcion: "Carga de .agents/skills/ por Codex INFERIDA, no ejecutada"
+  - id: R3
+    descripcion: "Historias.md, .specify/ y .agents/ sin versionar: una perdida del working tree se lleva constitucion y requisitos"
+    gravedad: alta
+  - id: R4
+    descripcion: "Secretos en texto plano en ~/.config/opencode/opencode.jsonc; recomendado rotarlos"
+  - id: R5
+    descripcion: "Toolchain local por debajo de la linea base (Node, pnpm, Rust); bloqueara en G5"
+  - id: R6
+    descripcion: >-
+      verify.mjs sigue dependiendo de que alguien lo invoque, pero desde el 2026-09-21
+      el hook pre-commit lo ejecuta en cada commit. Requiere 'git config core.hooksPath
+      scripts/git-hooks' una vez por clon: si nadie lo hace, la barrera no existe.
+    gravedad: media
+  - id: R7
+    descripcion: >-
+      Configuracion global de Codex sin aprobacion ni sandbox. Mitigado en tres capas
+      (.codex/config.toml, hook PreToolUse y hook pre-commit de Git), pero las dos
+      primeras estan DOCUMENTADA e INFERIDA, no ejecutadas, y el hook PreToolUse falla
+      en abierto a proposito. La causa raiz sigue en ~/.codex/config.toml.
+    gravedad: media
+  - id: R8
+    descripcion: "Puerta G6 abierta: las secciones §§29-54 del antiguo Historias.md siguen sin localizar"

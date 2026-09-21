@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .codex/hooks/guard-protected-paths.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

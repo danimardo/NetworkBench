@@ -1,0 +1,156 @@
+# Capacidades de las herramientas de agentes, validadas para NetworkBench.
+#
+# Regla de uso de esta cache:
+#   version actual == version validada  -> reutilizar; no repetir la auditoria
+#   version actual != version validada  -> revisar SOLO la herramienta afectada
+# La cache nunca sustituye una verificacion cuando hay evidencia de cambios.
+# Procedimiento: .agents/skills/verificar-sistema-agentes/SKILL.md
+
+fecha_validacion: "2026-09-21"
+
+herramientas:
+
+  claude_code:
+    version_validada: "2.1.278"
+    modalidades_conocidas: [CLI, IDE, escritorio, nube]
+    modalidad_validada: CLI
+    estado: VERIFICADO
+    metodo_de_verificacion: >-
+      claude --help y busqueda de cadenas en el binario instalado
+      (C:/Users/danimardo/.local/bin/claude), mas observacion de la sesion en curso.
+    capacidades_usadas:
+      instrucciones:
+        rutas: ["CLAUDE.md", ".claude/CLAUDE.md", "CLAUDE.md anidados", "CLAUDE.local.md"]
+        carga: "CLAUDE.md raiz y .claude/CLAUDE.md siempre; anidados al trabajar bajo su directorio"
+        estado: VERIFICADO
+      importaciones:
+        sintaxis: "@ruta/al/fichero.md"
+        comportamiento: "inlinea el contenido — garantia DETERMINISTA"
+        estado: VERIFICADO
+        uso_en_este_repo: "CLAUDE.md importa AGENTS.md y las 8 reglas"
+      skills:
+        ruta: ".claude/skills/<nombre>/SKILL.md"
+        frontmatter: "name, description"
+        invocacion: "/<nombre> o lenguaje natural"
+        estado: VERIFICADO
+        evidencia_adicional: "2026-09-21: las 10 skills speckit-* aparecieron en el listado de skills de la sesion de Claude Code. Los stubs cargan."
+        uso_en_este_repo: "10 stubs speckit-*. Las 2 skills propias se alcanzan por referencia desde AGENTS.md, no tienen stub"
+      permisos:
+        ruta: ".claude/settings.json (+ settings.local.json no versionado)"
+        clave: "permissions.allow / deny / defaultMode"
+        estado: VERIFICADO
+        uso_en_este_repo: "allowlist de solo lectura; deny de operaciones de escritura de Git"
+      agents:
+        ruta: ".claude/agents/"
+        estado: VERIFICADO
+        uso_en_este_repo: "NO USADO — sin consumidor que lo justifique"
+      commands:
+        ruta: ".claude/commands/"
+        estado: VERIFICADO
+        uso_en_este_repo: "NO USADO — las skills cubren el caso"
+    capacidades_no_verificadas:
+      - nombre: ".claude/rules/*.md"
+        estado: INFERIDO
+        nota: "la cadena aparece en el binario y se describe como fichero cargado; no se ha comprobado su carga ni si admite @import. NO USADO"
+      - nombre: "hooks en settings.json"
+        estado: NO_VERIFICABLE
+        nota: "no comprobado en este proyecto. NO USADO: el diseno no depende de ellos"
+      - nombre: "@import dentro de SKILL.md o de .claude/rules/*.md"
+        estado: NO_VERIFICABLE
+        nota: "por eso los stubs instruyen leer el canonico en vez de importarlo"
+    limitaciones:
+      - "Cambios en settings.json, skills o ficheros importados requieren sesion nueva"
+      - "No lee AGENTS.md de forma nativa: por eso CLAUDE.md lo importa"
+      - "No lee .agents/skills/: por eso existen los stubs"
+      - "No se ha verificado equivalencia entre CLI, IDE, escritorio y nube"
+
+  codex_cli:
+    version_validada: "0.155.1"
+    modalidades_conocidas: [CLI, escritorio, app-server, cloud]
+    modalidad_validada: CLI
+    estado: VERIFICADO_PARCIAL
+    metodo_de_verificacion: >-
+      codex --help y busqueda de cadenas en el binario instalado
+      (~/.codex/packages/standalone/current/bin/codex.exe). NO se ha ejecutado Codex.
+    capacidades_usadas:
+      instrucciones:
+        rutas: ["AGENTS.md", "AGENTS.override.md"]
+        carga: "nativa, sin adaptador"
+        estado: VERIFICADO
+        evidencia: "cadenas AGENTS.override.md y AGENTS.md en el binario"
+        nota: "AGENTS.override.md no existe en este repo y no debe crearse sin motivo"
+      skills:
+        ruta_repo: ".agents/skills/<nombre>/SKILL.md"
+        ruta_global: "CODEX_HOME/skills"
+        estado: INFERIDO
+        evidencia: >-
+          cadena de error 'failed to stat repo skills root' junto a '.agents' y 'skills',
+          y ruta de fuente 'ext\skills\src\host_prompt.rs' en el binario. Ademas, el
+          instalador de SpecKit para la integracion codex las deposito exactamente ahi.
+        pendiente: "confirmar abriendo una sesion de Codex y listando sus skills"
+    capacidades_ausentes:
+      - nombre: "mecanismo propio de rules"
+        estado: NO_PRESENTE
+        consecuencia: >-
+          Las reglas de .agents/rules/ le llegan como referencia en prosa desde AGENTS.md.
+          Garantia DEPENDIENTE DEL MODELO, no determinista. Por eso las reglas
+          innegociables viven dentro de AGENTS.md.
+      - nombre: "mecanismo propio de workflows"
+        estado: NO_PRESENTE
+      - nombre: "roles o subagentes declarativos"
+        estado: NO_VERIFICABLE
+        nota: "'codex agents' navega sesiones, no define roles"
+    permisos:
+      ruta_global: "~/.codex/config.toml — FUERA de este repositorio"
+      estado_global: "approval_policy=never; sandbox_mode=danger-full-access; f:\apps\netbench trusted"
+      mitigacion_en_el_repositorio: ".codex/config.toml — approval_policy=on-request; sandbox_mode=workspace-write"
+      estado: DOCUMENTADO
+      evidencia: >-
+        Cadena de precedencia en el binario 0.155.1, por mensajes propios:
+        'Overridden by enterprise-managed config' > 'Overridden by user config' >
+        'Overridden by project config' > 'Overridden by session flags'.
+        La configuracion de proyecto pisa a la del usuario.
+      pendiente: "abrir Codex en el repo y comprobar que pide aprobacion para escribir"
+    config_por_proyecto:
+      rutas: [".codex/config.toml", ".codex/hooks", ".codex/agents"]
+      estado: DOCUMENTADO
+      evidencia: "cadenas '.codex/config.toml', '.codex/agents', '.codex/hooks' junto a 'git repo root' y 'project config file' en el binario"
+      uso_en_este_repo: ".codex/config.toml y .codex/hooks/; .codex/agents NO USADO"
+    hooks:
+      ruta: ".codex/hooks/hooks.json"
+      eventos_detectados: [PreToolUse, PermissionRequest, PostToolUse, PreCompact, PostCompact, SessionStart, SessionEnd, UserPromptSubmit, SubagentStart, SubagentStop, Stop, Interrupt]
+      esquema_de_salida: "hookSpecificOutput.{hookEventName, permissionDecision, permissionDecisionReason, additionalContext}"
+      estado: INFERIDO
+      evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus' en el binario"
+      confianza: "Codex pide confirmar los hooks del repositorio la primera vez (HookTrustStatus). No usar --dangerously-bypass-hook-trust"
+      uso_en_este_repo: "PreToolUse -> .codex/hooks/guard-protected-paths.mjs; FALLA EN ABIERTO a proposito"
+      consecuencia: >-
+        RIESGO PARCIALMENTE MITIGADO. La barrera que SI falla en cerrado y no depende
+        de ningun agente es scripts/git-hooks/pre-commit.
+
+  opencode:
+    version_instalada: "1.17.9"
+    estado: NO_SOPORTADA
+    motivo: "excluida por decision del propietario el 2026-09-21"
+    nota_de_seguridad: >-
+      Su configuracion global ~/.config/opencode/opencode.jsonc contiene secretos en texto
+      plano (token Coolify, clave de API de Context7). Fuera del alcance de este repositorio.
+      Recomendacion pendiente: rotarlos.
+
+  gemini_cli:
+    estado: NO_VERIFICABLE
+    nota: "existe ~/.gemini pero el binario no esta en PATH"
+
+asimetria_declarada: >-
+  La importacion @path de Claude Code es determinista: inlinea el fichero, y lo que este
+  en .agents/rules/ llega siempre. En Codex, la referencia desde AGENTS.md a un fichero de
+  reglas es prosa y depende de que el modelo decida leerla. Consecuencia de diseno: las
+  reglas innegociables estan DENTRO de AGENTS.md; .agents/rules/ guarda solo las de ambito
+  acotado, que se consultan al tocar ese ambito.
+
+duplicacion_inevitable:
+  que: "name y description de cada skill, repetidos en el frontmatter del stub de Claude Code"
+  por_que: "el formato de Claude Code exige frontmatter propio"
+  volumen: "2 lineas x 10 stubs speckit-*"
+  control: "scripts/agent/check-adapters.mjs las compara contra el canonico"
+  descartado: "enlaces simbolicos — no autorizados y fragiles en Windows"
