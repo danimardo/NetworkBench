@@ -37,13 +37,12 @@ test("no interpreta cabeceras citadas dentro del contenido como destinos", () =>
 });
 
 for (const target of [
-  ".specify/memory/constitution.md",
   ".agents/skills/speckit-plan/SKILL.md",
   "Design/README.md",
   "Especificacion.md",
   "AUDITORIA_DISENO_V3.md",
-  "F:/Apps/NetBench/.specify/memory/constitution.md",
-  "F:\\Apps\\NetBench\\.specify\\memory\\constitution.md",
+  "F:/Apps/NetBench/.specify/templates/plan-template.md",
+  "F:\\Apps\\NetBench\\.specify\\templates\\plan-template.md",
 ]) {
   for (const operation of ["Add File", "Update File", "Delete File"]) {
     test(`bloquea ${operation}: ${target}`, () => {
@@ -101,4 +100,20 @@ test("Historias.md dejó de estar protegido (decisión del propietario, 2026-09-
   assert.equal(decision("Edit", { file_path: "Historias.md", new_string: "texto" }), "allow");
   assert.equal(decision("exec_command", { cmd: "Set-Content Historias.md 'texto'" }), "allow");
   assert.equal(decision("apply_patch", patch("*** Update File: Historias.md", "@@", "-a", "+b")), "allow");
+});
+
+test("la constitución está exenta del guard: el permiso lo pide settings.json (2026-09-21)", () => {
+  const c = ".specify/memory/constitution.md";
+  assert.equal(decision("Edit", { file_path: c, new_string: "texto" }), "allow");
+  assert.equal(decision("Write", { file_path: "F:/Apps/NetBench/" + c, content: "x" }), "allow");
+  assert.equal(decision("exec_command", { cmd: `Set-Content ${c} 'texto'` }), "allow");
+  assert.equal(decision("apply_patch", patch(`*** Update File: ${c}`, "@@", "-a", "+b")), "allow");
+});
+
+test("la exención no alcanza al resto de .specify ni a un comando mixto", () => {
+  assert.equal(decision("Edit", { file_path: ".specify/templates/plan-template.md", new_string: "x" }), "deny");
+  assert.equal(decision("Edit", { file_path: ".specify/integrations/codex.manifest.json", new_string: "x" }), "deny");
+  assert.equal(decision("exec_command", {
+    cmd: "cp .specify/memory/constitution.md .specify/templates/constitution-template.md",
+  }), "deny");
 });

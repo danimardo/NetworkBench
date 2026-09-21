@@ -56,7 +56,7 @@ Reglas derivadas:
   conserva entre ambos documentos.
 - **No edites `Design/**` ni la constitución para reapuntarlas.** `Design/` es la entrega
   del diseñador y la auditoría v3 dejó constancia de que no se modificó; la constitución
-  requiere autorización específica. La equivalencia se registra aquí, y
+  se edita solo con permiso del propietario y esto no lo justifica. La equivalencia se registra aquí, y
   `scripts/agent/check-references.mjs` las inventaría para que nadie las tome por rotas.
 
 ## Hueco abierto: puerta G6

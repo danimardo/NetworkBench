@@ -34,9 +34,11 @@ Las importaciones de abajo inlinean el contenido: lo que se lista aquí llega si
   (`ask`) por las operaciones de escritura de Git y **deniega** las rutas protegidas.
   Si algo te hace falta, **pídelo; no amplíes el permiso.**
 - **Hook `PreToolUse`.** `scripts/agent/guard-protected-paths.mjs` deniega escrituras en
-  `.specify/`, `.agents/skills/speckit-*`, `Design/` y los documentos
-  históricos, tanto por `Edit`/`Write` como por `Bash`. Es el mismo guard que usa Codex.
-  Si te lo deniega, **no busques otra vía**: informa, propón y espera.
+  `.specify/` (excepto `.specify/memory/constitution.md`), `.agents/skills/speckit-*`, `Design/` y
+  los documentos históricos, tanto por `Edit`/`Write` como por `Bash`. Es el mismo guard
+  que usa Codex. Si te lo deniega, **no busques otra vía**: informa, propón y espera.
+- **Constitución.** `settings.json` la tiene en `ask`: cada edición pide permiso al
+  propietario en el momento. Pídelo con motivo, diff e impacto; si lo concede, edita.
 - **Sesión nueva.** Los cambios en las skills y en los ficheros importados aquí no surten
   efecto hasta reiniciar la sesión. Los hooks y los permisos de `settings.json` sí se
   aplican en caliente (VERIFICADO el 2026-09-21).

@@ -29,7 +29,7 @@ Estado a 2026-09-21, tras probarlas todas en sesiones reales de las dos herramie
 |---|---|---|
 | `scripts/git-hooks/pre-commit` | **cualquier herramienta, y tú a mano** | **VERIFICADO** |
 | Hook `PreToolUse` → `scripts/agent/guard-protected-paths.mjs` | Claude Code | **VERIFICADO** |
-| `.claude/settings.json` (`deny` / `ask`) | Claude Code | VERIFICADO tras corregir los globs |
+| `.claude/settings.json` (`deny` / `ask`) | Claude Code | VERIFICADO tras corregir los globs. La constitución está en `ask`, no en `deny` (2026-09-21) |
 | El mismo hook en Codex | Codex CLI 0.155.1 | **VERIFICADO: escritura bloqueada y lectura permitida en sesión nueva** |
 | `.codex/config.toml` (`approval_policy`) | Codex | **NO ES BARRERA: decide el modelo** |
 

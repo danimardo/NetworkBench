@@ -79,6 +79,7 @@ No se usan enlaces simbólicos: no están autorizados y son frágiles en Windows
 ## Lo que NO se toca desde aquí
 
 - `.specify/**` — gestionado por el CLI de SpecKit, con manifiestos SHA-256. Editarlo
-  rompe `codex.manifest.json` y `speckit.manifest.json`.
+  rompe `codex.manifest.json` y `speckit.manifest.json`. Excepción:
+  `.specify/memory/constitution.md` se edita con permiso del propietario (regla `ask`).
 - `.agents/skills/speckit-*/` — instaladas por SpecKit, incluidas en esos manifiestos.
 - `Design/**` — entrega del diseñador.

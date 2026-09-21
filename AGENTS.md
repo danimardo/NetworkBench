@@ -49,9 +49,10 @@ Estas no se delegan a un fichero aparte: se cumplen siempre.
 - **Git.** Sin autorización explícita y específica: no hacer commit, push, amend, rebase,
   merge, tags, ramas, cambios de rama, PR ni fusiones. Nunca revertir ni limpiar trabajo
   existente que no hayas creado tú en esta sesión.
-- **Constitución.** No modificar `.specify/memory/constitution.md` sin autorización
-  específica. Si crees que debe cambiar: explica el motivo, muestra el diff, explica el
-  impacto y espera.
+- **Constitución.** `.specify/memory/constitution.md` se edita **con permiso del
+  propietario**, nunca de oficio. Claude Code lo pide automáticamente (regla `ask`); en
+  Codex, pídelo tú. Antes de pedirlo: motivo, diff e impacto. Cada enmienda sube la
+  versión y se declara en el mensaje del commit; el pre-commit avisa, no bloquea.
 - **Specs históricas.** No borrar ni sobrescribir specs ni documentos históricos. Si hace
   falta migrarlos, propón la estrategia y espera.
 - **Secretos.** No leer secretos sin necesidad, no mostrarlos, no copiarlos, no registrarlos
@@ -86,7 +87,7 @@ Las skills canónicas están en `.agents/skills/speckit-*/`. Existe una feature 
 ## Trabajo de desarrollo
 
 La arquitectura propuesta está en `ARCHITECTURE.md`; su estado de propuesta no autoriza
-modificar la constitución. `Historias.md` es editable desde el 2026-09-21 por decisión del
+modificar la constitución sin pedir permiso. `Historias.md` es editable desde el 2026-09-21 por decisión del
 propietario: cada cambio se declara en el cierre de tarea. Antes de implementar una tarea:
 
 1. Lee la constitución, los requisitos del lote, las reglas de ámbito y los ADR aplicables.
@@ -135,8 +136,8 @@ por clon y no lo esquives:
 git config core.hooksPath scripts/git-hooks
 ```
 
-Rechaza cualquier commit que toque `.specify/`, `.agents/skills/speckit-*`, `Design/`
-o los documentos históricos. `--no-verify` existe, requiere autorización
+Rechaza cualquier commit que toque `.specify/` (salvo la constitución, que solo avisa),
+`.agents/skills/speckit-*`, `Design/` o los documentos históricos. `--no-verify` existe, requiere autorización
 del propietario y debe declararse en el mensaje del commit.
 
 ## Herramientas de agentes soportadas

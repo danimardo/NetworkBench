@@ -6,10 +6,9 @@
 
 - Raíz: `F:/Apps/NetBench`. Rama por defecto: `main`. Un solo worktree, sin submódulos.
 - Remoto: `origin` → `https://github.com/danimardo/NetworkBench.git`.
-- Un único commit: `0bb03cb`.
-- **`Historias.md`, `.specify/` y `.agents/` están sin versionar.** Una pérdida del working
-  tree se llevaría la constitución y los requisitos. Es el riesgo abierto más grave del
-  repositorio y solo el propietario puede cerrarlo autorizando el commit.
+- `Historias.md`, `.specify/`, `.agents/`, `specs/` y `docs/` están versionados y en
+  `origin` desde el 2026-09-21 (commits `a884548` y `57e2ba0`). El riesgo de pérdida del
+  working tree quedó cerrado.
 - `Especificacion.md` y `AUDITORIA_DISENO_V3.md` están borrados del working tree y
   presentes en `HEAD`. Es intencionado: ver `fuentes-de-verdad.md`.
 

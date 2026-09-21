@@ -28,6 +28,14 @@
  */
 import { readFileSync } from "node:fs";
 
+/**
+ * Exenta del guard por decisión del propietario (2026-09-21): la constitución se edita
+ * con permiso, no con bloqueo. En Claude Code lo pide la regla `ask` de
+ * .claude/settings.json; en Codex decide su política de aprobación. Se retira del
+ * texto ANTES de buscar rutas protegidas para que `.specify/` no la alcance.
+ */
+const EXENTAS = [/(^|[^\w.-])\.specify[\/]memory[\/]constitution\.md(?=\W|$)/gi];
+
 /** Sin anclaje final: una ruta protegida cuenta aparezca donde aparezca. */
 const PROTEGIDAS = [
   [/(^|[^\w.-])\.specify[\/]/i, "gestionado por el CLI de SpecKit (manifiestos SHA-256)"],
@@ -156,7 +164,7 @@ if (rutasParche !== null) {
   inspeccionado = rutas.length > 0 ? aplanar(rutas) : aplanar(args);
 }
 
-const texto = inspeccionado.join("\n");
+const texto = EXENTAS.reduce((t, p) => t.replace(p, "$1"), inspeccionado.join("\n"));
 const golpe = PROTEGIDAS.find(([patron]) => patron.test(texto));
 
 if (!golpe) responder("allow", "guard: sin rutas protegidas en la operación");

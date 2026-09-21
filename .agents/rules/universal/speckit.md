@@ -32,10 +32,11 @@ Es la única feature; `$speckit-analyze` se ejecutó el 2026-09-21.
 
 ## Reglas
 
-- **No modificar `.specify/memory/constitution.md`** sin autorización específica del
-  propietario. Si crees que debe cambiar: motivo, diff, impacto, y esperar. La skill
-  `speckit-constitution` no es esa autorización.
-- **No editar nada bajo `.specify/`** ni las 10 skills `speckit-*`. Están cubiertas por
+- **`.specify/memory/constitution.md` se edita con permiso del propietario**, pedido en
+  el momento con motivo, diff e impacto (decisión del 2026-09-21). Claude Code lo pregunta
+  solo (`ask`); en Codex, pregunta tú. La skill `speckit-constitution` no es ese permiso.
+  Cada enmienda sube la versión y se declara en el commit.
+- **No editar nada más bajo `.specify/`** ni las 10 skills `speckit-*`. Están cubiertas por
   manifiestos SHA-256 (`codex.manifest.json`, `speckit.manifest.json`); editarlas rompe la
   integridad que el CLI comprueba.
 - **No borrar ni sobrescribir specs históricas.** Si hay que migrarlas: informar, proponer

@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report — 2026-09-21
-Versión: 0.5.0 -> 0.6.0 (matriz Windows: 22H2 y 11 x64; decisión Q1).
-Principio XIII añadido: abstracción, niveles, privacidad, formato y coste del logging.
-Tabla de versiones, CI y discrepancias actualizadas; no se eliminan principios.
-Plantilla resuelta con resolve-template.ps1 constitution-template -Json.
-Solo se modifica constitution.md; no se implementan comandos, esquemas ni configuración.
-Seguimiento: Q1-Q4, TODO(RATIFICATION_DATE), verificaciones V-01 a V-12 y puertas G1-G6.
+Versión: 0.4.0 -> 0.5.0 -> 0.6.0.
+0.5.0: principio VI, accesibilidad básica desde H1 y revisión completa en H2 (decisión Q3).
+0.6.0: matriz Windows 10 22H2 (build 19045) y Windows 11, solo x64 (decisión Q1).
+0.4.0 había añadido el principio XIII (logging) y las tablas de versiones, CI y discrepancias.
+No se eliminan principios. Solo se modifica constitution.md.
+Seguimiento: Q2 y Q4 abiertas, TODO(RATIFICATION_DATE), verificaciones V-01 a V-12 y puertas G1-G6.
 Informe temporal de revisión: retirar antes del commit de ratificación.
 -->
 
