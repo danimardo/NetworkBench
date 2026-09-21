@@ -116,6 +116,22 @@ Rechaza cualquier commit que toque `.specify/`, `.agents/skills/speckit-*`, `Des
 `Historias.md` o los documentos históricos. `--no-verify` existe, requiere autorización
 del propietario y debe declararse en el mensaje del commit.
 
+## Herramientas de agentes soportadas
+
+El desarrollo de NetworkBench se lleva principalmente con **Codex CLI y Claude Code**.
+Es un hecho del entorno de trabajo, no un requisito del producto: por eso vive aquí y no
+en `Historias.md`.
+
+| Herramienta | Versión validada | Punto de entrada | Skills |
+|---|---:|---|---|
+| Codex CLI | 0.155.1 | este fichero, de forma nativa | `.agents/skills/` nativo |
+| Claude Code | 2.1.278 | `CLAUDE.md`, que importa este fichero | `.claude/skills/` (stubs) |
+
+OpenCode está instalado en la máquina pero **no es una herramienta soportada** por este
+repositorio. Capacidades, límites y fecha de validación de cada una:
+`.agents/meta/agent-capabilities.yaml`. No asumas que una capacidad sigue igual tras
+actualizar: procedimiento en `.agents/skills/verificar-sistema-agentes/SKILL.md`.
+
 ## Mapa del sistema canónico
 
 | Ruta | Contenido |
