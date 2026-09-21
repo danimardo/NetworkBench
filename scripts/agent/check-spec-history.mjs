@@ -30,26 +30,39 @@ const git = (...args) => {
   }
 };
 
+/** Última versión conocida de un fichero, aunque ya no exista en HEAD. */
+function versionHistorica(f) {
+  const enHead = git("show", `HEAD:${f}`);
+  if (enHead.ok) return enHead;
+  // Último commit que tocó la ruta (el que la borró o renombró).
+  const sha = git("rev-list", "-1", "HEAD", "--", f);
+  if (!sha.ok || !sha.salida.trim()) return { ok: false };
+  return git("show", `${sha.salida.trim()}~1:${f}`);
+}
+
 export function check() {
   const r = [];
 
   const head = git("rev-parse", "HEAD");
   if (!head.ok) return [warn("No es un repositorio Git utilizable: comprobación omitida")];
 
-  // 1. Documentos históricos: si existen en el working tree, deben ser idénticos a HEAD.
+  // 1. Documentos históricos: si existen en el working tree, deben ser idénticos a su
+  //    última versión conocida. Se busca en TODO el historial, no solo en HEAD: tras el
+  //    renombrado Especificacion.md -> Historias.md el fichero ya no está en HEAD, y
+  //    mirar solo HEAD haría desaparecer la protección en silencio.
   for (const f of HISTORICOS) {
-    const enHead = git("show", `HEAD:${f}`);
-    if (!enHead.ok) { r.push(warn(`${f} no está en HEAD: nada que proteger`)); continue; }
+    const enHead = versionHistorica(f);
+    if (!enHead.ok) { r.push(warn(`${f} no aparece en el historial: nada que proteger`)); continue; }
     const ruta = join(ROOT, f);
     if (!existsSync(ruta)) {
-      r.push(ok(`${f} conservado en HEAD y ausente del working tree (intencionado)`));
+      r.push(ok(`${f} conservado en el historial y ausente del working tree (intencionado)`));
       continue;
     }
     const actual = readFileSync(ruta, "utf8");
     if (actual !== enHead.salida) {
-      r.push(fail(`${f} ha sido reescrito respecto a HEAD. Es un documento histórico: restaura e informa`));
+      r.push(fail(`${f} difiere de su última versión en el historial. Es un documento histórico: restaura e informa`));
     } else {
-      r.push(ok(`${f} presente e idéntico a HEAD`));
+      r.push(ok(`${f} presente e idéntico a su versión histórica`));
     }
   }
 
