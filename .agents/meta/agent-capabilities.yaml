@@ -93,8 +93,9 @@ herramientas:
     modalidad_validada: CLI
     estado: VERIFICADO_PARCIAL
     metodo_de_verificacion: >-
-      codex --help y busqueda de cadenas en el binario instalado
-      (~/.codex/packages/standalone/current/bin/codex.exe). NO se ha ejecutado Codex.
+      Codex CLI 0.155.1 ejecutado: pruebas de JSON inválido con codex exec,
+      revisión interactiva de confianza y prueba real de escritura/lectura.
+      Informe: .codex/validacion-hooks-2026-09-21.md.
     capacidades_usadas:
       instrucciones:
         rutas: ["AGENTS.md", "AGENTS.override.md"]
@@ -117,7 +118,7 @@ herramientas:
           cadena de error 'failed to stat repo skills root' junto a '.agents' y 'skills',
           y ruta de fuente 'ext\skills\src\host_prompt.rs' en el binario. Ademas, el
           instalador de SpecKit para la integracion codex las deposito exactamente ahi.
-        pendiente: "confirmar abriendo una sesion de Codex y listando sus skills"
+        pendiente: "ninguno para la carga ya verificada; no se repitió esta auditoría"
     capacidades_ausentes:
       - nombre: "mecanismo propio de rules"
         estado: NO_PRESENTE
@@ -131,6 +132,11 @@ herramientas:
         estado: NO_VERIFICABLE
         nota: "'codex agents' navega sesiones, no define roles"
     permisos:
+      observacion_prueba_hooks: >-
+        VERIFICADO: las sesiones codex exec del diagnóstico mostraron approval: never y
+        sandbox: danger-full-access, aunque el fichero del proyecto declara on-request.
+        La afirmación histórica de precedencia siguiente no queda demostrada por estos
+        ensayos. El bloqueo verificado lo produjo PreToolUse, no una aprobación humana.
       ruta_global: "~/.codex/config.toml — FUERA de este repositorio"
       estado_global: "approval_policy=never; sandbox_mode=danger-full-access; f:\apps\netbench trusted"
       mitigacion_en_el_repositorio: ".codex/config.toml — approval_policy=on-request. sandbox_mode NO se fija: ver sandbox_windows"
@@ -160,37 +166,41 @@ herramientas:
         ejecutar comandos ni leer ficheros en este repositorio. RETIRADO. No volver a
         fijarlo sin ejecutar antes ese setup y comprobar que Codex sigue funcionando.
     config_por_proyecto:
-      rutas: [".codex/config.toml", ".codex/hooks", ".codex/agents"]
+      rutas: [".codex/config.toml", ".codex/hooks.json", ".codex/agents"]
       estado: DOCUMENTADO
-      evidencia: "cadenas '.codex/config.toml', '.codex/agents', '.codex/hooks' junto a 'git repo root' y 'project config file' en el binario"
-      uso_en_este_repo: ".codex/config.toml y .codex/hooks/; .codex/agents NO USADO"
+      evidencia: "documentación oficial https://developers.openai.com/es-419/docs/config-file/config-advanced; carga de hooks.json ejecutada en el diagnóstico"
+      uso_en_este_repo: ".codex/config.toml y .codex/hooks.json; .codex/agents NO USADO"
     hooks:
-      ruta: ".codex/hooks/hooks.json"
+      ruta: ".codex/hooks.json"
+      formato: JSON
       eventos_detectados: [PreToolUse, PermissionRequest, PostToolUse, PreCompact, PostCompact, SessionStart, SessionEnd, UserPromptSubmit, SubagentStart, SubagentStop, Stop, Interrupt]
       esquema_de_salida: "hookSpecificOutput.{hookEventName, permissionDecision, permissionDecisionReason, additionalContext}"
-      estado: NO_FUNCIONAL
+      estado: VERIFICADO
       hallazgo_2026_09_21: >-
-        Probado en una sesion real: el hook NO se disparo y Codex no pidio confianza para
-        los hooks del repositorio. La caracteristica 'hooks' esta stable y activada
-        (codex features list), asi que el fallo es de UBICACION del fichero, no de que
-        los hooks esten apagados. Se han dejado dos rutas candidatas: .codex/hooks.json y
-        .codex/hooks/hooks.json. Ver .codex/hooks/README.md.
-      no_intentado: >-
-        Declarar el hook como tabla TOML dentro de .codex/config.toml, pese a que la
-        estructura HookEventsToml lo sugiere: una clave inventada puede impedir que Codex
-        lea toda su configuracion de proyecto, y ya hubo una averia asi con sandbox_mode.
-      evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus', 'trusted_hash' en el binario"
-      confianza: "Codex pide confirmar los hooks del repositorio la primera vez (HookTrustStatus). No usar --dangerously-bypass-hook-trust"
+        JSON inválido en .codex/hooks.json produjo un aviso de parseo con esa ruta;
+        en la candidata anidada no produjo aviso. Se eliminaron la candidata falsa y
+        su README. La sesión interactiva detectó un hook pendiente de confianza;
+        se revisó el comando del guard y se confió mediante el diálogo normal.
+        Una sesión nueva bloqueó Add-Content y permitió Get-Content sobre Historias.md.
+      evidencia: ".codex/validacion-hooks-2026-09-21.md; sesión final 01a0c3d2-68e9-70b3-ad7c-596fbe692da4"
+      confianza: "VERIFICADO: origen Project config, Trust Trusted, PreToolUse instalado 1 y activo 1; sin bypass"
+      compatibilidad_salida: >-
+        La primera lectura mostró PreToolUse Failed: la respuesta permissionDecision:allow
+        sin updatedInput no es admitida por esta versión. El guard devuelve ahora {} para
+        continuar y conserva deny con su razón. Repetición real: PreToolUse Completed,
+        lectura con salida 0 y escritura PreToolUse Blocked; hash del documento intacto.
+      alternativa_toml:
+        estado: DOCUMENTADO
+        esquema: "[[hooks.PreToolUse]] y [[hooks.PreToolUse.hooks]] en .codex/config.toml"
+        nota: "documentación oficial actual, no fijada a 0.155.1; alternativa no ejecutada ni necesaria"
       uso_en_este_repo: "PreToolUse, apuntando al guard COMPARTIDO con Claude Code; FALLA EN ABIERTO a proposito"
       criterio: >-
-        Herramientas de fichero: cualquier mencion de ruta protegida -> deny.
-        Herramientas de shell: ruta protegida MAS indicio de escritura -> deny; una
-        lectura como 'cat Historias.md' se permite. Probado con 12 casos el 2026-09-21.
+        Se conserva el criterio del guard compartido. Solo cambia la representación
+        de continuar: objeto JSON vacío en vez de permissionDecision:allow.
       consecuencia: >-
-        RIESGO NO MITIGADO DENTRO DE CODEX. A 2026-09-21 no hay contencion efectiva en
-        sesion: ni hook, ni approval_policy, ni sandbox (exige setup con elevacion).
-        La unica barrera real frente a Codex es scripts/git-hooks/pre-commit, en el
-        momento del commit.
+        Contención de la escritura ensayada VERIFICADA en sesiones CLI nuevas.
+        No se ha verificado recarga de esta sesión anfitriona, otras modalidades,
+        todas las herramientas ni la integración de Claude Code tras el ajuste de salida.
 
   opencode:
     version_instalada: "1.17.9"

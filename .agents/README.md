@@ -51,8 +51,9 @@ de `AGENTS.md` y `rules/` guarda solo las de ámbito acotado.
 
 `scripts/agent/guard-protected-paths.mjs` es un único fichero que invocan **las dos**
 herramientas como hook `PreToolUse`: Claude Code desde `.claude/settings.json` y Codex
-desde `.codex/hooks/hooks.json`. Ambas usan el mismo esquema de salida
-(`hookSpecificOutput.permissionDecision`), así que no hace falta adaptador ni copia.
+desde `.codex/hooks.json`. El bloqueo usa `hookSpecificOutput.permissionDecision: deny`;
+para continuar se devuelve `{}`, compatible con Codex CLI 0.155.1. La prueba real y sus
+límites constan en `.codex/validacion-hooks-2026-09-21.md`.
 
 Vive en `scripts/agent/` y no en `.claude/` ni en `.codex/` precisamente para que ninguna
 de las dos parezca su dueña.

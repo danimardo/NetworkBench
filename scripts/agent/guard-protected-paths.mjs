@@ -2,11 +2,11 @@
 /**
  * Hook PreToolUse de Codex: deniega escrituras en rutas protegidas de NetworkBench.
  *
- * ESTADO: INFERIDO. El formato de hooks.json y el esquema de salida
- * (hookSpecificOutput.permissionDecision) proceden de cadenas del binario de Codex
- * 0.155.1, NO de documentación ejecutada. Ver .codex/README.md.
+ * ESTADO: VERIFICADO en Codex CLI 0.155.1: escritura bloqueada y lectura permitida.
+ * Declaración en .codex/hooks.json y confianza concedida mediante el diálogo normal.
+ * Evidencia y límites: .codex/validacion-hooks-2026-09-21.md.
  *
- * FALLA EN ABIERTO a propósito: si no entiende lo que recibe, permite y lo dice.
+ * FALLA EN ABIERTO a propósito: si no entiende lo que recibe, permite continuar.
  * Un control secundario que rompe la sesión por no entender su propia entrada es peor
  * que no tenerlo. La garantía que SÍ falla en cerrado es el hook pre-commit de Git
  * (scripts/git-hooks/pre-commit), que no depende de ningún agente.
@@ -23,7 +23,7 @@
  *
  *   resto: allow.
  *
- * Probado con 10 casos; ver .codex/README.md.
+ * Los 14 casos previos validaron el criterio; la integración real está en el informe.
  */
 import { readFileSync } from "node:fs";
 
@@ -57,6 +57,13 @@ const ESCRIBE = [
 ];
 
 const responder = (decision, razon) => {
+  // Codex CLI 0.155.1 rechaza permissionDecision:allow sin updatedInput.
+  // Una respuesta vacía deja continuar sin alterar la política de aprobación.
+  // Claude Code también continúa cuando no se emite una decisión de bloqueo.
+  if (decision === "allow") {
+    process.stdout.write("{}");
+    process.exit(0);
+  }
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {

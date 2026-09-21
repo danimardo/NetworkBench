@@ -1,5 +1,22 @@
 # Configuración de Codex para NetworkBench
 
+## Estado vigente — verificado el 2026-09-21
+
+El hook funciona en sesiones nuevas de **Codex CLI 0.155.1**. La declaración correcta es
+`.codex/hooks.json` y requiere revisar y confiar en el guard mediante `/hooks`.
+La escritura ensayada se bloqueó y la lectura terminó con `PreToolUse Completed` y código 0.
+El guard devuelve `{}` para continuar: esta versión rechazaba la respuesta `allow` sola.
+Evidencia, esquema y límites en `.codex/validacion-hooks-2026-09-21.md`.
+
+La candidata anidada y su README se eliminaron. No se cambió la configuración del
+sandbox. Los comentarios antiguos de `config.toml` sobre precedencia y aprobaciones no
+son una garantía: las sesiones de prueba mostraron `approval: never`.
+
+## Antecedentes conservados
+
+El contenido siguiente registra el diseño y los ensayos previos al diagnóstico anterior;
+sus estados pendientes y afirmaciones sobre precedencia no describen el resultado actual.
+
 ## Por qué existe este directorio
 
 La configuración global de esta máquina (`~/.codex/config.toml`) fija
@@ -16,8 +33,8 @@ de ampliar permisos para desbloquear al agente.
 | Fichero | Qué hace |
 |---|---|
 | `config.toml` | `approval_policy = on-request`. **No fija `sandbox_mode`**: ver abajo |
-| `hooks/hooks.json` | Registra el hook `PreToolUse` |
-| `hooks/hooks.json` → `scripts/agent/guard-protected-paths.mjs` | Deniega escrituras en rutas protegidas. **El guard es compartido con Claude Code**: un solo fichero, dos consumidores |
+| `hooks.json` | Registra el hook `PreToolUse` (ruta corregida) |
+| `hooks.json` → `scripts/agent/guard-protected-paths.mjs` | Deniega escrituras en rutas protegidas. **El guard es compartido con Claude Code**: un solo fichero, dos consumidores |
 
 ## Por qué no se fija `sandbox_mode`
 

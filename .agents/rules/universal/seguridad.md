@@ -30,7 +30,7 @@ Estado a 2026-09-21, tras probarlas todas en sesiones reales de las dos herramie
 | `scripts/git-hooks/pre-commit` | **cualquier herramienta, y tú a mano** | **VERIFICADO** |
 | Hook `PreToolUse` → `scripts/agent/guard-protected-paths.mjs` | Claude Code | **VERIFICADO** |
 | `.claude/settings.json` (`deny` / `ask`) | Claude Code | VERIFICADO tras corregir los globs |
-| El mismo hook en Codex | Codex | **NO FUNCIONAL: no llega a dispararse** |
+| El mismo hook en Codex | Codex CLI 0.155.1 | **VERIFICADO: escritura bloqueada y lectura permitida en sesión nueva** |
 | `.codex/config.toml` (`approval_policy`) | Codex | **NO ES BARRERA: decide el modelo** |
 
 El guard es **un solo fichero** que invocan las dos herramientas: no hay copias que puedan
@@ -40,20 +40,22 @@ divergir. Instalación del hook de Git, una vez por clon:
 git config core.hooksPath scripts/git-hooks
 ```
 
-### Dentro de una sesión de Codex no hay contención hoy
+### Contención comprobada en Codex CLI
 
-VERIFICADO el 2026-09-21: Codex leyó estas mismas reglas, invocó la skill de cierre y
-editó igualmente una ruta protegida. Las tres vías están cerradas por ahora:
+El primer ensayo del 2026-09-21 falló: Codex editó una ruta protegida. El diagnóstico
+posterior identificó la declaración correcta, la confianza pendiente y una incompatibilidad
+en la respuesta de continuación del guard. Informe: `.codex/validacion-hooks-2026-09-21.md`.
 
-- El hook no se dispara. La característica `hooks` está `stable` y activada, así que es un
-  problema de ubicación del fichero, sin resolver. Ver `.codex/hooks/README.md`.
+- El hook se declara en `.codex/hooks.json`. Tras revisarlo y confiar mediante el diálogo
+  normal, una sesión CLI nueva bloqueó la escritura y permitió la lectura. El guard
+  conserva `deny` y devuelve `{}` para continuar, sin forzar una aprobación.
 - `approval_policy` no admite ningún valor que **obligue** a preguntar: solo `on-request`,
   donde decide el modelo, y `never`.
 - El sandbox exige `codex sandbox setup --elevated`, que no se ha ejecutado. Fijarlo sin
   ese paso deja Codex sin poder ejecutar comandos: ya ocurrió el mismo día.
 
-**Consecuencia práctica: con Codex, el commit es el primer punto donde algo se puede
-impedir de verdad.** Trátalo en consecuencia y no confíes en que una regla escrita baste.
+La prueba verifica las operaciones ensayadas, no todas las vías de escritura ni una
+recarga de sesiones ya abiertas. El hook de Git sigue siendo una barrera independiente.
 
 ### Configuración global, fuera del alcance de este repositorio
 

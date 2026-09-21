@@ -4,7 +4,35 @@
 
 fecha: "2026-09-21"
 version_constitucion_vigente: "0.4.0 (NO ratificada)"
-herramienta_que_realizo_la_validacion: "Claude Code 2.1.278"
+herramienta_que_realizo_la_validacion: "Codex; pruebas ejecutadas con Codex CLI 0.155.1; se conserva el historial previo de Claude Code"
+
+validacion_hooks_2026_09_21:
+  informe: ".codex/validacion-hooks-2026-09-21.md"
+  estado: VERIFICADO
+  alcance: "CLI 0.155.1, sesiones nuevas; bloqueo de escritura y continuación de lectura mediante shell"
+  ruta: ".codex/hooks.json"
+  formato: JSON
+  prueba_ruta: "codex exec con JSON inválido: aviso en la ruta raíz; silencio en la candidata anidada; originales restaurados por hash"
+  prueba_no_concluyente: "codex debug prompt-input no avisó con ninguna candidata inválida; no sirve para esta prueba"
+  confianza: "revisión interactiva: origen Project config, comando del guard, tecla t, Trusted; instalado 1 y activo 1"
+  incidencia_inicial: "la escritura se bloqueó; la lectura pasó con PreToolUse Failed por la respuesta allow"
+  correccion: "el guard devuelve {} para continuar; mantiene deny con razón para bloquear"
+  prueba_final: "sesión 01a0c3d2-68e9-70b3-ad7c-596fbe692da4: PreToolUse Blocked / PreToolUse Completed; lectura exit 0"
+  integridad: "Historias.md SHA-256 793F7AC4B3E1DA024EE85481903849D27DA6904490E6C78EBB1DFC1225436146 antes y después; sin git restore"
+  eliminados: [".codex/hooks/hooks.json", ".codex/hooks/README.md"]
+  alternativa_toml:
+    estado: DOCUMENTADO
+    nota: "documentación oficial actual; no ejecutada con 0.155.1, no necesaria para el arreglo"
+  fuera_de_verificacion:
+    estado: NO VERIFICABLE
+    nota: "no se ha demostrado recarga de la sesión anfitriona; no permite atribuirle la verificación obtenida en CLI nuevo"
+  no_ensayado: "otras modalidades, todas las herramientas y regresión de la integración Claude Code tras el ajuste de salida"
+  historial: "las entradas anteriores a este diagnóstico que siguen abajo son evidencia histórica, no el estado vigente del hook"
+  verificacion_sistema:
+    comando: "node scripts/agent/verify.mjs"
+    estado: VERIFICADO
+    resultado: "exit 0; seis comprobaciones correctas; nueve avisos de referencias históricas y dos por el cambio previo de Historias.md"
+    salida_final: "Sistema de instrucciones coherente. Esto NO verifica el producto: no existe aplicación."
 
 ejecutado:
   - comando: "git rev-parse --show-toplevel / branch / status / remote -v / worktree list / log"
@@ -51,26 +79,18 @@ no_ejecutado:
   - que: "pnpm check, lint, type-check, tests unitarios, integracion, E2E"
     motivo: "NO existen. La constitucion reconoce que pnpm check aun debe crearse"
     como_verificarlo_despues: "tras la primera implementacion que los introduzca"
-  - que: "La ruta correcta del fichero de hooks de proyecto de Codex"
-    motivo: "probada .codex/hooks/hooks.json y no se disparo; anadida tambien .codex/hooks.json, sin probar"
-    estado_actual: NO_RESUELTO
-    como_verificarlo_despues: "repetir el paso B; si sigue sin dispararse, quedan la tabla TOML en config.toml y la documentacion oficial de Codex"
-  - que: "Que Codex vuelve a ejecutar comandos con normalidad tras retirar sandbox_mode"
-    motivo: "requiere una sesion real de Codex"
-    estado_actual: NO_VERIFICADO
-    como_verificarlo_despues: "abrir Codex en el repo, pedirle un 'ls' y despues una escritura en Historias.md; lo primero debe funcionar y lo segundo debe denegarse"
+  - que: "Recarga del hook en la sesión anfitriona ya abierta"
+    motivo: "el arreglo se ensayó en sesiones CLI nuevas"
+    estado_actual: NO VERIFICABLE
+    como_verificarlo_despues: "abrir sesión nueva y revisar /hooks; repetir escritura negativa y lectura"
   - que: "Precedencia real de .codex/config.toml sobre ~/.codex/config.toml"
-    motivo: "requiere ejecutar Codex"
+    motivo: "las sesiones de este diagnóstico mostraron approval: never pese al on-request del proyecto; no se auditó la jerarquía completa"
+    estado_actual: INFERIDO
+    como_verificarlo_despues: "auditar por separado las capas efectivas; no atribuir al approval_policy el bloqueo producido por PreToolUse"
+  - que: "Declaración alternativa de hooks en TOML"
+    motivo: "JSON ya funciona; no se cambió el formato de configuración"
     estado_actual: DOCUMENTADO
-    como_verificarlo_despues: "abrir Codex en el repo y pedirle una escritura; debe pedir aprobacion en vez de ejecutar"
-  - que: "Formato real de .codex/hooks/hooks.json y esquema de entrada del hook"
-    motivo: "reconstruido de cadenas del binario, no de documentacion ni de ejecucion"
-    estado_actual: INFERIDO
-    como_verificarlo_despues: "abrir Codex, aceptar la confianza de hooks y pedirle que escriba en Historias.md; debe denegarlo"
-  - que: "Carga real de .agents/skills/ por Codex"
-    motivo: "requiere ejecutar Codex: operacion de red y consumo, fuera del alcance autorizado"
-    estado_actual: INFERIDO
-    como_verificarlo_despues: "abrir sesion de Codex en el repo y pedirle que liste sus skills, o invocar speckit-specify"
+    como_verificarlo_despues: "solo si se necesita migrar; respaldar config.toml y ensayar carga y ejecución"
   - que: "Carga real de CLAUDE.md y de los stubs por Claude Code"
     motivo: "los ficheros se crearon en esta misma sesion; Claude Code requiere sesion nueva"
     como_verificarlo_despues: "sesion nueva en F:/Apps/NetBench; /memory debe listar CLAUDE.md; / debe listar las skills"
@@ -130,7 +150,7 @@ riesgos_abiertos:
   - id: R1
     descripcion: "La constitucion no ratificada es la norma de facto; Q1-Q4 pueden invalidar reglas escritas hoy"
   - id: R2
-    descripcion: "Carga de .agents/skills/ por Codex INFERIDA, no ejecutada"
+    descripcion: "Resuelto antes de esta tarea: carga de las 12 skills por Codex VERIFICADA; no se repitió"
   - id: R3
     descripcion: "Historias.md, .specify/ y .agents/ sin versionar: una perdida del working tree se lleva constitucion y requisitos"
     gravedad: alta
@@ -146,16 +166,16 @@ riesgos_abiertos:
     gravedad: media
   - id: R7
     descripcion: >-
-      DENTRO DE CODEX NO HAY CONTENCION EFECTIVA (verificado 2026-09-21): el hook no se
-      dispara, approval_policy no admite un valor que obligue a preguntar y el sandbox
-      exige setup con elevacion. Solo el hook pre-commit de Git protege.
+      Mitigado para las operaciones ensayadas en Codex CLI 0.155.1: hook confiado,
+      escritura bloqueada y lectura permitida. No equivale a una barrera exhaustiva
+      de filesystem ni verifica recarga de sesiones existentes u otras modalidades.
     gravedad: alta
   - id: R7_historico
     descripcion: >-
       Configuracion global de Codex sin aprobacion ni sandbox. Se intento mitigar en capas
       (.codex/config.toml, hook PreToolUse y hook pre-commit de Git), pero las dos
-      primeras estan DOCUMENTADA e INFERIDA, no ejecutadas, y el hook PreToolUse falla
-      en abierto a proposito. La causa raiz sigue en ~/.codex/config.toml.
+      primeras estaban DOCUMENTADA e INFERIDA. Registro histórico anterior al diagnóstico
+      actual: el hook se ha ejecutado y reparado; conserva el diseño de fallo en abierto.
     gravedad: media
   - id: R8
     descripcion: "Puerta G6 abierta: las secciones §§29-54 del antiguo Historias.md siguen sin localizar"
