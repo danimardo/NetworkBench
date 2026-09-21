@@ -28,10 +28,18 @@ ejecutado:
   - comando: "pruebas negativas de las 5 garantias (stub huerfano, description divergente, referencia colgante, AGENTS.md inflado, historico reescrito)"
     resultado: "las 5 fallaron cuando debian; estado restaurado y comprobado con diff y git status"
     estado: VERIFICADO
-  - comando: "pruebas del hook PreToolUse de Codex con 5 payloads simulados"
-    resultado: "deny en Historias.md y Design/; allow en AGENTS.md, en lectura y ante entrada no-JSON"
+  - comando: "pruebas del hook PreToolUse de Codex con 12 payloads simulados (tras cerrar 2 agujeros)"
+    resultado: >-
+      7 deny (write, parche, redireccion, sed -i, rm de Design, Set-Content, edit de .specify)
+      y 5 allow (cat, grep, write a AGENTS.md, lectura, entrada basura). Todos como se esperaba.
     estado: VERIFICADO
     matiz: "payloads simulados por nosotros; el esquema real de entrada de Codex NO esta verificado"
+  - comando: "prueba real en Codex: intento de modificar Historias.md (2026-09-21)"
+    resultado: >-
+      La modificacion NO se produjo: la barrera cumplio. Pero Codex informo de que el
+      entorno fallaba al ejecutar comandos y no podia leer ficheros. Causa: el
+      sandbox_mode que fijaba .codex/config.toml. Retirado; pendiente repetir la prueba.
+    estado: VERIFICADO_PARCIAL
   - comando: "listado de skills de la sesion de Claude Code"
     resultado: "las 10 skills speckit-* aparecen; los stubs de .claude/skills/ cargan"
     estado: VERIFICADO
@@ -43,6 +51,10 @@ no_ejecutado:
   - que: "pnpm check, lint, type-check, tests unitarios, integracion, E2E"
     motivo: "NO existen. La constitucion reconoce que pnpm check aun debe crearse"
     como_verificarlo_despues: "tras la primera implementacion que los introduzca"
+  - que: "Que Codex vuelve a ejecutar comandos con normalidad tras retirar sandbox_mode"
+    motivo: "requiere una sesion real de Codex"
+    estado_actual: NO_VERIFICADO
+    como_verificarlo_despues: "abrir Codex en el repo, pedirle un 'ls' y despues una escritura en Historias.md; lo primero debe funcionar y lo segundo debe denegarse"
   - que: "Precedencia real de .codex/config.toml sobre ~/.codex/config.toml"
     motivo: "requiere ejecutar Codex"
     estado_actual: DOCUMENTADO

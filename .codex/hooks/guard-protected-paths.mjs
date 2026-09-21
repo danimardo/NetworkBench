@@ -6,29 +6,49 @@
  * (hookSpecificOutput.permissionDecision) proceden de cadenas del binario de Codex
  * 0.155.1, NO de documentación ejecutada. Ver .codex/README.md.
  *
- * Por eso este hook FALLA EN ABIERTO: si no entiende lo que recibe, permite y avisa.
+ * FALLA EN ABIERTO a propósito: si no entiende lo que recibe, permite y lo dice.
  * Un control secundario que rompe la sesión por no entender su propia entrada es peor
  * que no tenerlo. La garantía que SÍ falla en cerrado es el hook pre-commit de Git
  * (scripts/git-hooks/pre-commit), que no depende de ningún agente.
  *
- * Contrato asumido:
- *   entrada  : JSON por stdin, con el nombre de la herramienta y sus argumentos
- *   salida   : JSON por stdout con hookSpecificOutput.permissionDecision
- *              ("allow" | "deny" | "ask") y permissionDecisionReason
+ * Dos modos, porque una ruta mencionada no es una ruta escrita:
+ *
+ *   herramienta de fichero (write, edit, patch, create, delete, move):
+ *       cualquier mención de una ruta protegida -> deny.
+ *
+ *   herramienta de shell (shell, bash, powershell, exec, run):
+ *       deny solo si aparece una ruta protegida JUNTO A un indicio de escritura
+ *       (redirección, tee, sed -i, rm, mv, cp, Set-Content, git restore...).
+ *       Así `cat Historias.md` se permite y `echo x >> Historias.md` no.
+ *
+ *   resto: allow.
+ *
+ * Probado con 10 casos; ver .codex/README.md.
  */
 import { readFileSync } from "node:fs";
 
+/** Sin anclaje final: una ruta protegida cuenta aparezca donde aparezca. */
 const PROTEGIDAS = [
-  [/(^|[\/])\.specify[\/]/i, "gestionado por el CLI de SpecKit (manifiestos SHA-256)"],
-  [/(^|[\/])\.agents[\/]skills[\/]speckit-/i, "skill instalada por SpecKit"],
-  [/(^|[\/])Design[\/]/i, "entrega del disenador"],
-  [/(^|[\/])Historias\.md$/i, "requisitos de producto"],
-  [/(^|[\/])Especificacion\.md$/i, "documento histórico"],
-  [/(^|[\/])AUDITORIA_DISENO_V3\.md$/i, "documento histórico"],
+  [/(^|[^\w.-])\.specify[\/]/i, "gestionado por el CLI de SpecKit (manifiestos SHA-256)"],
+  [/(^|[^\w.-])\.agents[\/]skills[\/]speckit-/i, "skill instalada por SpecKit"],
+  [/(^|[^\w.-])Design[\/]/i, "entrega del disenador"],
+  [/(^|[^\w.-])Historias\.md(\W|$)/i, "requisitos de producto"],
+  [/(^|[^\w.-])Especificacion\.md(\W|$)/i, "documento histórico"],
+  [/(^|[^\w.-])AUDITORIA_DISENO_V3\.md(\W|$)/i, "documento histórico"],
 ];
 
-/** Herramientas que modifican ficheros. Se comparan en minúsculas y por inclusión. */
-const ESCRITURA = ["write", "edit", "patch", "apply", "create", "delete", "move", "shell", "bash"];
+const HERRAMIENTA_FICHERO = ["write", "edit", "patch", "create", "delete", "remove", "move", "rename"];
+const HERRAMIENTA_SHELL = ["shell", "bash", "powershell", "pwsh", "exec", "run", "command", "terminal"];
+
+/** Indicios de que un comando de shell escribe, y no solo lee. */
+const ESCRIBE = [
+  />>?\s/, /\|\s*tee\b/i,
+  /\bsed\b[^|;]*-i\b/i, /\bperl\b[^|;]*-i\b/i,
+  /\b(rm|mv|cp|ln|truncate|dd|touch|mkdir|chmod|chown|install)\b/i,
+  /\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b/i,
+  /\bgit\s+(restore|checkout|apply|rm|mv|clean|reset)\b/i,
+  /\bpatch\b/i, /\bapply_patch\b/i,
+];
 
 const responder = (decision, razon) => {
   process.stdout.write(
@@ -43,50 +63,50 @@ const responder = (decision, razon) => {
   process.exit(0);
 };
 
-let entrada = "";
-try {
-  entrada = readFileSync(0, "utf8");
-} catch {
-  responder("allow", "guard: no se pudo leer stdin; se permite y se avisa");
-}
+const RAZON_DENY = (motivo) =>
+  `Ruta protegida de NetworkBench — ${motivo}. Modificarla requiere autorización ` +
+  `específica del propietario: informa, propón y espera. No la edites por otra vía. ` +
+  `Ver .agents/rules/universal/fuentes-de-verdad.md`;
 
 let datos;
 try {
-  datos = JSON.parse(entrada);
+  datos = JSON.parse(readFileSync(0, "utf8"));
 } catch {
-  responder("allow", "guard: entrada no es JSON; se permite y se avisa");
+  responder("allow", "guard: entrada ilegible o no-JSON; se permite y se avisa");
 }
 
-// Nombre de la herramienta, bajo cualquiera de las claves plausibles.
 const herramienta = String(
   datos.tool_name ?? datos.toolName ?? datos.tool ?? datos.name ?? ""
 ).toLowerCase();
 
-if (herramienta && !ESCRITURA.some((t) => herramienta.includes(t))) {
-  responder("allow", "guard: herramienta de solo lectura");
+const esFichero = HERRAMIENTA_FICHERO.some((t) => herramienta.includes(t));
+const esShell = HERRAMIENTA_SHELL.some((t) => herramienta.includes(t));
+
+if (herramienta && !esFichero && !esShell) {
+  responder("allow", "guard: herramienta que no escribe ficheros");
 }
 
 // Todas las cadenas del payload, para no depender de dónde venga la ruta.
 const cadenas = [];
-const recoger = (v, profundidad = 0) => {
-  if (profundidad > 6) return;
+const recoger = (v, p = 0) => {
+  if (p > 6) return;
   if (typeof v === "string") cadenas.push(v);
-  else if (Array.isArray(v)) v.forEach((x) => recoger(x, profundidad + 1));
-  else if (v && typeof v === "object") Object.values(v).forEach((x) => recoger(x, profundidad + 1));
+  else if (Array.isArray(v)) v.forEach((x) => recoger(x, p + 1));
+  else if (v && typeof v === "object") Object.values(v).forEach((x) => recoger(x, p + 1));
 };
 recoger(datos.tool_input ?? datos.toolInput ?? datos.input ?? datos.arguments ?? datos);
 
-for (const cadena of cadenas) {
-  for (const [patron, motivo] of PROTEGIDAS) {
-    if (patron.test(cadena)) {
-      responder(
-        "deny",
-        `Ruta protegida de NetworkBench — ${motivo}. Modificarla requiere autorización ` +
-          `específica del propietario: informa, propón y espera. ` +
-          `Ver .agents/rules/universal/fuentes-de-verdad.md`
-      );
-    }
-  }
+const texto = cadenas.join("\n");
+const golpe = PROTEGIDAS.find(([patron]) => patron.test(texto));
+
+if (!golpe) responder("allow", "guard: sin rutas protegidas en la operación");
+
+// Herramienta de fichero, o herramienta desconocida: cualquier mención basta.
+if (!esShell) responder("deny", RAZON_DENY(golpe[1]));
+
+// Shell: hace falta además un indicio de escritura, para no bloquear lecturas.
+if (ESCRIBE.some((p) => p.test(texto))) {
+  responder("deny", RAZON_DENY(golpe[1]));
 }
 
-responder("allow", "guard: sin rutas protegidas en la operación");
+responder("allow", "guard: ruta protegida mencionada, pero el comando parece de solo lectura");

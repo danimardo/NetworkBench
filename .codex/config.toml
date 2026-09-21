@@ -1,23 +1,40 @@
 # Configuración de Codex para este repositorio.
 #
 # Existe porque la configuración global de esta máquina (~/.codex/config.toml) fija
-# approval_policy = "never" y sandbox_mode = "danger-full-access" para TODOS los
-# proyectos, y marca f:\apps\netbench como trusted. Aquí no queremos eso.
+# approval_policy = "never" para TODOS los proyectos, y marca f:\apps\netbench como
+# trusted. Aquí no queremos que el agente actúe sin preguntar.
 #
 # Precedencia en Codex 0.155.1, según los mensajes del propio binario:
 #   enterprise-managed  >  user config  >  PROJECT CONFIG  >  session flags
 # Es decir, este fichero pisa a ~/.codex/config.toml.
 #
-# ESTADO: DOCUMENTADO, no ejecutado. Verificar abriendo una sesión de Codex en el
-# repositorio y comprobando que pide aprobación para escribir. Si NO la pidiera, este
-# fichero no sirve y la única barrera real es el hook pre-commit de Git: dilo y
-# actualiza .agents/meta/agent-capabilities.yaml.
-#
 # Validado contra: Codex CLI 0.155.1 — 2026-09-21
 
 # El modelo pide aprobación cuando la necesita, en vez de ejecutar sin preguntar.
+# Esta es la barrera que aporta valor y no requiere ninguna instalación previa.
 approval_policy = "on-request"
 
-# Escritura limitada al workspace. No "danger-full-access": el agente no tiene por qué
-# escribir fuera del repositorio para trabajar en este proyecto.
-sandbox_mode = "workspace-write"
+# ─────────────────────────────────────────────────────────────────────────────
+# sandbox_mode: DELIBERADAMENTE NO SE FIJA AQUÍ.
+#
+# Se intentó "workspace-write" el 2026-09-21 y dejó Codex inservible en este
+# repositorio: fallaba al ejecutar cualquier comando y no podía ni leer ficheros.
+#
+# Motivo (VERIFICADO en las cadenas del binario): el sandbox de Windows exige un
+# paso previo con elevación —
+#     codex sandbox setup --elevated --user <usuario> --codex-home <ruta>
+# — y además no admite command/exec/write, terminate, resize, streaming ni
+# outputBytesCap personalizado. Sin ese setup, cualquier modo distinto de
+# danger-full-access rompe la sesión.
+#
+# Decisión: no forzarlo desde el repositorio. Requiere elevación y cambia estado
+# global de la máquina; eso lo decide el propietario, no este fichero.
+# Si algún día se ejecuta ese setup, puede añadirse aquí:
+#     sandbox_mode = "workspace-write"
+# y comprobarse que Codex sigue pudiendo ejecutar comandos ANTES de consolidarlo.
+#
+# Mientras tanto, la contención de escrituras la aportan, por este orden:
+#   1. scripts/git-hooks/pre-commit  — independiente del agente, falla en cerrado
+#   2. .codex/hooks/                 — PreToolUse, deniega rutas protegidas
+#   3. approval_policy de arriba     — el agente pregunta antes de actuar
+# ─────────────────────────────────────────────────────────────────────────────

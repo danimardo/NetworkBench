@@ -103,7 +103,7 @@ herramientas:
     permisos:
       ruta_global: "~/.codex/config.toml — FUERA de este repositorio"
       estado_global: "approval_policy=never; sandbox_mode=danger-full-access; f:\apps\netbench trusted"
-      mitigacion_en_el_repositorio: ".codex/config.toml — approval_policy=on-request; sandbox_mode=workspace-write"
+      mitigacion_en_el_repositorio: ".codex/config.toml — approval_policy=on-request. sandbox_mode NO se fija: ver sandbox_windows"
       estado: DOCUMENTADO
       evidencia: >-
         Cadena de precedencia en el binario 0.155.1, por mensajes propios:
@@ -111,6 +111,18 @@ herramientas:
         'Overridden by project config' > 'Overridden by session flags'.
         La configuracion de proyecto pisa a la del usuario.
       pendiente: "abrir Codex en el repo y comprobar que pide aprobacion para escribir"
+    sandbox_windows:
+      estado: VERIFICADO
+      hallazgo: >-
+        El sandbox de Windows exige un paso previo con elevacion:
+        'codex sandbox setup --elevated --user <usuario> --codex-home <ruta>'.
+        Ademas no admite command/exec/write, terminate, resize, streaming ni
+        outputBytesCap personalizado.
+      evidencia: "cadenas del binario 0.155.1 + prueba real del 2026-09-21"
+      consecuencia: >-
+        Fijar sandbox_mode="workspace-write" en .codex/config.toml dejo Codex sin poder
+        ejecutar comandos ni leer ficheros en este repositorio. RETIRADO. No volver a
+        fijarlo sin ejecutar antes ese setup y comprobar que Codex sigue funcionando.
     config_por_proyecto:
       rutas: [".codex/config.toml", ".codex/hooks", ".codex/agents"]
       estado: DOCUMENTADO
@@ -124,6 +136,10 @@ herramientas:
       evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus' en el binario"
       confianza: "Codex pide confirmar los hooks del repositorio la primera vez (HookTrustStatus). No usar --dangerously-bypass-hook-trust"
       uso_en_este_repo: "PreToolUse -> .codex/hooks/guard-protected-paths.mjs; FALLA EN ABIERTO a proposito"
+      criterio: >-
+        Herramientas de fichero: cualquier mencion de ruta protegida -> deny.
+        Herramientas de shell: ruta protegida MAS indicio de escritura -> deny; una
+        lectura como 'cat Historias.md' se permite. Probado con 12 casos el 2026-09-21.
       consecuencia: >-
         RIESGO PARCIALMENTE MITIGADO. La barrera que SI falla en cerrado y no depende
         de ningun agente es scripts/git-hooks/pre-commit.
