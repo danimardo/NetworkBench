@@ -21,15 +21,53 @@
   a las capabilities de Tauri, la lista blanca del firewall y los comandos IPC.
 - Un revisor no necesita edición, instalación, push, PR, configuración global ni secretos.
 
-## Limitación conocida del entorno (VERIFICADO, no corregible desde el repositorio)
+## Barreras efectivas de este repositorio
 
-`~/.codex/config.toml` fija globalmente `approval_policy = "never"` y
-`sandbox_mode = "danger-full-access"`, y marca `f:\apps\netbench` como `trust_level = "trusted"`.
-Ninguna regla de este repositorio puede contrarrestarlo: se corrige en ese fichero, que
-está fuera del alcance del sistema de agentes. Consecuencia práctica: **en Codex, estas
-reglas son la única barrera; no hay una segunda oportunidad de aprobación.**
+Estado a 2026-09-21, tras probarlas todas en sesiones reales de las dos herramientas.
 
-Claude Code sí aplica `.claude/settings.json`, cuyos permisos de proyecto son de solo lectura.
+| Capa | Alcance | Estado |
+|---|---|---|
+| `scripts/git-hooks/pre-commit` | **cualquier herramienta, y tú a mano** | **VERIFICADO** |
+| Hook `PreToolUse` → `scripts/agent/guard-protected-paths.mjs` | Claude Code | **VERIFICADO** |
+| `.claude/settings.json` (`deny` / `ask`) | Claude Code | VERIFICADO tras corregir los globs |
+| El mismo hook en Codex | Codex | **NO FUNCIONAL: no llega a dispararse** |
+| `.codex/config.toml` (`approval_policy`) | Codex | **NO ES BARRERA: decide el modelo** |
+
+El guard es **un solo fichero** que invocan las dos herramientas: no hay copias que puedan
+divergir. Instalación del hook de Git, una vez por clon:
+
+```
+git config core.hooksPath scripts/git-hooks
+```
+
+### Dentro de una sesión de Codex no hay contención hoy
+
+VERIFICADO el 2026-09-21: Codex leyó estas mismas reglas, invocó la skill de cierre y
+editó igualmente una ruta protegida. Las tres vías están cerradas por ahora:
+
+- El hook no se dispara. La característica `hooks` está `stable` y activada, así que es un
+  problema de ubicación del fichero, sin resolver. Ver `.codex/hooks/README.md`.
+- `approval_policy` no admite ningún valor que **obligue** a preguntar: solo `on-request`,
+  donde decide el modelo, y `never`.
+- El sandbox exige `codex sandbox setup --elevated`, que no se ha ejecutado. Fijarlo sin
+  ese paso deja Codex sin poder ejecutar comandos: ya ocurrió el mismo día.
+
+**Consecuencia práctica: con Codex, el commit es el primer punto donde algo se puede
+impedir de verdad.** Trátalo en consecuencia y no confíes en que una regla escrita baste.
+
+### Configuración global, fuera del alcance de este repositorio
+
+`~/.codex/config.toml` fija `approval_policy = "never"` y
+`sandbox_mode = "danger-full-access"` para todos los proyectos, y marca
+`f:\apps\netbench` como `trust_level = "trusted"`. La causa raíz se corrige ahí, no aquí.
+
+### Los globs de permisos no se dan por buenos sin probarlos
+
+El 2026-09-21 las reglas `deny` de Claude Code estaban escritas con un prefijo de
+directorio actual y **no bloquearon nada**: esa forma no está reconocida y el glob falló
+en silencio. Las válidas son `Edit(ruta)`, `Edit(**/ruta)`, `Edit(//absoluta)` y
+`Edit(~/ruta)`; `Edit(...)` ya cubre Write y NotebookEdit. Un glob mal escrito no avisa:
+por eso existe el hook además del `deny`.
 
 ## Operaciones que requieren autorización específica
 

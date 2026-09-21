@@ -127,7 +127,12 @@ herramientas:
       ruta_global: "~/.codex/config.toml — FUERA de este repositorio"
       estado_global: "approval_policy=never; sandbox_mode=danger-full-access; f:\apps\netbench trusted"
       mitigacion_en_el_repositorio: ".codex/config.toml — approval_policy=on-request. sandbox_mode NO se fija: ver sandbox_windows"
-      estado: DOCUMENTADO
+      estado: NO_ES_BARRERA
+      hallazgo_2026_09_21: >-
+        Los unicos valores son 'on-request' (decide el modelo) y 'never'. NO existe un
+        valor que obligue a preguntar. Con on-request, Codex edito una ruta protegida sin
+        pedir nada. Se mantiene por ser mejor que never, no porque contenga nada.
+      evidencia_valores: "codex --help, -a/--ask-for-approval"
       evidencia: >-
         Cadena de precedencia en el binario 0.155.1, por mensajes propios:
         'Overridden by enterprise-managed config' > 'Overridden by user config' >
@@ -136,6 +141,7 @@ herramientas:
       pendiente: "abrir Codex en el repo y comprobar que pide aprobacion para escribir"
     sandbox_windows:
       estado: VERIFICADO
+      confirmado_2026_09_21: "tras retirar sandbox_mode, 'ejecuta ls' volvio a funcionar en una sesion real"
       hallazgo: >-
         El sandbox de Windows exige un paso previo con elevacion:
         'codex sandbox setup --elevated --user <usuario> --codex-home <ruta>'.
@@ -155,8 +161,18 @@ herramientas:
       ruta: ".codex/hooks/hooks.json"
       eventos_detectados: [PreToolUse, PermissionRequest, PostToolUse, PreCompact, PostCompact, SessionStart, SessionEnd, UserPromptSubmit, SubagentStart, SubagentStop, Stop, Interrupt]
       esquema_de_salida: "hookSpecificOutput.{hookEventName, permissionDecision, permissionDecisionReason, additionalContext}"
-      estado: INFERIDO
-      evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus' en el binario"
+      estado: NO_FUNCIONAL
+      hallazgo_2026_09_21: >-
+        Probado en una sesion real: el hook NO se disparo y Codex no pidio confianza para
+        los hooks del repositorio. La caracteristica 'hooks' esta stable y activada
+        (codex features list), asi que el fallo es de UBICACION del fichero, no de que
+        los hooks esten apagados. Se han dejado dos rutas candidatas: .codex/hooks.json y
+        .codex/hooks/hooks.json. Ver .codex/hooks/README.md.
+      no_intentado: >-
+        Declarar el hook como tabla TOML dentro de .codex/config.toml, pese a que la
+        estructura HookEventsToml lo sugiere: una clave inventada puede impedir que Codex
+        lea toda su configuracion de proyecto, y ya hubo una averia asi con sandbox_mode.
+      evidencia: "cadenas 'hooks/hooks.json', 'PreToolUseHookSpecificOutputWire', 'permissionDecision', 'HookTrustStatus', 'trusted_hash' en el binario"
       confianza: "Codex pide confirmar los hooks del repositorio la primera vez (HookTrustStatus). No usar --dangerously-bypass-hook-trust"
       uso_en_este_repo: "PreToolUse, apuntando al guard COMPARTIDO con Claude Code; FALLA EN ABIERTO a proposito"
       criterio: >-
@@ -164,8 +180,10 @@ herramientas:
         Herramientas de shell: ruta protegida MAS indicio de escritura -> deny; una
         lectura como 'cat Historias.md' se permite. Probado con 12 casos el 2026-09-21.
       consecuencia: >-
-        RIESGO PARCIALMENTE MITIGADO. La barrera que SI falla en cerrado y no depende
-        de ningun agente es scripts/git-hooks/pre-commit.
+        RIESGO NO MITIGADO DENTRO DE CODEX. A 2026-09-21 no hay contencion efectiva en
+        sesion: ni hook, ni approval_policy, ni sandbox (exige setup con elevacion).
+        La unica barrera real frente a Codex es scripts/git-hooks/pre-commit, en el
+        momento del commit.
 
   opencode:
     version_instalada: "1.17.9"

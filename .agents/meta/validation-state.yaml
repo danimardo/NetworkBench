@@ -51,10 +51,10 @@ no_ejecutado:
   - que: "pnpm check, lint, type-check, tests unitarios, integracion, E2E"
     motivo: "NO existen. La constitucion reconoce que pnpm check aun debe crearse"
     como_verificarlo_despues: "tras la primera implementacion que los introduzca"
-  - que: "Que Codex carga el hook y se le concede confianza"
-    motivo: "requiere una sesion real de Codex; el guard esta probado, su carga por Codex no"
-    estado_actual: INFERIDO
-    como_verificarlo_despues: "abrir Codex, aceptar la confianza de hooks y pedirle una escritura en el documento de requisitos"
+  - que: "La ruta correcta del fichero de hooks de proyecto de Codex"
+    motivo: "probada .codex/hooks/hooks.json y no se disparo; anadida tambien .codex/hooks.json, sin probar"
+    estado_actual: NO_RESUELTO
+    como_verificarlo_despues: "repetir el paso B; si sigue sin dispararse, quedan la tabla TOML en config.toml y la documentacion oficial de Codex"
   - que: "Que Codex vuelve a ejecutar comandos con normalidad tras retirar sandbox_mode"
     motivo: "requiere una sesion real de Codex"
     estado_actual: NO_VERIFICADO
@@ -98,6 +98,22 @@ no_ejecutado:
       documentacion que fue un falso positivo por confundir una flecha de prosa con una
       redireccion. Corregido y reprobado.
 
+  - comando: "prueba real en Codex, paso A (2026-09-21): 'ejecuta ls'"
+    resultado: "funciono. Retirar sandbox_mode arreglo la ejecucion de comandos"
+    estado: VERIFICADO
+  - comando: "prueba real en Codex, paso B (2026-09-21): escribir en una ruta protegida"
+    resultado: >-
+      FALLO TOTAL DE LA CAPA DE CODEX. Codex leyo las reglas, invoco la skill de cierre y
+      edito el fichero igualmente. El hook no se disparo, no pidio confianza para los
+      hooks y approval_policy no provoco ninguna pregunta.
+    estado: VERIFICADO
+    consecuencia: >-
+      La capa de Codex pasa de INFERIDA a NO FUNCIONAL. Dentro de una sesion de Codex no
+      hay contencion; la barrera efectiva es el hook pre-commit de Git.
+  - comando: "codex features list"
+    resultado: "la caracteristica 'hooks' esta stable y activada; el fallo es de ubicacion del fichero"
+    estado: VERIFICADO
+
 no_autorizado:
   - que: "Cualquier operacion de escritura de Git (add, commit, push, rama, PR)"
     nota: "la aprobacion de la propuesta de arquitectura NO la autoriza. Pendiente de permiso especifico"
@@ -130,7 +146,13 @@ riesgos_abiertos:
     gravedad: media
   - id: R7
     descripcion: >-
-      Configuracion global de Codex sin aprobacion ni sandbox. Mitigado en tres capas
+      DENTRO DE CODEX NO HAY CONTENCION EFECTIVA (verificado 2026-09-21): el hook no se
+      dispara, approval_policy no admite un valor que obligue a preguntar y el sandbox
+      exige setup con elevacion. Solo el hook pre-commit de Git protege.
+    gravedad: alta
+  - id: R7_historico
+    descripcion: >-
+      Configuracion global de Codex sin aprobacion ni sandbox. Se intento mitigar en capas
       (.codex/config.toml, hook PreToolUse y hook pre-commit de Git), pero las dos
       primeras estan DOCUMENTADA e INFERIDA, no ejecutadas, y el hook PreToolUse falla
       en abierto a proposito. La causa raiz sigue en ~/.codex/config.toml.

@@ -10,8 +10,15 @@
 #
 # Validado contra: Codex CLI 0.155.1 — 2026-09-21
 
-# El modelo pide aprobación cuando la necesita, en vez de ejecutar sin preguntar.
-# Esta es la barrera que aporta valor y no requiere ninguna instalación previa.
+# ATENCIÓN: en Codex 0.155.1 esto NO es una barrera.
+#
+# Los únicos valores posibles son (VERIFICADO en `codex --help`):
+#   on-request : «The model decides when to ask the user for approval»
+#   never      : nunca pide aprobación
+#
+# Es decir: no existe ningún valor que OBLIGUE a preguntar. Con "on-request" decide el
+# modelo, y el 2026-09-21 decidió no preguntar antes de editar una ruta protegida.
+# Se mantiene porque es estrictamente mejor que "never", no porque contenga nada.
 approval_policy = "on-request"
 
 # ─────────────────────────────────────────────────────────────────────────────
