@@ -100,12 +100,19 @@ herramientas:
         rutas: ["AGENTS.md", "AGENTS.override.md"]
         carga: "nativa, sin adaptador"
         estado: VERIFICADO
-        evidencia: "cadenas AGENTS.override.md y AGENTS.md en el binario"
+        evidencia: "cadenas en el binario, y AGENTS.md presente en el volcado de 'codex debug prompt-input' del 2026-09-21"
         nota: "AGENTS.override.md no existe en este repo y no debe crearse sin motivo"
       skills:
         ruta_repo: ".agents/skills/<nombre>/SKILL.md"
         ruta_global: "CODEX_HOME/skills"
-        estado: INFERIDO
+        estado: VERIFICADO
+        verificado_2026_09_21: >-
+          'codex debug prompt-input' muestra F:/Apps/NetBench/.agents/skills como raiz de
+          skills y lista las 12 del repositorio, incluidas cierre-de-tarea y
+          verificar-sistema-agentes. Codex carga las skills propias SIN stub, al contrario
+          que Claude Code. AGENTS.md tambien aparece en el prompt.
+        diagnostico_barato: "codex debug prompt-input — local, solo lectura, sin llamar a la API"
+        estado_anterior: INFERIDO
         evidencia: >-
           cadena de error 'failed to stat repo skills root' junto a '.agents' y 'skills',
           y ruta de fuente 'ext\skills\src\host_prompt.rs' en el binario. Ademas, el

@@ -43,10 +43,30 @@ hay CI ni hooks en este repositorio.
 | Qué | Cómo |
 |---|---|
 | Instrucciones | Codex lee `AGENTS.md` de la raíz de forma nativa. `AGENTS.override.md` tiene prioridad si existe; hoy no existe y no debe crearse sin motivo |
-| Skills | Codex lee las skills del repositorio desde `.agents/skills/`. **Estado: INFERIDO con evidencia fuerte** — cadenas del binario instalado (`"failed to stat repo skills root"` junto a `.agents` + `skills`, y la ruta de fuente `ext\skills\src\host_prompt.rs`). **No se ha comprobado ejecutando Codex** |
-| Cómo verificarlo de verdad | Abrir una sesión de Codex en el repositorio y pedirle que liste sus skills disponibles, o invocar `speckit-specify`. Si no aparecen, el canónico necesita un adaptador propio y hay que informar |
+| Skills | Codex lee las skills del repositorio desde `.agents/skills/`. **VERIFICADO el 2026-09-21** |
+| **Cómo verificarlo sin gastar una sesión** | `codex debug prompt-input` vuelca el prompt que verá el modelo, en JSON, **localmente y sin llamar a la API**. Es la forma más barata y fiable de comprobar qué carga Codex de verdad |
 | Reglas | Codex **no tiene mecanismo propio de reglas**. Las de `.agents/rules/` le llegan como referencia en prosa desde `AGENTS.md`: es una garantía dependiente del modelo, no determinista |
 | Permisos | Se configuran en `~/.codex/config.toml`, **fuera de este repositorio**. Hoy: `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`, proyecto `trusted`. Ninguna regla de aquí lo contrarresta |
+
+### El diagnóstico barato: `codex debug prompt-input`
+
+```
+codex debug prompt-input
+```
+
+Imprime en JSON el prompt visible para el modelo. Comprueba de un vistazo:
+
+- **Skills del repositorio.** Aparece una tabla de «Skill roots»; una de las raíces debe
+  ser `F:/Apps/NetBench/.agents/skills`, y las skills se listan con ese prefijo. El
+  2026-09-21 aparecían las 12: las 10 de SpecKit más `cierre-de-tarea` y
+  `verificar-sistema-agentes`. Codex carga las propias **sin necesidad de stub**, al
+  contrario que Claude Code.
+- **Instrucciones.** `AGENTS.md` debe aparecer citado.
+- **Lo que NO se ve aquí.** Los hooks son un mecanismo de ejecución, no contenido del
+  prompt: su ausencia en este volcado no prueba nada sobre ellos. Para eso hace falta
+  provocar una operación y ver si se deniega.
+
+Úsalo antes de abrir una sesión: responde a «¿carga Codex mi contexto?» sin consumir nada.
 
 ## 4. Tras actualizar una herramienta
 
