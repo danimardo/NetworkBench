@@ -1,6 +1,6 @@
 <!--
 Sync Impact Report — 2026-09-21
-Versión: 0.3.0 -> 0.4.0 (política transversal de logging y depuración).
+Versión: 0.5.0 -> 0.6.0 (matriz Windows: 22H2 y 11 x64; decisión Q1).
 Principio XIII añadido: abstracción, niveles, privacidad, formato y coste del logging.
 Tabla de versiones, CI y discrepancias actualizadas; no se eliminan principios.
 Plantilla resuelta con resolve-template.ps1 constitution-template -Json.
@@ -148,8 +148,11 @@ La versión de la constitución es independiente de la versión de la aplicació
 
 ### VI. Accesibilidad verificable desde la primera pantalla
 
-- Cada pantalla entregada cumple los criterios aplicables de WCAG 2.2 AA, con WCAG2ICT
-  para escritorio. NO posponer la accesibilidad de H1 a H2.
+- Cada pantalla entregada cumple desde H1 los criterios básicos de WCAG 2.2 AA, con WCAG2ICT
+  para escritorio: teclado, foco visible, contraste, texto además de color y reducción de
+  movimiento. La revisión completa con Narrador, alto contraste y ampliación al 200 % se
+  cierra en H2 (decisión Q3 del propietario, 2026-09-21). Ninguna pantalla H1 se rediseña
+  en H2 para añadir accesibilidad: se entrega accesible y H2 la verifica.
 - Todas las acciones accesibles por teclado; foco visible, orden lógico, retorno del foco
   al cerrar diálogos y ausencia de trampas. Controles propios conservan semántica, nombres,
   estados y patrones de teclado equivalentes.
@@ -450,7 +453,7 @@ La versión de la constitución es independiente de la versión de la aplicació
 
 ### Plataforma y alcance
 
-Propuesta Q1: Windows 10 1809 (build 17763) o posterior y Windows 11, solo x64.
+Q1 (decidido el 2026-09-21): Windows 10 22H2 (build 19045) y Windows 11, solo x64.
 Target `x86_64-pc-windows-msvc`, edición Rust 2024. El equipo de desarrollo puede requerir
 Windows más reciente que el cliente; son matrices distintas. No se promete soporte de
 Microsoft para todas las versiones Windows admitidas por la app.
@@ -461,7 +464,7 @@ monitorización continua o argumentos libres en v1. No implementar anticipadamen
 ### Línea base propuesta, consultada el 2026-09-21
 
 Se verificó existencia de versiones y restricciones declaradas. **No se ha compilado ni
-validado el conjunto en Windows 10 1809.** El primer plan DEBE resolver dependencias,
+validado el conjunto en Windows 10 22H2.** El primer plan DEBE resolver dependencias,
 compilar, empaquetar y comprobar arranque antes de consolidarlo. Conflictos requieren
 enmienda explícita, no downgrade silencioso.
 
@@ -586,7 +589,7 @@ Cerrar un hito exige Historias.md §26 y pruebas reales aplicables. Publicar v1 
 Windows, TCP/UDP, IPv4/IPv6, LAN/routing/VPN según alcance, UAC aceptado/rechazado,
 instalación/actualización/desinstalación, migración, caída/cancelación, revisión manual
 de accesibilidad y V-01 a V-12 cerradas en VALIDACION.md.
-Matriz mínima propuesta: Windows 10 1809 y 22H2, Windows 11; DPI 100/150/200 %,
+Matriz mínima: Windows 10 22H2 y Windows 11; DPI 100/150/200 %,
 monitor desconectado y GPU integrada. Registrar build exacta de cada imagen.
 
 La release genera networkbench-setup.exe, firma y latest.json del mismo binario.
@@ -615,7 +618,7 @@ En esta redacción solo se modifica la constitución.
 | Instancia única / integración de dos instancias | Harness aislado, sin bypass de producción |
 | Terminar procesos por nombre/ruta | Demostrar propiedad de la instancia |
 | latest y pre-release / URL mutable | URL por etiqueta para pruebas y binarios; latest solo estable |
-| Accesibilidad H2 / zoom bloqueado y máximo 130 % | Accesibilidad desde H1 y ampliación propia al 200 % |
+| Accesibilidad H2 / zoom bloqueado y máximo 130 % | Básica desde H1; verificación completa en H2; ampliación propia al 200 % |
 | Design Sistema / Historias Oscuro | Oscuro inicial, sujeto a Q4 |
 | Tipografía embebida / fuentes Windows de Design | Fuentes del SO locales; adicionales empaquetadas y licenciadas |
 | «Todo local» / updater y Evergreen | Funcionalidad local y actualizaciones externas documentadas |
@@ -668,10 +671,11 @@ Conservar motivos/evidencia en Git.
 
 ### Decisiones pendientes de respuesta
 
-- **Q1:** conservar Windows 10 1809+ y Windows 11 x64 (propuesta) o reducir matriz.
+- **Q1:** decidido el 2026-09-21: Windows 10 22H2 y Windows 11, solo x64.
 - **Q2:** 80 % general por capa y 90 % de líneas en módulos críticos Rust (propuesta).
-- **Q3:** adoptar offline, persistencia H1, máximo simultáneo de 32 streams por sentido,
-  actualización por versión y accesibilidad desde H1 (propuesta).
+- **Q3:** adoptar offline, persistencia H1, máximo simultáneo de 32 streams por sentido y
+  actualización por versión (propuesta). Accesibilidad: básica desde H1 y completa en H2
+  (decidido el 2026-09-21).
   Mantener 64 simultáneos exige rediseñar rangos y reglas.
 - **Q4:** Graphite Violet con Oscuro inicial (propuesta) o Sistema inicial.
 
@@ -681,4 +685,4 @@ transversal, el control Svelte y las políticas de entorno y logging están soli
 por el propietario. Primera versión ratificada: 1.0.0.
 Ratificar el marco no equivale a aprobar builds todavía no probadas.
 
-**Version**: 0.4.0 | **Ratified**: pendiente — TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-21
+**Version**: 0.6.0 | **Ratified**: pendiente — TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-21
