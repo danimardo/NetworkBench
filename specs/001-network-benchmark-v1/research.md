@@ -1,7 +1,7 @@
 # Investigación: NetworkBench v1
 
 **Fecha**: 2026-09-21  
-**Constitución**: 0.6.0, no ratificada  
+**Constitución**: 0.7.0, no ratificada  
 **Estado**: decisiones de diseño resueltas; gates empíricos y normativos conservados
 
 Este documento resuelve las decisiones técnicas necesarias para diseñar la feature. No presenta
@@ -165,6 +165,9 @@ frágiles o no prueban el comportamiento prometido.
 - https://v2.tauri.app/develop/tests/webdriver/
 
 ## R12 — Cobertura Q2
+
+**Resolución (2026-09-21)**: el propietario adoptó la propuesta; constitución 0.7.0. El texto
+siguiente se conserva como registro.
 
 **Decisión**: medir baseline completa desde L00 y dejar el gate numérico sin ratificar hasta que
 el propietario responda Q2. La propuesta documentada es 80 % general por lenguaje/métrica y 90 %

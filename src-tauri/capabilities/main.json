@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Capacidad mínima para la ventana principal de NetworkBench sin shell, SQL ni filesystem genéricos",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

@@ -36,8 +36,8 @@ function ficherosControlados() {
   }
   l.push(
     ...walk(join(ROOT, ".agents"), (p) => /\.(md|ya?ml)$/i.test(p)).filter(
-      (p) => !rel(p).startsWith(".agents/skills/speckit-")
-    )
+      (p) => !rel(p).startsWith(".agents/skills/speckit-"),
+    ),
   );
   return l;
 }
@@ -55,7 +55,7 @@ function extraerRutas(texto) {
       !/\s/.test(r) &&
       // Rutas fuera del repositorio (configuración global del usuario): no comprobables.
       !r.startsWith("~") &&
-      !/^[A-Za-z]:/.test(r)
+      !/^[A-Za-z]:/.test(r),
   );
 }
 
@@ -91,7 +91,11 @@ export function check() {
     }
   }
   if (total > 0) {
-    r.push(warn(`${total} referencias a Especificacion.md en ${detalle.length} ficheros no editables — léanse como Historias.md`));
+    r.push(
+      warn(
+        `${total} referencias a Especificacion.md en ${detalle.length} ficheros no editables — léanse como Historias.md`,
+      ),
+    );
     for (const d of detalle.sort()) r.push(warn(`    ${d}`));
   }
 

@@ -43,17 +43,25 @@ export function check() {
   }
 
   for (const n of canon) {
-    if (!stubs.includes(n)) r.push(fail(`Falta el stub .claude/skills/${n}/SKILL.md para la skill canónica ${n}`));
+    if (!stubs.includes(n))
+      r.push(fail(`Falta el stub .claude/skills/${n}/SKILL.md para la skill canónica ${n}`));
   }
   for (const n of stubs) {
-    if (!canon.includes(n)) r.push(fail(`Stub huérfano .claude/skills/${n}/ sin skill canónica correspondiente`));
+    if (!canon.includes(n))
+      r.push(fail(`Stub huérfano .claude/skills/${n}/ sin skill canónica correspondiente`));
   }
 
   for (const n of canon.filter((x) => stubs.includes(x))) {
     const rutaCanon = join(CANONICO, n, "SKILL.md");
     const rutaStub = join(ADAPTADO, n, "SKILL.md");
-    if (!existsSync(rutaCanon)) { r.push(fail(`.agents/skills/${n}/ no contiene SKILL.md`)); continue; }
-    if (!existsSync(rutaStub)) { r.push(fail(`.claude/skills/${n}/ no contiene SKILL.md`)); continue; }
+    if (!existsSync(rutaCanon)) {
+      r.push(fail(`.agents/skills/${n}/ no contiene SKILL.md`));
+      continue;
+    }
+    if (!existsSync(rutaStub)) {
+      r.push(fail(`.claude/skills/${n}/ no contiene SKILL.md`));
+      continue;
+    }
 
     const c = readFileSync(rutaCanon, "utf8");
     const s = readFileSync(rutaStub, "utf8");
@@ -61,8 +69,14 @@ export function check() {
     for (const campo of ["name", "description"]) {
       const vc = frontmatterField(c, campo);
       const vs = frontmatterField(s, campo);
-      if (vc === null) { r.push(fail(`${n}: el canónico no declara "${campo}" en su frontmatter`)); continue; }
-      if (vs === null) { r.push(fail(`${n}: el stub no declara "${campo}" en su frontmatter`)); continue; }
+      if (vc === null) {
+        r.push(fail(`${n}: el canónico no declara "${campo}" en su frontmatter`));
+        continue;
+      }
+      if (vs === null) {
+        r.push(fail(`${n}: el stub no declara "${campo}" en su frontmatter`));
+        continue;
+      }
       if (vc !== vs) r.push(fail(`${n}: "${campo}" diverge entre canónico y stub`));
     }
 
@@ -71,7 +85,11 @@ export function check() {
     }
     const lineas = s.split(/\r?\n/).length;
     if (lineas > MAX_LINEAS_STUB) {
-      r.push(fail(`${n}: el stub tiene ${lineas} líneas (máximo ${MAX_LINEAS_STUB}); parece copiar el canónico en vez de apuntarlo`));
+      r.push(
+        fail(
+          `${n}: el stub tiene ${lineas} líneas (máximo ${MAX_LINEAS_STUB}); parece copiar el canónico en vez de apuntarlo`,
+        ),
+      );
     }
   }
 

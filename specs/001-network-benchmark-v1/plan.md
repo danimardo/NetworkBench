@@ -3,7 +3,7 @@
 **Branch**: `001-network-benchmark-v1` *(identificador de feature; no existe rama Git)*  
 **Date**: 2026-09-21  
 **Spec**: [spec.md](./spec.md)  
-**Constitution**: 0.6.0, no ratificada
+**Constitution**: 0.7.0, no ratificada
 
 ## Resumen
 
@@ -35,7 +35,7 @@ autoritativo.
 **Testing**: `cargo test`, Vitest/V8, Testing Library, Playwright/axe-core, integración Rust con
 recursos aislados y pruebas Windows/laboratorio. Tauri mock prueba lógica de integración, pero
 no WebView2, UAC, firewall, instalación ni procesos nativos. El harness nativo se decide por
-piloto. Q2 mantiene pendientes los umbrales numéricos de cobertura.
+piloto. Umbrales de cobertura fijados por Q2 (constitución 0.7.0).
 
 **Target Platform**: Windows 10 22H2 y Windows 11, solo x64. Target de build
 `x86_64-pc-windows-msvc`. Instalador NSIS por máquina con WebView2 offline.
@@ -64,14 +64,14 @@ diseña para múltiples motores, cloud, Linux/macOS, ARM64 ni monitorización co
 
 | Área | Estado | Evidencia y condición |
 |---|---|---|
-| Autoridad | Pendiente | Constitución 0.6.0 no ratificada. Q1 (0.6.0) y la accesibilidad de Q3 (0.5.0) ya están enmendadas; Q4 respondido en `spec.md`; Q2 continúa abierto. |
-| Arquitectura | Cumple para diseño | Monolito modular, Rust autoritativo, Svelte presentacional y adaptadores estrechos. ADR-002 debe aceptarse antes del bootstrap. |
+| Autoridad | Pendiente de ratificación | Constitución 0.7.0 no ratificada. Q1 (0.6.0), Q2 (0.7.0) y la accesibilidad de Q3 (0.5.0) enmendadas; Q4 respondido en `spec.md`. ADR-001–ADR-006 aceptados. |
+| Arquitectura | Cumple para diseño | Monolito modular, Rust autoritativo, Svelte presentacional y adaptadores estrechos. ADR-002 aceptado el 2026-09-21. |
 | Versiones | Pendiente G5 | La línea base está documentada; faltan manifiestos, lockfiles, build, instalador y arranque reales. |
 | Seguridad | Cumple | mTLS por identidad, consentimiento, validación repetida, capabilities mínimas y helper allowlisted. |
 | Datos | Cumple | Propietario único de SQLite, migraciones inmutables, backup/restauración y rechazo de esquema futuro. |
 | Accesibilidad | Cumple | Constitución 0.5.0 (VI): básica desde H1 (teclado, foco, contraste, texto además de color, reducción de movimiento); revisión completa con Narrador, alto contraste y 200 % en H2. Coincide con FR-042. |
 | Rendimiento | Pendiente V-04/V-12 | Presupuesto y método definidos; falta evidencia en hardware real. |
-| Pruebas | Pendiente Q2 | Estrategia y herramientas definidas; ningún porcentaje se trata como ratificado. |
+| Pruebas | Cumple | Estrategia y herramientas definidas; umbrales Q2 fijados en la constitución 0.7.0 (T132 los configura tras medir la baseline). |
 | Distribución | Cumple | `spec.md` FR-042 alineado el 2026-09-21: `latest.json` estable cuyo artefacto apunta a la URL inmutable de la etiqueta `vX.Y.Z`. T125 verifica esa forma; no queda conflicto. |
 | Puertas técnicas | Pendiente | G1–G6 y V-01–V-12 tienen responsable, lote y criterio de cierre en este plan. |
 
@@ -86,8 +86,8 @@ independiente; sí impiden declarar cerrado el lote que materialice la regla en 
   G1–G4 hasta obtener evidencia.
 - El modelo mantiene datos ausentes como tales, versiona límites y evita duplicar autoridad.
 - `quickstart.md` distingue comprobaciones disponibles, futuras y de laboratorio.
-- Q2, ADR-002 y la ratificación constitucional siguen siendo decisiones del propietario;
-  `tasks.md` deberá colocarlas antes de sus consumidores. Los conflictos de accesibilidad y
+- Q2 y ADR-001–ADR-006 quedaron decididos el 2026-09-21; solo la ratificación constitucional
+  y Q4 siguen pendientes del propietario. Los conflictos de accesibilidad y
   updater quedaron resueltos el 2026-09-21 (constitución 0.5.0 y FR-042).
 - No quedan marcadores de aclaración; los pendientes son gates registrados, no supuestos.
 
@@ -95,7 +95,7 @@ independiente; sí impiden declarar cerrado el lote que materialice la regla en 
 
 | Lote | Alcance | Prerrequisitos | Checkpoint observable |
 |---|---|---|---|
-| L00 | Bootstrap, contratos, configuración, logging y harness | ADR-001/002, G5 y Q2 para gate numérico | Build reproducible y smoke instalado sin afirmar compatibilidad no ejecutada |
+| L00 | Bootstrap, contratos, configuración, logging y harness | ADR-001/002 aceptados; G5 | Build reproducible y smoke instalado sin afirmar compatibilidad no ejecutada |
 | L01 | Shell, navegación, i18n, tema, ventana y geometría | L00; accesibilidad básica desde H1 (constitución 0.5.0, VI) | UI mínima es/en y comportamiento de ventana probado en Windows |
 | L02 | Identidad, descubrimiento, conexión manual, pairing y consentimiento | L00/L01; G2 parcial | Dos identidades se emparejan/rechazan sin que mDNS conceda confianza |
 | L03 | Plan, NTTTCP, estados, TCP bidireccional, cancelación y resultado básico | L02; G1–G3 | Dos instancias completan/cancelan una prueba sin procesos huérfanos |
@@ -193,8 +193,8 @@ artifacts/validation/            # evidencia de consolidación (T130–T136)
 
 **Decisión de estructura**: feature-first en frontend y módulos por capacidad en Rust, según
 `ARCHITECTURE.md`. Una feature exporta solo `index.ts`; Rust expone servicios/traits estrechos.
-No se crean carpetas vacías: cada lote añade solo rutas necesarias. ADR-002 debe registrar la
-evolución respecto a la estructura técnica de `Historias.md` §25.
+No se crean carpetas vacías: cada lote añade solo rutas necesarias. ADR-002 (aceptado) registra
+la evolución respecto a la estructura técnica de `Historias.md` §25, que ya lo anota.
 
 ## Fronteras y APIs públicas
 
@@ -261,9 +261,9 @@ de arquitectura y contratos, builds, unitarios/integración/cobertura y escaneos
 NO PRESENTE debe crearse en L00 antes de cerrar la primera implementación. E2E y laboratorio se
 ejecutan por riesgo y checkpoint, no en cada edición.
 
-Q2 debe decidir antes de configurar el gate numérico si adopta la propuesta de 80 % general por
-lenguaje/métrica y 90 % de líneas en módulos críticos Rust. Hasta entonces se mide una baseline
-completa y ningún porcentaje inferior se interpreta como aprobación.
+Q2 (constitución 0.7.0) fija 80 % general por lenguaje/métrica y 90 % de líneas en módulos
+críticos Rust. L00 mide primero la baseline completa; T132 configura el gate con esos umbrales y
+ningún porcentaje inferior se interpreta como aprobación.
 
 ## Justificación de dependencias
 

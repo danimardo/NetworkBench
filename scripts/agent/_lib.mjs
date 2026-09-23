@@ -48,14 +48,16 @@ export function walk(dir, filtro = () => true, acc = []) {
 }
 
 /** Ruta relativa a la raíz, con separadores POSIX para que la salida sea estable. */
-export const rel = (p) => p.slice(ROOT.length + 1).split(sep).join("/");
+export const rel = (p) =>
+  p
+    .slice(ROOT.length + 1)
+    .split(sep)
+    .join("/");
 
 /** Extrae un campo simple del frontmatter YAML de la cabecera de un fichero. */
 export function frontmatterField(contenido, campo) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(contenido);
   if (!m) return null;
-  const linea = m[1]
-    .split(/\r?\n/)
-    .find((l) => l.startsWith(`${campo}:`));
+  const linea = m[1].split(/\r?\n/).find((l) => l.startsWith(`${campo}:`));
   return linea === undefined ? null : linea.slice(campo.length + 1).trim();
 }

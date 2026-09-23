@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "performance": {
+    "okMinUtilization": 0.85,
+    "warnMinUtilization": 0.60
+  },
+  "stability": {
+    "minSamples": 10,
+    "veryStableMaxCv": 0.05,
+    "stableMaxCv": 0.10,
+    "variableMaxCv": 0.20,
+    "dropRatioThreshold": 0.50,
+    "dropCountPenaltyThreshold": 2
+  },
+  "asymmetry": {
+    "ratioThreshold": 0.20
+  },
+  "retransmission": {
+    "normalMaxRatio": 0.001,
+    "elevatedMaxRatio": 0.01
+  },
+  "cpu": {
+    "lowMaxPercent": 25.0,
+    "moderateMaxPercent": 60.0
+  }
+}

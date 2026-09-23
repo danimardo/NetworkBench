@@ -4,9 +4,11 @@
 
 **Created**: 2026-09-21
 
-**Status**: Tasks generated; analizada con `$speckit-analyze` el 2026-09-21
+**Status**: Implementación parcial; convergida con `$speckit-converge` el 2026-09-22 y analizada
+con `$speckit-analyze` el 2026-09-23. Fases 11 (convergencia, 21 tareas) y 12 (coherencia entre
+artefactos, 11 tareas) abiertas en `tasks.md`. Esta línea se actualiza en cada pasada de SpecKit.
 
-**Constitution**: 0.6.0, no ratificada
+**Constitution**: 0.7.0, no ratificada
 
 **Input**: Contenido completo de `Historias.md` como descripción de la feature.
 
@@ -403,7 +405,7 @@ y se simula una actualización válida e inválida. Se conservan decisiones y se
   macOS, ARM64 y otros motores quedan fuera de v1.
 - El historial no caduca automáticamente; el usuario controla su eliminación.
 - Los valores provisionales requieren validación antes de release.
-- La constitución 0.6.0 no está ratificada. Para esta feature, el propietario eligió Windows
+- La constitución 0.7.0 no está ratificada. Para esta feature, el propietario eligió Windows
   10 22H2/Windows 11 x64 en Q1, mantener las reglas de `Historias.md` en Q3 y tema Oscuro
   inicial en Q4. Q2 corresponde al plan de calidad. Estas respuestas no modifican ni ratifican
   por sí solas `.specify/memory/constitution.md`.

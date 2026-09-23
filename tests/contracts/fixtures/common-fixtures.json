@@ -1,0 +1,32 @@
+{
+  "valid_instances": [
+    "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    "123e4567-e89b-42d3-a456-426614174000",
+    "550e8400-e29b-41d4-a716-446655440000"
+  ],
+  "invalid_instances": [
+    "not-a-uuid",
+    "123e4567-e89b-12d3-a456-426614174000",
+    "",
+    "123e4567-e89b-42d3-c456-426614174000"
+  ],
+  "valid_u64_decimals": ["0", "1", "9007199254740991", "9007199254740992", "18446744073709551615"],
+  "invalid_u64_decimals": ["-1", "abc", "18446744073709551616", "1.5"],
+  "metric_values": {
+    "available": {
+      "status": "available",
+      "value": "10000000000"
+    },
+    "not_available": {
+      "status": "notAvailable"
+    },
+    "not_evaluable": {
+      "status": "notEvaluable",
+      "reason": "Muestras insuficientes durante la fase de medición"
+    },
+    "invalid": {
+      "status": "invalid",
+      "reason": "Timestamp fuera de secuencia"
+    }
+  }
+}

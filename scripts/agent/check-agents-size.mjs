@@ -25,7 +25,11 @@ export function check() {
   }
   const lineas = readFileSync(objetivo, "utf8").split(/\r?\n/).length;
   if (lineas >= LIMITE) {
-    r.push(fail(`AGENTS.md tiene ${lineas} líneas; el límite es ${LIMITE}. Mueve contenido a .agents/rules/`));
+    r.push(
+      fail(
+        `AGENTS.md tiene ${lineas} líneas; el límite es ${LIMITE}. Mueve contenido a .agents/rules/`,
+      ),
+    );
   } else if (lineas >= AVISO) {
     r.push(ok(`AGENTS.md tiene ${lineas} líneas (límite ${LIMITE}) — cerca del límite`));
   } else {

@@ -1,0 +1,268 @@
+[
+  {
+    "code": "NB-CONN-001",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-001",
+    "descriptionKey": "errors.NB-CONN-001-desc",
+    "actions": ["retry", "change_address", "show_details"]
+  },
+  {
+    "code": "NB-CONN-002",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-002",
+    "descriptionKey": "errors.NB-CONN-002-desc",
+    "actions": ["change_address", "show_details"]
+  },
+  {
+    "code": "NB-CONN-003",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-003",
+    "descriptionKey": "errors.NB-CONN-003-desc",
+    "actions": ["retry", "show_details"]
+  },
+  {
+    "code": "NB-CONN-004",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-004",
+    "descriptionKey": "errors.NB-CONN-004-desc",
+    "actions": ["change_port", "show_details"]
+  },
+  {
+    "code": "NB-CONN-005",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-005",
+    "descriptionKey": "errors.NB-CONN-005-desc",
+    "actions": ["repeat_test", "check_connection"]
+  },
+  {
+    "code": "NB-CONN-006",
+    "severity": "error",
+    "messageKey": "errors.NB-CONN-006",
+    "descriptionKey": "errors.NB-CONN-006-desc",
+    "actions": ["show_details"]
+  },
+  {
+    "code": "NB-VERSION-001",
+    "severity": "error",
+    "messageKey": "errors.NB-VERSION-001",
+    "descriptionKey": "errors.NB-VERSION-001-desc",
+    "actions": ["update_app"]
+  },
+  {
+    "code": "NB-PEER-001",
+    "severity": "info",
+    "messageKey": "errors.NB-PEER-001",
+    "descriptionKey": "errors.NB-PEER-001-desc",
+    "actions": ["retry"]
+  },
+  {
+    "code": "NB-PEER-002",
+    "severity": "warning",
+    "messageKey": "errors.NB-PEER-002",
+    "descriptionKey": "errors.NB-PEER-002-desc",
+    "actions": ["retry"]
+  },
+  {
+    "code": "NB-PEER-003",
+    "severity": "warning",
+    "messageKey": "errors.NB-PEER-003",
+    "descriptionKey": "errors.NB-PEER-003-desc",
+    "actions": ["retry"]
+  },
+  {
+    "code": "NB-PEER-004",
+    "severity": "info",
+    "messageKey": "errors.NB-PEER-004",
+    "descriptionKey": "errors.NB-PEER-004-desc",
+    "actions": ["repeat_test"]
+  },
+  {
+    "code": "NB-PEER-005",
+    "severity": "error",
+    "messageKey": "errors.NB-PEER-005",
+    "descriptionKey": "errors.NB-PEER-005-desc",
+    "actions": ["retry", "show_details"]
+  },
+  {
+    "code": "NB-PEER-006",
+    "severity": "error",
+    "messageKey": "errors.NB-PEER-006",
+    "descriptionKey": "errors.NB-PEER-006-desc",
+    "actions": ["reverify_identity", "show_details"]
+  },
+  {
+    "code": "NB-PARAM-001",
+    "severity": "error",
+    "messageKey": "errors.NB-PARAM-001",
+    "descriptionKey": "errors.NB-PARAM-001-desc",
+    "actions": ["show_details"]
+  },
+  {
+    "code": "NB-PORT-001",
+    "severity": "error",
+    "messageKey": "errors.NB-PORT-001",
+    "descriptionKey": "errors.NB-PORT-001-desc",
+    "actions": ["change_port"]
+  },
+  {
+    "code": "NB-PORT-002",
+    "severity": "error",
+    "messageKey": "errors.NB-PORT-002",
+    "descriptionKey": "errors.NB-PORT-002-desc",
+    "actions": ["change_port", "show_details"]
+  },
+  {
+    "code": "NB-FW-001",
+    "severity": "error",
+    "messageKey": "errors.NB-FW-001",
+    "descriptionKey": "errors.NB-FW-001-desc",
+    "actions": ["show_firewall_instructions", "retry"]
+  },
+  {
+    "code": "NB-FW-002",
+    "severity": "error",
+    "messageKey": "errors.NB-FW-002",
+    "descriptionKey": "errors.NB-FW-002-desc",
+    "actions": ["configure_firewall", "show_firewall_instructions"]
+  },
+  {
+    "code": "NB-FW-003",
+    "severity": "error",
+    "messageKey": "errors.NB-FW-003",
+    "descriptionKey": "errors.NB-FW-003-desc",
+    "actions": ["show_firewall_instructions", "copy_diagnostics"]
+  },
+  {
+    "code": "NB-FW-004",
+    "severity": "warning",
+    "messageKey": "errors.NB-FW-004",
+    "descriptionKey": "errors.NB-FW-004-desc",
+    "actions": ["retry_as_admin", "show_firewall_instructions"]
+  },
+  {
+    "code": "NB-FW-005",
+    "severity": "error",
+    "messageKey": "errors.NB-FW-005",
+    "descriptionKey": "errors.NB-FW-005-desc",
+    "actions": ["show_firewall_instructions", "show_details"]
+  },
+  {
+    "code": "NB-ENGINE-001",
+    "severity": "fatal",
+    "messageKey": "errors.NB-ENGINE-001",
+    "descriptionKey": "errors.NB-ENGINE-001-desc",
+    "actions": ["show_details", "reinstall"]
+  },
+  {
+    "code": "NB-ENGINE-002",
+    "severity": "fatal",
+    "messageKey": "errors.NB-ENGINE-002",
+    "descriptionKey": "errors.NB-ENGINE-002-desc",
+    "actions": ["show_details"]
+  },
+  {
+    "code": "NB-ENGINE-003",
+    "severity": "error",
+    "messageKey": "errors.NB-ENGINE-003",
+    "descriptionKey": "errors.NB-ENGINE-003-desc",
+    "actions": ["repeat_test", "change_port", "show_details"]
+  },
+  {
+    "code": "NB-ENGINE-004",
+    "severity": "error",
+    "messageKey": "errors.NB-ENGINE-004",
+    "descriptionKey": "errors.NB-ENGINE-004-desc",
+    "actions": ["repeat_test", "show_details"]
+  },
+  {
+    "code": "NB-ENGINE-005",
+    "severity": "error",
+    "messageKey": "errors.NB-ENGINE-005",
+    "descriptionKey": "errors.NB-ENGINE-005-desc",
+    "actions": ["repeat_test", "show_details"]
+  },
+  {
+    "code": "NB-ENGINE-006",
+    "severity": "error",
+    "messageKey": "errors.NB-ENGINE-006",
+    "descriptionKey": "errors.NB-ENGINE-006-desc",
+    "actions": ["repeat_test", "show_details"]
+  },
+  {
+    "code": "NB-RESULT-001",
+    "severity": "warning",
+    "messageKey": "errors.NB-RESULT-001",
+    "descriptionKey": "errors.NB-RESULT-001-desc",
+    "actions": ["repeat_test"]
+  },
+  {
+    "code": "NB-RESULT-002",
+    "severity": "warning",
+    "messageKey": "errors.NB-RESULT-002",
+    "descriptionKey": "errors.NB-RESULT-002-desc",
+    "actions": ["repeat_test", "show_details"]
+  },
+  {
+    "code": "NB-NIC-001",
+    "severity": "error",
+    "messageKey": "errors.NB-NIC-001",
+    "descriptionKey": "errors.NB-NIC-001-desc",
+    "actions": ["choose_interface", "open_network_settings"]
+  },
+  {
+    "code": "NB-NIC-002",
+    "severity": "error",
+    "messageKey": "errors.NB-NIC-002",
+    "descriptionKey": "errors.NB-NIC-002-desc",
+    "actions": ["repeat_test", "choose_interface"]
+  },
+  {
+    "code": "NB-NIC-003",
+    "severity": "error",
+    "messageKey": "errors.NB-NIC-003",
+    "descriptionKey": "errors.NB-NIC-003-desc",
+    "actions": ["choose_interface", "show_details"]
+  },
+  {
+    "code": "NB-NIC-004",
+    "severity": "error",
+    "messageKey": "errors.NB-NIC-004",
+    "descriptionKey": "errors.NB-NIC-004-desc",
+    "actions": ["open_network_settings"]
+  },
+  {
+    "code": "NB-PERM-001",
+    "severity": "error",
+    "messageKey": "errors.NB-PERM-001",
+    "descriptionKey": "errors.NB-PERM-001-desc",
+    "actions": ["retry_as_admin", "show_details"]
+  },
+  {
+    "code": "NB-DISK-001",
+    "severity": "warning",
+    "messageKey": "errors.NB-DISK-001",
+    "descriptionKey": "errors.NB-DISK-001-desc",
+    "actions": ["free_space"]
+  },
+  {
+    "code": "NB-DATA-001",
+    "severity": "fatal",
+    "messageKey": "errors.NB-DATA-001",
+    "descriptionKey": "errors.NB-DATA-001-desc",
+    "actions": ["show_details"]
+  },
+  {
+    "code": "NB-UNEXPECTED-001",
+    "severity": "error",
+    "messageKey": "errors.NB-UNEXPECTED-001",
+    "descriptionKey": "errors.NB-UNEXPECTED-001-desc",
+    "actions": ["copy_diagnostics", "retry"]
+  },
+  {
+    "code": "NB-INTERNAL-001",
+    "severity": "error",
+    "messageKey": "errors.NB-INTERNAL-001",
+    "descriptionKey": "errors.NB-INTERNAL-001-desc",
+    "actions": ["copy_diagnostics", "retry"]
+  }
+]

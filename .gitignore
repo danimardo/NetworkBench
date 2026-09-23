@@ -1,3 +1,27 @@
 .logs/
 node_modules/
+dist/
+build/
+*.log
+.env*
+
+# Rust
+target/
+debug/
+release/
+*.rs.bk
+*.rlib
+*.prof*
+
+# Estado local de herramientas, no compartible
+.specify/integrations/.cache/
+src-tauri/gen/schemas/
+
+# IDEs and OS
 .claude/settings.local.json
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

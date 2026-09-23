@@ -1223,6 +1223,11 @@ Todo texto recibido (`displayName`, descripción de NIC, driver, stderr de NTTTC
 
 ## 25. Arquitectura software [H1]
 
+> **Estructura vigente (ADR-002, aceptado el 2026-09-21):** la organización real del código es la
+> de `ARCHITECTURE.md` (frontend por features con `index.ts` público; módulos Rust por capacidad;
+> un crate con dos binarios). El árbol siguiente se conserva como referencia de responsabilidades,
+> no como disposición de carpetas.
+
 ```
 src/                     Svelte + TS + Tailwind CSS (plugin Vite)
   lib/api/               wrappers de comandos Tauri y eventos

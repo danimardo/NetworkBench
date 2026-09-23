@@ -1,7 +1,7 @@
 # Guía rápida de validación: NetworkBench v1
 
 **Fecha**: 2026-09-21  
-**Constitución**: 0.6.0, no ratificada
+**Constitución**: 0.7.0, no ratificada
 
 Esta guía define cómo validar el producto a medida que exista. Hoy la aplicación, los manifiestos,
 los scripts de producto y CI están **NO PRESENTES**. Los comandos futuros se identifican como

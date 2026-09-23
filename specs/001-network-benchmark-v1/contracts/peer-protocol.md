@@ -60,10 +60,10 @@ requerido o autorización incrementa la versión del protocolo.
 | `PAIR_RESULT` | responder → initiator | pairing | accepted + closed reason |
 | `REQUEST` | initiator → responder | precheck | validated plan, estimate, interface; `RESPONSE` |
 | `RESPONSE` | responder → initiator | waiting | accepted + closed reason + interface |
-| `PREPARE` | initiator → peer | preparing | direction, bounded port block, structured engine parameters |
+| `PREPARE` | initiator → peer | preparing | direction (`forward`, `reverse`, `both_sequential`, `both_simultaneous`), bounded port block, structured engine parameters |
 | `PREPARE_RESULT` | peer → initiator | preparing | ok, bounded checks, optional suggested port |
 | `READY` | engine receiver → peer | preparing | direction + opaque owned process reference; G2 decides PID exposure |
-| `START` | initiator → peer | preparing | direction, start marker, warmup/measure. El marcador NO presupone relojes sincronizados: G2 fija negociación de inicio/offset y tolerancia antes de implementar (constitución VII) |
+| `START` | initiator → peer | preparing | direction, start marker, warmup/measure. En plan simultáneo activa `RUNNING_BOTH`. El marcador NO presupone relojes sincronizados: G2 fija negociación de inicio/offset y tolerancia antes de implementar (constitución VII) |
 | `STARTED` | peer → initiator | running | direction |
 | `SAMPLE` | both | running | bounded observation; no response |
 | `ENGINE_DONE` | both | running | direction, role, bounded engine result |

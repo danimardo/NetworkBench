@@ -45,8 +45,26 @@ const PROTEGIDAS = [
   [/(^|[^\w.-])AUDITORIA_DISENO_V3\.md(\W|$)/i, "documento histórico"],
 ];
 
-const HERRAMIENTA_FICHERO = ["write", "edit", "patch", "create", "delete", "remove", "move", "rename"];
-const HERRAMIENTA_SHELL = ["shell", "bash", "powershell", "pwsh", "exec", "run", "command", "terminal"];
+const HERRAMIENTA_FICHERO = [
+  "write",
+  "edit",
+  "patch",
+  "create",
+  "delete",
+  "remove",
+  "move",
+  "rename",
+];
+const HERRAMIENTA_SHELL = [
+  "shell",
+  "bash",
+  "powershell",
+  "pwsh",
+  "exec",
+  "run",
+  "command",
+  "terminal",
+];
 
 /**
  * Indicios de que un comando de shell escribe, y no solo lee.
@@ -56,12 +74,15 @@ const HERRAMIENTA_SHELL = ["shell", "bash", "powershell", "pwsh", "exec", "run",
  * Ese falso positivo bloqueó una edición legítima de documentación el 2026-09-21.
  */
 const ESCRIBE = [
-  /(^|[^-=>])>>?\s/, /\|\s*tee\b/i,
-  /\bsed\b[^|;]*-i\b/i, /\bperl\b[^|;]*-i\b/i,
+  /(^|[^-=>])>>?\s/,
+  /\|\s*tee\b/i,
+  /\bsed\b[^|;]*-i\b/i,
+  /\bperl\b[^|;]*-i\b/i,
   /\b(rm|mv|cp|ln|truncate|dd|touch|mkdir|chmod|chown|install)\b/i,
   /\b(Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Clear-Content)\b/i,
   /\bgit\s+(restore|checkout|apply|rm|mv|clean|reset)\b/i,
-  /\bpatch\b/i, /\bapply_patch\b/i,
+  /\bpatch\b/i,
+  /\bapply_patch\b/i,
 ];
 
 const responder = (decision, razon) => {
@@ -79,7 +100,7 @@ const responder = (decision, razon) => {
         permissionDecision: decision,
         permissionDecisionReason: razon,
       },
-    })
+    }),
   );
   process.exit(0);
 };
@@ -97,7 +118,7 @@ try {
 }
 
 const herramienta = String(
-  datos.tool_name ?? datos.toolName ?? datos.tool ?? datos.name ?? ""
+  datos.tool_name ?? datos.toolName ?? datos.tool ?? datos.name ?? "",
 ).toLowerCase();
 
 const esFichero = HERRAMIENTA_FICHERO.some((t) => herramienta.includes(t));
@@ -128,7 +149,16 @@ const aplanar = (v, p = 0, acc = []) => {
  *       todo el payload, porque ahí la ruta sí va en el cuerpo.
  *   herramienta de shell -> solo el comando. La descripción es prosa humana.
  */
-const CAMPOS_RUTA = ["file_path", "filePath", "path", "notebook_path", "notebookPath", "paths", "file", "files"];
+const CAMPOS_RUTA = [
+  "file_path",
+  "filePath",
+  "path",
+  "notebook_path",
+  "notebookPath",
+  "paths",
+  "file",
+  "files",
+];
 const CAMPOS_COMANDO = ["command", "cmd", "script", "argv"];
 
 /**

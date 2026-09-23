@@ -16,22 +16,23 @@ Aplicación de escritorio para Windows que mide el rendimiento de red entre dos 
 usando Microsoft NTTTCP como motor. Frontend Svelte/TypeScript sobre Tauri 2 + Rust,
 renderizado en WebView2. Todo local: sin nube, sin cuentas, sin servidor.
 
-## Estado real (2026-09-21)
+## Estado real (2026-09-22)
 
-**La aplicación no existe todavía.** El repositorio contiene documentación normativa y un
-sistema de diseño de referencia. No hay `package.json`, `Cargo.toml`, `src/`, `src-tauri/`,
-`tests/` ni CI.
+**La aplicación existe y compila, pero no funciona.** `pnpm verify` y `cargo test` pasan
+limpios; aun así no hay TLS, ni escucha en el puerto de control, ni orquestación de sesión:
+el motor, el muestreo, el preflight y el diagnóstico existen con sus pruebas y **nadie los
+invoca**. Que algo compile y pase sus tests no demuestra que cumpla la especificación.
 
-Consecuencia directa: **no hay comandos de build, test o lint del proyecto.** No los
-inventes, no los ejecutes y no declares aprobado lo que no se ha ejecutado. El único
-comando verificado hoy es `node Design/scripts/verify-tokens.mjs`.
+`VALIDACION.md` declara `VERIFICADO` mucho más de lo que se ejecutó: arneses que afirman
+resultados sobre constantes y suites E2E vacías. **Comprueba el comando antes de citarlo.**
+Detalle, comandos reales y los 21 huecos de la Fase 11: `.agents/rules/proyecto/estado.md`.
 
 ## Fuentes de verdad y jerarquía
 
 Cuando dos documentos se contradigan, prevalece el de arriba:
 
-1. `.specify/memory/constitution.md` — marco normativo. **Versión 0.6.0, NO ratificada**,
-   con Q2 y Q4 abiertas y puertas técnicas G1-G6 sin cerrar. Una propuesta suya
+1. `.specify/memory/constitution.md` — marco normativo. **Versión 0.7.0, NO ratificada**,
+   con Q4 abierta y puertas técnicas G1-G6 sin cerrar. Una propuesta suya
    sin respuesta no es una aprobación.
 2. `Historias.md` — requisitos de producto (§§1-28 + estrategia de pruebas).
 3. `Design/` — presentación: tokens, componentes, flujos, pantallas y maqueta.
@@ -75,7 +76,7 @@ Usa estos términos en vez de expresiones ambiguas como «parece funcionar»:
 
 ## Metodología
 
-El ciclo de trabajo es SpecKit 1.0.9.dev0, integración `codex`, scripts PowerShell:
+El ciclo de trabajo es SpecKit 1.0.9.dev0, integración `agy`, scripts PowerShell:
 
 ```
 specify → clarify → plan → tasks → implement

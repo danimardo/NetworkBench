@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<ntttcprun>
+  <parameters>
+    <role>receiver</role>
+    <protocol>udp</protocol>
+    <mapping>(1,0,5001)</mapping>
+    <buffer_length>1472</buffer_length>
+    <async>8</async>
+    <runtime>10</runtime>
+    <warmup>1</warmup>
+    <cooldown>1</cooldown>
+  </parameters>
+  <total_bytes>146464000</total_bytes>
+  <total_buffers>99500</total_buffers>
+  <realtime metric="s">10.000</realtime>
+  <throughput metric="mbps">117.171</throughput>
+  <throughput_bps>117171200</throughput_bps>
+  <cpu metric="%">2.80</cpu>
+  <errors>0</errors>
+</ntttcprun>

@@ -1,0 +1,14 @@
+{
+  "peerA": {
+    "instanceId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "displayName": "Equipo-Iniciador-A",
+    "fingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+    "port": 17411
+  },
+  "peerB": {
+    "instanceId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "displayName": "Equipo-Receptor-B",
+    "fingerprint": "2222222222222222222222222222222222222222222222222222222222222222",
+    "port": 17412
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+src-tauri/
+.specify/
+.agents/
+Design/
+docs/
+specs/
+*.md
+pnpm-lock.yaml
+coverage/

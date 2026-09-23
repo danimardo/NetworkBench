@@ -44,7 +44,11 @@ function checkTokens() {
     });
     return [{ estado: "ok", mensaje: salida.trim().split(/\r?\n/).pop() || "sin salida" }];
   } catch (e) {
-    const detalle = `${e.stdout || ""}${e.stderr || ""}`.trim().split(/\r?\n/).slice(-3).join(" | ");
+    const detalle = `${e.stdout || ""}${e.stderr || ""}`
+      .trim()
+      .split(/\r?\n/)
+      .slice(-3)
+      .join(" | ");
     return [{ estado: "fallo", mensaje: `verify-tokens.mjs falló: ${detalle}` }];
   }
 }
@@ -64,7 +68,11 @@ function checkGuardProtectedPaths() {
     const resumen = salida.match(/ℹ pass \d+/)?.[0] ?? "pruebas del guard correctas";
     return [{ estado: "ok", mensaje: resumen }];
   } catch (e) {
-    const detalle = `${e.stdout || ""}${e.stderr || ""}`.trim().split(/\r?\n/).slice(-5).join(" | ");
+    const detalle = `${e.stdout || ""}${e.stderr || ""}`
+      .trim()
+      .split(/\r?\n/)
+      .slice(-5)
+      .join(" | ");
     return [{ estado: "fallo", mensaje: `pruebas del guard fallaron: ${detalle}` }];
   }
 }
@@ -96,8 +104,8 @@ for (const s of resumen) {
 }
 console.log(
   codigo === 0
-    ? "\nSistema de instrucciones coherente. Esto NO verifica el producto: no existe aplicación."
-    : "\nHay fallos. Corrige el sistema canónico, no los adaptadores."
+    ? "\nSistema de instrucciones coherente. Esto NO verifica el producto: para eso, pnpm verify."
+    : "\nHay fallos. Corrige el sistema canónico, no los adaptadores.",
 );
 
 process.exit(codigo);

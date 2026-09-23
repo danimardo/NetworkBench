@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ntttcprun>
+  <parameters>
+    <role>receiver</role>
+    <mapping>(1,0,7412)</mapping>
+    <buffer_length>65536</buffer_length>
+    <async>8</async>
+    <runtime>10</runtime>
+    <warmup>1</warmup>
+    <cooldown>1</cooldown>
+  </parameters>
+  <total_bytes>1186201600</total_bytes>
+  <total_buffers>18100</total_buffers>
+  <realtime metric="s">10.002</realtime>
+  <throughput metric="mbps">948.771</throughput>
+  <throughput_bps>948771000</throughput_bps>
+  <cpu metric="%">4.25</cpu>
+  <errors>0</errors>
+</ntttcprun>

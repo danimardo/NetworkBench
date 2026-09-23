@@ -1,0 +1,145 @@
+use crate::control::service::SessionService;
+use crate::history::database::Database;
+use crate::identity::InstanceIdentity;
+use crate::ipc::response::{IpcResult, OneTimeTokenStore};
+use crate::ipc::snapshot::{AppSnapshot, SnapshotManager};
+use crate::logging::{init_logger, LogLevel};
+use crate::settings::SettingsStore;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+pub struct AppState {
+    pub snapshot: Arc<SnapshotManager>,
+    pub database: Arc<Database>,
+    pub settings: Arc<SettingsStore>,
+    pub tokens: Arc<OneTimeTokenStore>,
+    pub identity: Arc<InstanceIdentity>,
+    pub session_service: Arc<SessionService>,
+    pub delete_tokens: Arc<crate::history::delete::DeleteTokenStore>,
+}
+
+use crate::platform::window::{
+    normalize_or_fallback_geometry, MonitorBounds, WindowGeometry,
+};
+
+#[tauri::command]
+pub fn app_get_snapshot(state: tauri::State<AppState>) -> IpcResult<AppSnapshot> {
+    IpcResult::ok(state.snapshot.get_snapshot())
+}
+
+#[tauri::command]
+pub fn window_get_geometry(state: tauri::State<AppState>) -> IpcResult<Option<WindowGeometry>> {
+    IpcResult::ok(state.settings.get().window_geometry)
+}
+
+#[tauri::command]
+pub fn window_save_geometry(
+    state: tauri::State<AppState>,
+    geometry: WindowGeometry,
+) -> IpcResult<()> {
+    match state.settings.update(|p| {
+        p.window_geometry = Some(geometry);
+    }) {
+        Ok(_) => IpcResult::ok(()),
+        Err(e) => IpcResult::err(e),
+    }
+}
+
+#[tauri::command]
+pub fn window_restore_and_show(
+    window: tauri::WebviewWindow,
+    state: tauri::State<AppState>,
+) -> IpcResult<WindowGeometry> {
+    let saved = state.settings.get().window_geometry;
+
+    let available = window.available_monitors().unwrap_or_default();
+    let monitors: Vec<MonitorBounds> = available
+        .into_iter()
+        .map(|m| {
+            let pos = m.position();
+            let size = m.size();
+            MonitorBounds {
+                x: pos.x,
+                y: pos.y,
+                width: size.width,
+                height: size.height,
+            }
+        })
+        .collect();
+
+    let primary = window.primary_monitor().ok().flatten().map(|m| {
+        let pos = m.position();
+        let size = m.size();
+        MonitorBounds {
+            x: pos.x,
+            y: pos.y,
+            width: size.width,
+            height: size.height,
+        }
+    });
+
+    let target_geom = normalize_or_fallback_geometry(saved, primary, &monitors);
+
+    let _ = window.set_size(tauri::LogicalSize::new(target_geom.width, target_geom.height));
+    let _ = window.set_position(tauri::LogicalPosition::new(target_geom.x, target_geom.y));
+    if target_geom.is_maximized {
+        let _ = window.maximize();
+    }
+    let _ = window.show();
+    let _ = window.set_focus();
+
+    IpcResult::ok(target_geom)
+}
+
+/// Inicialización y orquestación del ciclo de vida de la aplicación sin autoridad duplicada
+pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
+    let app_dir = dirs_or_fallback();
+    let log_dir = app_dir.join("logs");
+    let db_path = app_dir.join("history.db");
+    let settings_path = app_dir.join("settings.json");
+    let identity_dir = app_dir.join("identity");
+
+    let _logger = init_logger(log_dir, LogLevel::Warn);
+    let settings = Arc::new(SettingsStore::new(settings_path));
+    let database = Arc::new(Database::open(db_path)?);
+    let tokens = Arc::new(OneTimeTokenStore::new());
+
+    let identity = Arc::new(InstanceIdentity::get_or_create(&identity_dir, "NetworkBench")?);
+    let session_service = Arc::new(SessionService::new());
+    let delete_tokens = Arc::new(crate::history::delete::DeleteTokenStore::new());
+
+    let initial_prefs = settings.get();
+    let snapshot = Arc::new(SnapshotManager::new(AppSnapshot {
+        revision: 1,
+        app_version: "0.1.0".to_string(),
+        locale: initial_prefs.locale,
+        theme: match initial_prefs.theme {
+            crate::settings::ThemeMode::System => "system".to_string(),
+            crate::settings::ThemeMode::Light => "light".to_string(),
+            crate::settings::ThemeMode::Dark => "dark".to_string(),
+        },
+        instance_id: identity.instance_id.to_string(),
+        instance_name: identity.display_name.clone(),
+        is_session_active: false,
+        active_session_id: None,
+        peers_count: 0,
+    }));
+
+    Ok(AppState {
+        snapshot,
+        database,
+        settings,
+        tokens,
+        identity,
+        session_service,
+        delete_tokens,
+    })
+}
+
+pub fn dirs_or_fallback() -> PathBuf {
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        PathBuf::from(local_app_data).join("NetworkBench")
+    } else {
+        std::env::temp_dir().join("NetworkBench")
+    }
+}

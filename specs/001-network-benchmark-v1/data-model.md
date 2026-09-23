@@ -1,7 +1,7 @@
 # Modelo de datos: NetworkBench v1
 
 **Fecha**: 2026-09-21  
-**Constitución**: 0.6.0, no ratificada  
+**Constitución**: 0.7.0, no ratificada  
 **Fuentes**: `spec.md`, `Historias.md` §§6–24 y `ARCHITECTURE.md`
 
 El modelo distingue valores de dominio, snapshots históricos y registros de infraestructura.

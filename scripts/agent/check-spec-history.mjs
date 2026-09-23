@@ -24,7 +24,14 @@ const CONSTITUCION = ".specify/memory/constitution.md";
 
 const git = (...args) => {
   try {
-    return { ok: true, salida: execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }) };
+    return {
+      ok: true,
+      salida: execFileSync("git", args, {
+        cwd: ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }),
+    };
   } catch (e) {
     return { ok: false, error: e };
   }
@@ -52,7 +59,10 @@ export function check() {
   //    mirar solo HEAD haría desaparecer la protección en silencio.
   for (const f of HISTORICOS) {
     const enHead = versionHistorica(f);
-    if (!enHead.ok) { r.push(warn(`${f} no aparece en el historial: nada que proteger`)); continue; }
+    if (!enHead.ok) {
+      r.push(warn(`${f} no aparece en el historial: nada que proteger`));
+      continue;
+    }
     const ruta = join(ROOT, f);
     if (!existsSync(ruta)) {
       r.push(ok(`${f} conservado en el historial y ausente del working tree (intencionado)`));
@@ -60,7 +70,11 @@ export function check() {
     }
     const actual = readFileSync(ruta, "utf8");
     if (actual !== enHead.salida) {
-      r.push(fail(`${f} difiere de su última versión en el historial. Es un documento histórico: restaura e informa`));
+      r.push(
+        fail(
+          `${f} difiere de su última versión en el historial. Es un documento histórico: restaura e informa`,
+        ),
+      );
     } else {
       r.push(ok(`${f} presente e idéntico a su versión histórica`));
     }
@@ -68,9 +82,7 @@ export function check() {
 
   // 2. specs/**: ningún fichero versionado puede haber desaparecido.
   const enHeadSpecs = git("ls-tree", "-r", "--name-only", "HEAD", "specs/");
-  const listaSpecs = enHeadSpecs.ok
-    ? enHeadSpecs.salida.split(/\r?\n/).filter(Boolean)
-    : [];
+  const listaSpecs = enHeadSpecs.ok ? enHeadSpecs.salida.split(/\r?\n/).filter(Boolean) : [];
   if (listaSpecs.length === 0) {
     r.push(ok("specs/ no existe todavía en HEAD: ninguna spec que proteger"));
   } else {
@@ -90,7 +102,11 @@ export function check() {
   } else if (!constEnHead.ok) {
     r.push(warn(`${CONSTITUCION} existe pero no está versionado en HEAD: sin trazabilidad en Git`));
   } else if (readFileSync(constRuta, "utf8") !== constEnHead.salida) {
-    r.push(warn(`${CONSTITUCION} difiere de HEAD: su modificación requiere autorización específica. Decláralo`));
+    r.push(
+      warn(
+        `${CONSTITUCION} difiere de HEAD: su modificación requiere autorización específica. Decláralo`,
+      ),
+    );
   } else {
     r.push(ok(`${CONSTITUCION} idéntica a HEAD`));
   }

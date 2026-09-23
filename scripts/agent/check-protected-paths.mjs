@@ -71,7 +71,11 @@ export function check({ staged = false } = {}) {
   let tocadas = 0;
   for (const f of ficheros) {
     if (A_DECLARAR.test(f)) {
-      r.push(warn(`${f} modificado: requiere autorización específica. Decláralo en el mensaje de commit`));
+      r.push(
+        warn(
+          `${f} modificado: requiere autorización específica. Decláralo en el mensaje de commit`,
+        ),
+      );
       continue;
     }
     const p = PROTEGIDAS.find((x) => x.patron.test(f));
@@ -87,8 +91,8 @@ export function check({ staged = false } = {}) {
       (staged ? fail : warn)(
         staged
           ? `${tocadas} ruta(s) protegida(s) en el índice. Con autorización del propietario y declarándolo: git commit --no-verify`
-          : `${tocadas} ruta(s) protegida(s) modificada(s) en el working tree. No bloquea aquí; el hook pre-commit sí lo hará`
-      )
+          : `${tocadas} ruta(s) protegida(s) modificada(s) en el working tree. No bloquea aquí; el hook pre-commit sí lo hará`,
+      ),
     );
   } else {
     r.push(ok(`${ficheros.length} fichero(s) ${ambito}, ninguno protegido`));

@@ -19,21 +19,34 @@ const decision = (tool_name, tool_input) => {
 const patch = (...lines) => ["*** Begin Patch", ...lines, "*** End Patch"].join("\n");
 
 test("permite documentación que menciona rutas protegidas", () => {
-  assert.equal(decision("apply_patch", patch(
-    "*** Add File: F:/Apps/NetBench/ARCHITECTURE.md",
-    "+Consultar .specify/memory/constitution.md, Historias.md y Design/.",
-    "+No editar .agents/skills/speckit-plan/SKILL.md.",
-  )), "allow");
+  assert.equal(
+    decision(
+      "apply_patch",
+      patch(
+        "*** Add File: F:/Apps/NetBench/ARCHITECTURE.md",
+        "+Consultar .specify/memory/constitution.md, Historias.md y Design/.",
+        "+No editar .agents/skills/speckit-plan/SKILL.md.",
+      ),
+    ),
+    "allow",
+  );
 });
 
 test("no interpreta cabeceras citadas dentro del contenido como destinos", () => {
-  assert.equal(decision("functions.apply_patch", patch(
-    "*** Update File: docs/governance/README.md", "@@",
-    "-Referencia a Historias.md",
-    "+*** Update File: .specify/memory/constitution.md",
-    " Referencia a Design/README.md",
-    "*** End of File",
-  )), "allow");
+  assert.equal(
+    decision(
+      "functions.apply_patch",
+      patch(
+        "*** Update File: docs/governance/README.md",
+        "@@",
+        "-Referencia a Historias.md",
+        "+*** Update File: .specify/memory/constitution.md",
+        " Referencia a Design/README.md",
+        "*** End of File",
+      ),
+    ),
+    "allow",
+  );
 });
 
 for (const target of [
@@ -46,32 +59,64 @@ for (const target of [
 ]) {
   for (const operation of ["Add File", "Update File", "Delete File"]) {
     test(`bloquea ${operation}: ${target}`, () => {
-      const body = operation === "Add File" ? ["+contenido"]
-        : operation === "Update File" ? ["@@", "-antes", "+después"] : [];
+      const body =
+        operation === "Add File"
+          ? ["+contenido"]
+          : operation === "Update File"
+            ? ["@@", "-antes", "+después"]
+            : [];
       assert.equal(decision("apply_patch", patch(`*** ${operation}: ${target}`, ...body)), "deny");
     });
   }
 }
 
 test("bloquea mover desde una ruta protegida", () => {
-  assert.equal(decision("apply_patch", patch(
-    "*** Update File: Design/README.md", "*** Move to: docs/copia.md",
-    "@@", "-antes", "+después",
-  )), "deny");
+  assert.equal(
+    decision(
+      "apply_patch",
+      patch(
+        "*** Update File: Design/README.md",
+        "*** Move to: docs/copia.md",
+        "@@",
+        "-antes",
+        "+después",
+      ),
+    ),
+    "deny",
+  );
 });
 
 test("bloquea mover hacia una ruta protegida", () => {
-  assert.equal(decision("apply_patch", patch(
-    "*** Update File: docs/copia.md", "*** Move to: Design/README.md",
-    "@@", "-antes", "+después",
-  )), "deny");
+  assert.equal(
+    decision(
+      "apply_patch",
+      patch(
+        "*** Update File: docs/copia.md",
+        "*** Move to: Design/README.md",
+        "@@",
+        "-antes",
+        "+después",
+      ),
+    ),
+    "deny",
+  );
 });
 
 test("bloquea un parche mixto si cualquiera de sus destinos está protegido", () => {
-  assert.equal(decision("apply_patch", patch(
-    "*** Add File: ARCHITECTURE.md", "+documentación",
-    "*** Update File: Design/README.md", "@@", "-antes", "+después",
-  )), "deny");
+  assert.equal(
+    decision(
+      "apply_patch",
+      patch(
+        "*** Add File: ARCHITECTURE.md",
+        "+documentación",
+        "*** Update File: Design/README.md",
+        "@@",
+        "-antes",
+        "+después",
+      ),
+    ),
+    "deny",
+  );
 });
 
 test("acepta payload estructurado y CRLF", () => {
@@ -81,9 +126,7 @@ test("acepta payload estructurado y CRLF", () => {
 
 test("conserva fallback ante parche desconocido o truncado", () => {
   assert.equal(decision("apply_patch", "*** Update File: Design/README.md"), "deny");
-  assert.equal(decision("apply_patch", patch(
-    "*** Formato desconocido: Design/README.md",
-  )), "deny");
+  assert.equal(decision("apply_patch", patch("*** Formato desconocido: Design/README.md")), "deny");
 });
 
 test("mantiene los campos de ruta de herramientas de edición", () => {
@@ -99,7 +142,10 @@ test("mantiene lecturas permitidas y escrituras shell bloqueadas", () => {
 test("Historias.md dejó de estar protegido (decisión del propietario, 2026-09-21)", () => {
   assert.equal(decision("Edit", { file_path: "Historias.md", new_string: "texto" }), "allow");
   assert.equal(decision("exec_command", { cmd: "Set-Content Historias.md 'texto'" }), "allow");
-  assert.equal(decision("apply_patch", patch("*** Update File: Historias.md", "@@", "-a", "+b")), "allow");
+  assert.equal(
+    decision("apply_patch", patch("*** Update File: Historias.md", "@@", "-a", "+b")),
+    "allow",
+  );
 });
 
 test("la constitución está exenta del guard: el permiso lo pide settings.json (2026-09-21)", () => {
@@ -111,9 +157,18 @@ test("la constitución está exenta del guard: el permiso lo pide settings.json 
 });
 
 test("la exención no alcanza al resto de .specify ni a un comando mixto", () => {
-  assert.equal(decision("Edit", { file_path: ".specify/templates/plan-template.md", new_string: "x" }), "deny");
-  assert.equal(decision("Edit", { file_path: ".specify/integrations/codex.manifest.json", new_string: "x" }), "deny");
-  assert.equal(decision("exec_command", {
-    cmd: "cp .specify/memory/constitution.md .specify/templates/constitution-template.md",
-  }), "deny");
+  assert.equal(
+    decision("Edit", { file_path: ".specify/templates/plan-template.md", new_string: "x" }),
+    "deny",
+  );
+  assert.equal(
+    decision("Edit", { file_path: ".specify/integrations/codex.manifest.json", new_string: "x" }),
+    "deny",
+  );
+  assert.equal(
+    decision("exec_command", {
+      cmd: "cp .specify/memory/constitution.md .specify/templates/constitution-template.md",
+    }),
+    "deny",
+  );
 });
