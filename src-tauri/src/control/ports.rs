@@ -122,6 +122,7 @@ pub fn find_available_port_block(
 /// En simultáneo («Ambas a la vez»):
 ///   - Bloque de 64 puertos: forward = base..base+31, reverse = base+32..base+63.
 ///   - Garantiza sin solape entre ambas direcciones (Historias.md §17).
+///
 /// En secuencial:
 ///   - forward = base..base+streams-1, reverse = base..base+streams-1.
 pub fn allocate_ports_for_plan(plan: &BenchmarkPlan) -> Result<PortAllocation, String> {

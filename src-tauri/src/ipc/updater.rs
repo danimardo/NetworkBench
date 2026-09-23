@@ -1,12 +1,15 @@
 use crate::app::AppState;
 use crate::control::domain::SessionState;
 use crate::ipc::response::IpcResult;
-use crate::updater::{evaluate_manifest, UpdateStatus};
+use crate::updater::{UpdateStatus, evaluate_manifest};
 
 #[tauri::command]
-pub async fn updater_check(state: tauri::State<'_, AppState>) -> Result<IpcResult<UpdateStatus>, ()> {
+pub async fn updater_check(
+    state: tauri::State<'_, AppState>,
+) -> Result<IpcResult<UpdateStatus>, String> {
     let session_state = state.session_service.current_state().await;
-    let is_session_active = session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    let is_session_active =
+        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
 
     if is_session_active {
         return Ok(IpcResult::ok(UpdateStatus::DeferredDueToActiveSession));
@@ -20,9 +23,10 @@ pub async fn updater_check(state: tauri::State<'_, AppState>) -> Result<IpcResul
 pub async fn updater_evaluate(
     state: tauri::State<'_, AppState>,
     manifest_json: String,
-) -> Result<IpcResult<UpdateStatus>, ()> {
+) -> Result<IpcResult<UpdateStatus>, String> {
     let session_state = state.session_service.current_state().await;
-    let is_session_active = session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    let is_session_active =
+        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
 
     let current_version = env!("CARGO_PKG_VERSION");
     let target_platform = if cfg!(target_arch = "x86_64") {
@@ -31,7 +35,12 @@ pub async fn updater_evaluate(
         "windows-aarch64"
     };
 
-    match evaluate_manifest(&manifest_json, current_version, target_platform, is_session_active) {
+    match evaluate_manifest(
+        &manifest_json,
+        current_version,
+        target_platform,
+        is_session_active,
+    ) {
         Ok(status) => Ok(IpcResult::ok(status)),
         Err(e) => {
             let app_err = crate::errors::AppError::new(

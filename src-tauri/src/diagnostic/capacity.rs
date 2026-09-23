@@ -27,15 +27,15 @@ impl CapacityReference {
         is_b_wireless_or_virtual: bool,
     ) -> Self {
         // 1. Capacidad manual explícita
-        if let Some(mbps) = expected_capacity_mbps {
-            if mbps > 0 {
-                return Self {
-                    ref_bps: Some(mbps as u64 * 1_000_000),
-                    ref_source: CapacitySource::Manual,
-                    cap_a_bps,
-                    cap_b_bps,
-                };
-            }
+        if let Some(mbps) = expected_capacity_mbps
+            && mbps > 0
+        {
+            return Self {
+                ref_bps: Some(mbps as u64 * 1_000_000),
+                ref_source: CapacitySource::Manual,
+                cap_a_bps,
+                cap_b_bps,
+            };
         }
 
         // 2. Si alguno de los adaptadores es wifi/virtual y no hay manual -> no determinable de forma fija
@@ -93,7 +93,13 @@ mod tests {
 
     #[test]
     fn test_manual_capacity_overrides_everything() {
-        let cap = CapacityReference::new(Some(1000), Some(10_000_000_000), true, Some(1_000_000_000), false);
+        let cap = CapacityReference::new(
+            Some(1000),
+            Some(10_000_000_000),
+            true,
+            Some(1_000_000_000),
+            false,
+        );
         assert_eq!(cap.ref_bps, Some(1_000_000_000));
         assert_eq!(cap.ref_source, CapacitySource::Manual);
         assert!(cap.has_performance_verdict());
@@ -101,7 +107,13 @@ mod tests {
 
     #[test]
     fn test_negotiated_minimum_link_speed() {
-        let cap = CapacityReference::new(None, Some(10_000_000_000), false, Some(1_000_000_000), false);
+        let cap = CapacityReference::new(
+            None,
+            Some(10_000_000_000),
+            false,
+            Some(1_000_000_000),
+            false,
+        );
         assert_eq!(cap.ref_bps, Some(1_000_000_000));
         assert_eq!(cap.ref_source, CapacitySource::Negotiated);
         assert!(cap.has_performance_verdict());

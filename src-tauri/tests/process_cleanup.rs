@@ -1,8 +1,8 @@
+use networkbench_lib::control::cleanup::CleanupCoordinator;
+use networkbench_lib::engine::ntttcp::job_object::JobObject;
 use std::env;
 use std::fs;
 use std::process::Command;
-use networkbench_lib::control::cleanup::CleanupCoordinator;
-use networkbench_lib::engine::ntttcp::job_object::JobObject;
 
 #[test]
 fn test_cleanup_terminates_registered_child_process() {

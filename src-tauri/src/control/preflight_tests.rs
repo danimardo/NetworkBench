@@ -1,10 +1,10 @@
-use std::env;
-use std::fs;
-use std::net::{IpAddr, Ipv4Addr, TcpListener};
-use sha2::{Digest, Sha256};
 use crate::control::preflight::{PreflightCheckType, PreflightEvaluator, PreflightStatus};
 use crate::errors::ErrorCode;
 use crate::firewall::RuleStatus;
+use sha2::{Digest, Sha256};
+use std::env;
+use std::fs;
+use std::net::{IpAddr, Ipv4Addr, TcpListener};
 
 #[test]
 fn test_preflight_engine_missing() {
@@ -20,7 +20,10 @@ fn test_preflight_engine_hash_mismatch() {
     let temp_file = env::temp_dir().join("test_ntttcp_fake.exe");
     fs::write(&temp_file, b"fake engine content").unwrap();
 
-    let check = PreflightEvaluator::check_engine(&temp_file, "0000000000000000000000000000000000000000000000000000000000000000");
+    let check = PreflightEvaluator::check_engine(
+        &temp_file,
+        "0000000000000000000000000000000000000000000000000000000000000000",
+    );
     let _ = fs::remove_file(&temp_file);
 
     assert_eq!(check.status, PreflightStatus::Failed);
@@ -95,7 +98,10 @@ fn test_preflight_version_check() {
 
     let check_mismatch = PreflightEvaluator::check_version(1, 2);
     assert_eq!(check_mismatch.status, PreflightStatus::Failed);
-    assert_eq!(check_mismatch.error.unwrap().code, ErrorCode::VersionIncompatible);
+    assert_eq!(
+        check_mismatch.error.unwrap().code,
+        ErrorCode::VersionIncompatible
+    );
 }
 
 #[test]
@@ -103,7 +109,10 @@ fn test_preflight_firewall_diagnostics() {
     // 1. Canal de control no responde -> NB-FW-001
     let check1 = PreflightEvaluator::check_firewall(false, false, RuleStatus::Missing);
     assert_eq!(check1.status, PreflightStatus::Failed);
-    assert_eq!(check1.error.unwrap().code, ErrorCode::FirewallBlockedControl);
+    assert_eq!(
+        check1.error.unwrap().code,
+        ErrorCode::FirewallBlockedControl
+    );
 
     // 2. Canal de control OK pero sondeo falla y regla ausente -> NB-FW-002
     let check2 = PreflightEvaluator::check_firewall(true, false, RuleStatus::Missing);
@@ -118,7 +127,10 @@ fn test_preflight_firewall_diagnostics() {
     // 4. Canal de control OK pero sondeo falla y regla presente -> NB-FW-005 (bloqueo intermedio)
     let check4 = PreflightEvaluator::check_firewall(true, false, RuleStatus::Present);
     assert_eq!(check4.status, PreflightStatus::Failed);
-    assert_eq!(check4.error.unwrap().code, ErrorCode::FirewallExternalBlocked);
+    assert_eq!(
+        check4.error.unwrap().code,
+        ErrorCode::FirewallExternalBlocked
+    );
 
     // 5. Todo OK -> Passed
     let check5 = PreflightEvaluator::check_firewall(true, true, RuleStatus::Present);

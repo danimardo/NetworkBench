@@ -14,12 +14,12 @@ fn test_settings_lifecycle_missing_file_creates_clean_default() {
 
     assert_eq!(prefs.theme, ThemeMode::Dark);
     assert_eq!(prefs.locale, "es");
-    assert_eq!(prefs.reduce_motion, false);
+    assert!(!prefs.reduce_motion);
     assert_eq!(prefs.log_level, LogLevel::Warn);
-    assert_eq!(prefs.auto_accept_trusted, false);
-    assert_eq!(prefs.autostart, false);
-    assert_eq!(prefs.minimize_to_tray, false);
-    assert_eq!(prefs.mdns_enabled, true);
+    assert!(!prefs.auto_accept_trusted);
+    assert!(!prefs.autostart);
+    assert!(!prefs.minimize_to_tray);
+    assert!(prefs.mdns_enabled);
     assert!(prefs_file.exists());
 
     let _ = fs::remove_dir_all(&tmp_dir);
@@ -42,7 +42,10 @@ fn test_settings_lifecycle_corrupt_file_quarantine() {
         .unwrap()
         .filter_map(|e| e.ok())
         .any(|e| e.file_name().to_string_lossy().contains("corrupt"));
-    assert!(corrupt_found, "El archivo corrupto debe aislarse en cuarentena");
+    assert!(
+        corrupt_found,
+        "El archivo corrupto debe aislarse en cuarentena"
+    );
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }
@@ -70,14 +73,14 @@ fn test_settings_lifecycle_schema_migration_preserves_existing() {
 
     assert_eq!(prefs.theme, ThemeMode::Light);
     assert_eq!(prefs.locale, "en");
-    assert_eq!(prefs.reduce_motion, true);
+    assert!(prefs.reduce_motion);
     assert_eq!(prefs.log_level, LogLevel::Info);
-    assert_eq!(prefs.auto_accept_trusted, true);
+    assert!(prefs.auto_accept_trusted);
     assert_eq!(prefs.custom_control_port, Some(5202));
     // Defaults para campos nuevos
-    assert_eq!(prefs.autostart, false);
-    assert_eq!(prefs.minimize_to_tray, false);
-    assert_eq!(prefs.mdns_enabled, true);
+    assert!(!prefs.autostart);
+    assert!(!prefs.minimize_to_tray);
+    assert!(prefs.mdns_enabled);
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }
@@ -122,7 +125,10 @@ fn test_settings_lifecycle_session_active_rejects_critical_changes() {
     let res = store.validate_and_update(true, |p| {
         p.custom_control_port = Some(9000);
     });
-    assert!(res.is_err(), "Debe rechazar cambio de puerto durante sesión activa");
+    assert!(
+        res.is_err(),
+        "Debe rechazar cambio de puerto durante sesión activa"
+    );
     let err = res.unwrap_err();
     assert_eq!(err.code, ErrorCode::PeerBusy);
 
@@ -130,13 +136,19 @@ fn test_settings_lifecycle_session_active_rejects_critical_changes() {
     let res2 = store.validate_and_update(true, |p| {
         p.mdns_enabled = false;
     });
-    assert!(res2.is_err(), "Debe rechazar cambio de mDNS durante sesión activa");
+    assert!(
+        res2.is_err(),
+        "Debe rechazar cambio de mDNS durante sesión activa"
+    );
 
     // 3. Intentar cambiar auto_accept_trusted durante sesión activa
     let res3 = store.validate_and_update(true, |p| {
         p.auto_accept_trusted = true;
     });
-    assert!(res3.is_err(), "Debe rechazar cambio de autoaceptación durante sesión activa");
+    assert!(
+        res3.is_err(),
+        "Debe rechazar cambio de autoaceptación durante sesión activa"
+    );
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }
@@ -156,12 +168,15 @@ fn test_settings_lifecycle_session_active_allows_presentation_changes() {
         p.minimize_to_tray = true;
     });
 
-    assert!(res.is_ok(), "Cambios visuales y de bandeja deben permitirse durante sesión activa");
+    assert!(
+        res.is_ok(),
+        "Cambios visuales y de bandeja deben permitirse durante sesión activa"
+    );
     let current = store.get();
     assert_eq!(current.theme, ThemeMode::Light);
     assert_eq!(current.locale, "en");
-    assert_eq!(current.reduce_motion, true);
-    assert_eq!(current.minimize_to_tray, true);
+    assert!(current.reduce_motion);
+    assert!(current.minimize_to_tray);
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }

@@ -1,5 +1,5 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use serde::{Deserialize, Serialize};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,7 +23,8 @@ pub fn find_best_interface_for_target(target_ip: IpAddr) -> Result<NetworkInterf
         IpAddr::V6(_) => SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), 0),
     };
 
-    let socket = UdpSocket::bind(bind_addr).map_err(|e| format!("Fallo al crear socket local: {}", e))?;
+    let socket =
+        UdpSocket::bind(bind_addr).map_err(|e| format!("Fallo al crear socket local: {}", e))?;
     socket
         .connect(dummy_target)
         .map_err(|e| format!("Fallo al consultar ruta hacia {}: {}", target_ip, e))?;

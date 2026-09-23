@@ -49,7 +49,11 @@ fn test_common_fixtures_round_trip() {
             Ok(u) => u.get_version_num() == 4 && u.get_variant() == uuid::Variant::RFC4122,
             Err(_) => false,
         };
-        assert!(!is_valid_v4, "ID {} no debería ser un UUIDv4 válido", inv_id);
+        assert!(
+            !is_valid_v4,
+            "ID {} no debería ser un UUIDv4 válido",
+            inv_id
+        );
     }
 
     // 3. Validar u64 serializado como cadena decimal sin pérdida de precisión

@@ -5,6 +5,7 @@ pub use crate::model::plan::*;
 /// - Enlaces 100..1000 Mbit/s (1 GbE): 1 stream estándar (hasta 4 para multi-cola)
 /// - Enlaces 2.5 GbE / 5 GbE: 4 streams
 /// - Enlaces 10 GbE o superiores: 8 streams
+///
 /// Si no está disponible la velocidad de enlace, usa 1 stream por defecto.
 pub fn derive_standard_streams(link_speed_mbps: Option<u64>) -> u32 {
     match link_speed_mbps {

@@ -17,8 +17,8 @@ pub use service::*;
 pub use transport::*;
 
 #[cfg(test)]
+mod advanced_plan_tests;
+#[cfg(test)]
 mod domain_tests;
 #[cfg(test)]
 mod preflight_tests;
-#[cfg(test)]
-mod advanced_plan_tests;

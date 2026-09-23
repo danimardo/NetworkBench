@@ -26,7 +26,15 @@ run("pnpm format", "Formato Prettier (pnpm format)");
 // 3. Linting
 run("pnpm lint", "Linting ESLint (pnpm lint)");
 
-// 4. Verificación de Rust
+// 4. Verificación de Rust (constitución §CI y Definition of Done, punto 2)
+run(
+  "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+  "Formato de Rust (cargo fmt --check)",
+);
+run(
+  "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+  "Clippy con warnings como errores",
+);
 run("cargo check --manifest-path src-tauri/Cargo.toml", "Compilación de backend Rust");
 
 // 5. Tests unitarios

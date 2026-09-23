@@ -1,12 +1,15 @@
 use crate::model::protocol::{
-    decode_frame_length, encode_frame, ProtocolEnvelope, MAX_FRAME_SIZE_BYTES,
+    MAX_FRAME_SIZE_BYTES, ProtocolEnvelope, decode_frame_length, encode_frame,
 };
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::io::{Error, ErrorKind};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-pub async fn send_envelope<W, T>(writer: &mut W, envelope: &ProtocolEnvelope<T>) -> Result<(), Error>
+pub async fn send_envelope<W, T>(
+    writer: &mut W,
+    envelope: &ProtocolEnvelope<T>,
+) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin,
     T: Serialize,

@@ -1,12 +1,12 @@
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, Result};
 
 #[cfg(windows)]
 pub fn protect_bytes(data: &[u8]) -> Result<Vec<u8>> {
     use windows::Win32::Foundation::HLOCAL;
     use windows::Win32::Foundation::LocalFree;
-    use windows::Win32::Security::Cryptography::{CryptProtectData, CRYPT_INTEGER_BLOB};
+    use windows::Win32::Security::Cryptography::{CRYPT_INTEGER_BLOB, CryptProtectData};
 
-    let mut in_blob = CRYPT_INTEGER_BLOB {
+    let in_blob = CRYPT_INTEGER_BLOB {
         cbData: data.len() as u32,
         pbData: data.as_ptr() as *mut u8,
     };
@@ -16,16 +16,8 @@ pub fn protect_bytes(data: &[u8]) -> Result<Vec<u8>> {
     };
 
     unsafe {
-        CryptProtectData(
-            &mut in_blob,
-            None,
-            None,
-            None,
-            None,
-            0,
-            &mut out_blob,
-        )
-        .map_err(|e| Error::new(ErrorKind::Other, format!("CryptProtectData falló: {}", e)))?;
+        CryptProtectData(&in_blob, None, None, None, None, 0, &mut out_blob)
+            .map_err(|e| Error::other(format!("CryptProtectData falló: {}", e)))?;
 
         let slice = std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize);
         let protected = slice.to_vec();
@@ -38,9 +30,9 @@ pub fn protect_bytes(data: &[u8]) -> Result<Vec<u8>> {
 pub fn unprotect_bytes(protected_data: &[u8]) -> Result<Vec<u8>> {
     use windows::Win32::Foundation::HLOCAL;
     use windows::Win32::Foundation::LocalFree;
-    use windows::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
+    use windows::Win32::Security::Cryptography::{CRYPT_INTEGER_BLOB, CryptUnprotectData};
 
-    let mut in_blob = CRYPT_INTEGER_BLOB {
+    let in_blob = CRYPT_INTEGER_BLOB {
         cbData: protected_data.len() as u32,
         pbData: protected_data.as_ptr() as *mut u8,
     };
@@ -50,16 +42,8 @@ pub fn unprotect_bytes(protected_data: &[u8]) -> Result<Vec<u8>> {
     };
 
     unsafe {
-        CryptUnprotectData(
-            &mut in_blob,
-            None,
-            None,
-            None,
-            None,
-            0,
-            &mut out_blob,
-        )
-        .map_err(|e| Error::new(ErrorKind::Other, format!("CryptUnprotectData falló: {}", e)))?;
+        CryptUnprotectData(&in_blob, None, None, None, None, 0, &mut out_blob)
+            .map_err(|e| Error::other(format!("CryptUnprotectData falló: {}", e)))?;
 
         let slice = std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize);
         let unprotected = slice.to_vec();

@@ -1,5 +1,7 @@
-use crate::diagnostic::{AsymmetryStats, CapacityReference, RetransmissionStats, SessionVerdict, StabilityStats};
 use super::plan::BenchmarkPlan;
+use crate::diagnostic::{
+    AsymmetryStats, CapacityReference, RetransmissionStats, SessionVerdict, StabilityStats,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -134,7 +136,10 @@ pub struct SessionResult {
 impl SessionResult {
     pub fn is_fully_completed(&self) -> bool {
         self.status == "completed"
-            && self.directions.iter().all(|d| d.status == "completed" && d.official_bps.is_some())
+            && self
+                .directions
+                .iter()
+                .all(|d| d.status == "completed" && d.official_bps.is_some())
     }
 }
 

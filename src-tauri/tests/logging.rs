@@ -1,5 +1,5 @@
 use networkbench_lib::logging::{
-    format_madrid_human, is_madrid_dst, sanitize_value, LogEvent, LogLevel, LogOrigin, Logger,
+    LogEvent, LogLevel, LogOrigin, Logger, format_madrid_human, is_madrid_dst, sanitize_value,
 };
 use std::collections::HashMap;
 use std::fs;
@@ -45,7 +45,10 @@ fn test_log_level_filtering() {
     logger.log(mk_event(LogLevel::Info, "mensaje info filtrado"));
 
     let log_file = tmp_dir.join("networkbench.log");
-    assert!(!log_file.exists(), "No debe crear el archivo si todos los logs son filtrados");
+    assert!(
+        !log_file.exists(),
+        "No debe crear el archivo si todos los logs son filtrados"
+    );
 
     // Warn y Error deben escribirse
     logger.log(mk_event(LogLevel::Warn, "alerta visible"));
@@ -67,7 +70,10 @@ fn test_sensitive_data_redaction() {
     assert_eq!(sanitize_value("authToken", "token_abc"), "[REDACTED]");
     assert_eq!(sanitize_value("userPassword", "p@ssword"), "[REDACTED]");
     assert_eq!(sanitize_value("sessionId", "session-789"), "[REDACTED]");
-    assert_eq!(sanitize_value("peerFingerprint", "sha256:abcd"), "[REDACTED]");
+    assert_eq!(
+        sanitize_value("peerFingerprint", "sha256:abcd"),
+        "[REDACTED]"
+    );
     assert_eq!(sanitize_value("privateCert", "cert_content"), "[REDACTED]");
 
     // Parámetros seguros permitidos
@@ -100,20 +106,23 @@ fn test_madrid_timezone_and_dst_transitions() {
     // 00:59:59 UTC -> aún CET UTC+1
     let march_before = 1774745999u64;
     assert!(!is_madrid_dst(march_before));
-    let str_before_m = format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(march_before));
+    let str_before_m =
+        format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(march_before));
     assert!(str_before_m.contains("+01:00"));
 
     // 01:00:00 UTC -> CEST UTC+2
     let march_after = 1774746000u64;
     assert!(is_madrid_dst(march_after));
-    let str_after_m = format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(march_after));
+    let str_after_m =
+        format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(march_after));
     assert!(str_after_m.contains("+02:00"));
 
     // Cambio de hora octubre 2026: domingo 25 de octubre de 2026
     // 00:59:59 UTC -> aún CEST UTC+2
     let oct_before = 1792889999u64;
     assert!(is_madrid_dst(oct_before));
-    let str_before_o = format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(oct_before));
+    let str_before_o =
+        format_madrid_human(SystemTime::UNIX_EPOCH + Duration::from_secs(oct_before));
     assert!(str_before_o.contains("+02:00"));
 
     // 01:00:00 UTC -> CET UTC+1

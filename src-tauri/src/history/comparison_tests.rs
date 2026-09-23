@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::history::comparison::{
-        evaluate_cohort_comparison, format_bps_human,
-        COHORT_DIFFERENCE_THRESHOLD_PERCENT, COHORT_SAMPLE_LIMIT,
+        COHORT_DIFFERENCE_THRESHOLD_PERCENT, COHORT_SAMPLE_LIMIT, evaluate_cohort_comparison,
+        format_bps_human,
     };
 
     #[test]
@@ -36,7 +36,9 @@ mod tests {
         assert!(!res_low.is_significantly_higher);
         assert!(res_low.difference_percent > COHORT_DIFFERENCE_THRESHOLD_PERCENT);
 
-        let obs = res_low.observation_text.expect("Debe haber observación de rendimiento inferior");
+        let obs = res_low
+            .observation_text
+            .expect("Debe haber observación de rendimiento inferior");
         assert!(obs.contains("inferior a la media reciente"));
         assert!(obs.contains("9,3 Gbit/s"));
         assert!(obs.contains("54 %"));
@@ -48,7 +50,9 @@ mod tests {
 
         assert!(res_high.is_significantly_higher);
         assert!(!res_high.is_significantly_lower);
-        let obs_high = res_high.observation_text.expect("Debe haber observación de rendimiento superior");
+        let obs_high = res_high
+            .observation_text
+            .expect("Debe haber observación de rendimiento superior");
         assert!(obs_high.contains("superior a la media reciente"));
         assert!(obs_high.contains("25 %"));
 

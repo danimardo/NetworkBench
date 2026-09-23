@@ -31,21 +31,42 @@ impl DiagnosticSanitizer {
         let mut report = String::new();
         report.push_str("=== INFORME DE DIAGNÓSTICO TÉCNICO - NETWORKBENCH ===\n");
         report.push_str(&format!("Versión App: {}\n", result.versions.app_version));
-        report.push_str(&format!("Versión Motor: {}\n", result.versions.engine_version));
+        report.push_str(&format!(
+            "Versión Motor: {}\n",
+            result.versions.engine_version
+        ));
         report.push_str(&format!("ID de Sesión: {}\n", result.session_id));
-        report.push_str(&format!("Inicio: {} | Fin: {}\n", result.started_at, result.finished_at));
+        report.push_str(&format!(
+            "Inicio: {} | Fin: {}\n",
+            result.started_at, result.finished_at
+        ));
         report.push_str(&format!("Estado: {}\n", result.status));
-        report.push_str(&format!("Iniciador: {} ({})\n", result.initiator.display_name, result.initiator.address));
-        report.push_str(&format!("Receptor: {} ({})\n", result.responder.display_name, result.responder.address));
+        report.push_str(&format!(
+            "Iniciador: {} ({})\n",
+            result.initiator.display_name, result.initiator.address
+        ));
+        report.push_str(&format!(
+            "Receptor: {} ({})\n",
+            result.responder.display_name, result.responder.address
+        ));
 
         if let Some(cap) = &result.capacity {
-            let ref_str = cap.ref_bps.map(|b| format!("{} bps", b)).unwrap_or_else(|| "No determinable".into());
-            report.push_str(&format!("Capacidad de Referencia: {} (Origen: {:?})\n", ref_str, cap.ref_source));
+            let ref_str = cap
+                .ref_bps
+                .map(|b| format!("{} bps", b))
+                .unwrap_or_else(|| "No determinable".into());
+            report.push_str(&format!(
+                "Capacidad de Referencia: {} (Origen: {:?})\n",
+                ref_str, cap.ref_source
+            ));
         }
 
         report.push_str("\n--- DIRECCIONES ---\n");
         for dir in &result.directions {
-            report.push_str(&format!("Dirección: {} | Estado: {}\n", dir.direction, dir.status));
+            report.push_str(&format!(
+                "Dirección: {} | Estado: {}\n",
+                dir.direction, dir.status
+            ));
             if let Some(bps) = &dir.official_bps {
                 report.push_str(&format!("  Throughput Oficial (Receptor): {} bps\n", bps));
             }
@@ -53,14 +74,26 @@ impl DiagnosticSanitizer {
                 report.push_str(&format!("  Utilización: {:.1}%\n", u * 100.0));
             }
             if let Some(st) = &dir.stability {
-                report.push_str(&format!("  Estabilidad: {:?} (CV: {:.3}, Caídas: {})\n", st.level, st.cv, st.drops_count));
+                report.push_str(&format!(
+                    "  Estabilidad: {:?} (CV: {:.3}, Caídas: {})\n",
+                    st.level, st.cv, st.drops_count
+                ));
             }
             if let Some(rt) = &dir.retransmission {
-                let ratio_str = rt.ratio.map(|r| format!("{:.4}", r)).unwrap_or_else(|| "N/A".into());
-                report.push_str(&format!("  Retransmisiones: {:?} (Ratio: {})\n", rt.level, ratio_str));
+                let ratio_str = rt
+                    .ratio
+                    .map(|r| format!("{:.4}", r))
+                    .unwrap_or_else(|| "N/A".into());
+                report.push_str(&format!(
+                    "  Retransmisiones: {:?} (Ratio: {})\n",
+                    rt.level, ratio_str
+                ));
             }
             if let (Some(cs), Some(cr)) = (dir.cpu_sender, dir.cpu_receiver) {
-                report.push_str(&format!("  CPU: Emisor: {:.1}% | Receptor: {:.1}%\n", cs, cr));
+                report.push_str(&format!(
+                    "  CPU: Emisor: {:.1}% | Receptor: {:.1}%\n",
+                    cs, cr
+                ));
             }
         }
 

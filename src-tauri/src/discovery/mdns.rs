@@ -1,9 +1,9 @@
 use crate::control::transport::{recv_envelope, send_envelope};
 use crate::identity::PublicIdentity;
-use sha2::Digest;
 use crate::model::peer::Peer;
 use crate::model::protocol::{HelloPayload, ProtocolEnvelope, ProtocolMessageType};
 use crate::netinfo::resolve::{resolve_target_address, sanitize_display_name};
+use sha2::Digest;
 use std::time::Duration;
 use tokio::time::timeout;
 use uuid::Uuid;
@@ -31,7 +31,9 @@ pub async fn manual_connect_peer(
     {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => return Err(format!("No se pudo conectar a {}: {}", target_addr, e)),
-        Err(_) => return Err("Tiempo de espera agotado al conectar al equipo remoto (5 s)".to_string()),
+        Err(_) => {
+            return Err("Tiempo de espera agotado al conectar al equipo remoto (5 s)".to_string());
+        }
     };
 
     let (mut reader, mut writer) = stream.split();
@@ -59,13 +61,11 @@ pub async fn manual_connect_peer(
         .map_err(|e| format!("Error enviando HELLO: {}", e))?;
 
     // 2. Recibir HELLO del peer remoto
-    let remote_hello: ProtocolEnvelope<HelloPayload> = timeout(
-        Duration::from_secs(5),
-        recv_envelope(&mut reader),
-    )
-    .await
-    .map_err(|_| "Tiempo de espera agotado esperando HELLO del equipo remoto".to_string())?
-    .map_err(|e| format!("Error recibiendo HELLO: {}", e))?;
+    let remote_hello: ProtocolEnvelope<HelloPayload> =
+        timeout(Duration::from_secs(5), recv_envelope(&mut reader))
+            .await
+            .map_err(|_| "Tiempo de espera agotado esperando HELLO del equipo remoto".to_string())?
+            .map_err(|e| format!("Error recibiendo HELLO: {}", e))?;
 
     if remote_hello.msg_type != ProtocolMessageType::Hello {
         return Err(format!(
@@ -79,7 +79,10 @@ pub async fn manual_connect_peer(
 
     // 4. Construir Peer
     let hash = sha2::Sha256::digest(remote_hello.payload.instance_id.as_bytes());
-    let fingerprint = hash.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+    let fingerprint = hash
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
 
     let peer = Peer::new(
         remote_hello.payload.instance_id,
@@ -132,7 +135,8 @@ mod tests {
         let local_ident = PublicIdentity {
             instance_id: Uuid::new_v4(),
             display_name: "Local-PC".to_string(),
-            fingerprint: "1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            fingerprint: "1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             cert_pem: "".to_string(),
         };
 

@@ -165,8 +165,14 @@ pub fn redact_direction(dir: &DirectionResult, redact_identifiers: bool) -> Dire
     DirectionResult {
         direction: dir.direction.clone(),
         status: dir.status.clone(),
-        sender: dir.sender.as_ref().map(|s| redact_engine_result(s, redact_identifiers)),
-        receiver: dir.receiver.as_ref().map(|r| redact_engine_result(r, redact_identifiers)),
+        sender: dir
+            .sender
+            .as_ref()
+            .map(|s| redact_engine_result(s, redact_identifiers)),
+        receiver: dir
+            .receiver
+            .as_ref()
+            .map(|r| redact_engine_result(r, redact_identifiers)),
         official_bps: dir.official_bps.clone(),
         utilization: dir.utilization,
         stability: dir.stability.clone(),

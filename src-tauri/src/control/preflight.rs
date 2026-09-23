@@ -1,12 +1,12 @@
-use std::fs;
-use std::net::IpAddr;
-use std::path::Path;
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use crate::control::ports::check_port_range;
 use crate::errors::{AppError, ErrorCode};
 use crate::firewall::RuleStatus;
 use crate::netinfo::find_best_interface_for_target;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::net::IpAddr;
+use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +50,12 @@ impl PreflightCheck {
         }
     }
 
-    pub fn warning(check_type: PreflightCheckType, title_key: &str, desc_key: &str, err: AppError) -> Self {
+    pub fn warning(
+        check_type: PreflightCheckType,
+        title_key: &str,
+        desc_key: &str,
+        err: AppError,
+    ) -> Self {
         Self {
             check_type,
             status: PreflightStatus::Warning,
@@ -60,7 +65,12 @@ impl PreflightCheck {
         }
     }
 
-    pub fn failed(check_type: PreflightCheckType, title_key: &str, desc_key: &str, err: AppError) -> Self {
+    pub fn failed(
+        check_type: PreflightCheckType,
+        title_key: &str,
+        desc_key: &str,
+        err: AppError,
+    ) -> Self {
         Self {
             check_type,
             status: PreflightStatus::Failed,
@@ -111,7 +121,11 @@ impl PreflightEvaluator {
             );
         }
 
-        PreflightCheck::passed(PreflightCheckType::Engine, "preflight.engine", "preflight.status_ok")
+        PreflightCheck::passed(
+            PreflightCheckType::Engine,
+            "preflight.engine",
+            "preflight.status_ok",
+        )
     }
 
     /// 2. Comprobación del adaptador de red y ruta (FR-019, §10.2, §15, §28)
@@ -158,7 +172,11 @@ impl PreflightEvaluator {
             );
         }
 
-        PreflightCheck::passed(PreflightCheckType::Ports, "preflight.ports", "preflight.status_ok")
+        PreflightCheck::passed(
+            PreflightCheckType::Ports,
+            "preflight.ports",
+            "preflight.status_ok",
+        )
     }
 
     /// 4. Comprobación de espacio libre en disco (%APPDATA% >= 200 MB, §19.1, §28)
@@ -174,7 +192,11 @@ impl PreflightEvaluator {
                 AppError::from_code(ErrorCode::DiskSpaceLow),
             )
         } else {
-            PreflightCheck::passed(PreflightCheckType::DiskSpace, "preflight.disk", "preflight.status_ok")
+            PreflightCheck::passed(
+                PreflightCheckType::DiskSpace,
+                "preflight.disk",
+                "preflight.status_ok",
+            )
         }
     }
 
@@ -188,12 +210,20 @@ impl PreflightEvaluator {
                 AppError::from_code(ErrorCode::VersionIncompatible),
             )
         } else {
-            PreflightCheck::passed(PreflightCheckType::Version, "preflight.version", "preflight.status_ok")
+            PreflightCheck::passed(
+                PreflightCheckType::Version,
+                "preflight.version",
+                "preflight.status_ok",
+            )
         }
     }
 
     /// 6. Comprobación de firewall según canal de control y sondeo TCP (§14.4, §28)
-    pub fn check_firewall(is_control_ok: bool, test_probe_ok: bool, rule_status: RuleStatus) -> PreflightCheck {
+    pub fn check_firewall(
+        is_control_ok: bool,
+        test_probe_ok: bool,
+        rule_status: RuleStatus,
+    ) -> PreflightCheck {
         if !is_control_ok {
             return PreflightCheck::failed(
                 PreflightCheckType::Firewall,
@@ -221,7 +251,11 @@ impl PreflightEvaluator {
             }
         }
 
-        PreflightCheck::passed(PreflightCheckType::Firewall, "preflight.firewall", "preflight.status_ok")
+        PreflightCheck::passed(
+            PreflightCheckType::Firewall,
+            "preflight.firewall",
+            "preflight.status_ok",
+        )
     }
 
     #[cfg(target_os = "windows")]
@@ -231,7 +265,10 @@ impl PreflightEvaluator {
         use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
 
         let path_str = path.to_str()?;
-        let wide: Vec<u16> = OsStr::new(path_str).encode_wide().chain(std::iter::once(0)).collect();
+        let wide: Vec<u16> = OsStr::new(path_str)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
 
         let mut free_bytes_available: u64 = 0;
         let mut total_number_of_bytes: u64 = 0;

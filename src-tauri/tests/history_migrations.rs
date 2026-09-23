@@ -26,7 +26,10 @@ fn test_database_initialization_and_pragmas() {
     let user_version: u32 = lock
         .query_row("PRAGMA user_version;", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(user_version, networkbench_lib::history::migrations::CURRENT_SCHEMA_VERSION);
+    assert_eq!(
+        user_version,
+        networkbench_lib::history::migrations::CURRENT_SCHEMA_VERSION
+    );
 
     // Comprobar que las tablas existen
     let count: i32 = lock
@@ -112,7 +115,8 @@ fn test_database_backup_operation() {
     }
 
     // Ejecutar backup
-    db.backup_to(&backup_path).expect("backup debe completarse con éxito");
+    db.backup_to(&backup_path)
+        .expect("backup debe completarse con éxito");
     assert!(backup_path.exists());
 
     // Verificar contenido en el backup

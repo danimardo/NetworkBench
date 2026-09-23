@@ -25,7 +25,9 @@ fn test_stability_very_stable() {
 fn test_stability_stable() {
     let engine = DiagnosticEngine::new();
     // cv entre 0.05 y 0.10 (std dev ~ 63, mean 1000 -> cv ~ 0.063)
-    let samples = vec![940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0];
+    let samples = vec![
+        940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0, 940.0, 1060.0,
+    ];
     let stats = engine.evaluate_stability(&samples, 0);
     assert!(stats.cv >= 0.05 && stats.cv < 0.10);
     assert_eq!(stats.level, StabilityLevel::Stable);
@@ -41,13 +43,16 @@ fn test_stability_drops_penalty() {
     let stats = engine.evaluate_stability(&samples, 0);
     assert_eq!(stats.drops_count, 2);
     // Debe haber bajado al menos a Variable o VeryVariable
-    assert!(matches!(stats.level, StabilityLevel::Variable | StabilityLevel::VeryVariable));
+    assert!(matches!(
+        stats.level,
+        StabilityLevel::Variable | StabilityLevel::VeryVariable
+    ));
 }
 
 #[test]
 fn test_asymmetry_boundaries() {
     let engine = DiagnosticEngine::new();
-    
+
     // Exactly 20% difference: (1000 - 800) / 1000 = 0.20 -> NOT asymmetric (strictly > 0.20)
     let asym_20 = engine.evaluate_asymmetry(Some(1000), Some(800)).unwrap();
     assert!(!asym_20.is_asymmetric);
@@ -132,17 +137,17 @@ fn test_verdict_generation_ok_path() {
         packets_retransmitted: Some(5),
     };
 
-    let verdict = engine.generate_verdict(
-        &cap,
-        Some(950_000_000),
-        Some(940_000_000),
-        Some(&stability),
-        Some(&stability),
-        Some(&asym),
-        Some(&retrans),
-        Some(15.0),
-        true,
-    );
+    let verdict = engine.generate_verdict(VerdictInput {
+        capacity: &cap,
+        forward_bps: Some(950_000_000),
+        reverse_bps: Some(940_000_000),
+        forward_stability: Some(&stability),
+        reverse_stability: Some(&stability),
+        asymmetry: Some(&asym),
+        retransmissions: Some(&retrans),
+        max_cpu_percent: Some(15.0),
+        is_completed: true,
+    });
 
     assert_eq!(verdict.level, VerdictLevel::Ok);
     assert_eq!(verdict.performance_level, Some(VerdictLevel::Ok));
@@ -173,17 +178,17 @@ fn test_verdict_without_ref_bps_has_no_performance_verdict() {
         gaps_count: 0,
     };
 
-    let verdict = engine.generate_verdict(
-        &cap,
-        Some(450_000_000),
-        Some(440_000_000),
-        Some(&stability),
-        Some(&stability),
-        None,
-        None,
-        Some(10.0),
-        true,
-    );
+    let verdict = engine.generate_verdict(VerdictInput {
+        capacity: &cap,
+        forward_bps: Some(450_000_000),
+        reverse_bps: Some(440_000_000),
+        forward_stability: Some(&stability),
+        reverse_stability: Some(&stability),
+        asymmetry: None,
+        retransmissions: None,
+        max_cpu_percent: Some(10.0),
+        is_completed: true,
+    });
 
     assert_eq!(verdict.performance_level, None);
     assert_eq!(verdict.level, VerdictLevel::Ok);

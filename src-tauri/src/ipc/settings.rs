@@ -2,7 +2,7 @@ use crate::app::AppState;
 use crate::control::domain::SessionState;
 use crate::ipc::response::IpcResult;
 use crate::platform::autostart;
-use crate::platform::lifecycle::{evaluate_close_request, CloseActionDecision};
+use crate::platform::lifecycle::{CloseActionDecision, evaluate_close_request};
 use crate::settings::Preferences;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -37,9 +37,10 @@ pub fn settings_get(state: tauri::State<AppState>) -> IpcResult<Preferences> {
 pub async fn settings_update(
     state: tauri::State<'_, AppState>,
     preferences: Preferences,
-) -> Result<IpcResult<Preferences>, ()> {
+) -> Result<IpcResult<Preferences>, String> {
     let session_state = state.session_service.current_state().await;
-    let is_session_active = session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    let is_session_active =
+        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
 
     let res = state.settings.validate_and_update(is_session_active, |p| {
         *p = preferences;
@@ -138,9 +139,10 @@ pub fn settings_about_info() -> IpcResult<AboutInfo> {
 pub async fn app_close_evaluate(
     state: tauri::State<'_, AppState>,
     force: bool,
-) -> Result<IpcResult<CloseActionDecision>, ()> {
+) -> Result<IpcResult<CloseActionDecision>, String> {
     let session_state = state.session_service.current_state().await;
-    let is_session_active = session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    let is_session_active =
+        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
     let minimize_to_tray = state.settings.get().minimize_to_tray;
 
     let decision = evaluate_close_request(is_session_active, minimize_to_tray, force);

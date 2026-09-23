@@ -112,7 +112,9 @@ pub fn sanitize_value(key: &str, val: &str) -> String {
 /// Formatea una fecha y hora en formato legible con zona Europe/Madrid
 /// (formato: DD/MM/YYYY HH:mm:ss.SSS +02:00 o +01:00)
 pub fn format_madrid_human(time: SystemTime) -> String {
-    let dur = time.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+    let dur = time
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
     let total_secs = dur.as_secs();
     let millis = dur.subsec_millis();
 
@@ -157,7 +159,7 @@ pub fn is_madrid_dst(unix_secs: u64) -> bool {
     let days = (unix_secs / 86400) as i64;
     let day_secs = unix_secs % 86400;
     let (year, month, day) = days_to_ymd(days);
-    if month < 3 || month > 10 {
+    if !(3..=10).contains(&month) {
         return false;
     }
     if month > 3 && month < 10 {
@@ -186,7 +188,9 @@ pub fn is_madrid_dst(unix_secs: u64) -> bool {
 }
 
 fn last_sunday(year: i64, month: u32) -> u32 {
-    let days_in_month = if month == 3 { 31 } else { 31 };
+    // Solo se invoca para marzo y octubre, los meses del cambio de hora en la UE.
+    // Ambos tienen 31 días.
+    let days_in_month = 31;
     for d in (days_in_month - 6..=days_in_month).rev() {
         let days = ymd_to_days(year, month, d);
         let day_of_week = (days + 4).rem_euclid(7); // 0 = Domingo
@@ -258,7 +262,11 @@ impl Logger {
         };
 
         // Escritura en archivo local con manejo seguro que nunca bloquea ni entra en pánico
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&file_path) {
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&file_path)
+        {
             let _ = file.write_all(json_line.as_bytes());
         } else {
             self.dropped_events.fetch_add(1, Ordering::Relaxed);
@@ -343,4 +351,3 @@ pub fn log(level: LogLevel, module: &str, message: &str) {
         logger.log(event);
     }
 }
-

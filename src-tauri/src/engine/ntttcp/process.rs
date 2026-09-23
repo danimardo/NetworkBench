@@ -1,6 +1,6 @@
 use super::args::build_ntttcp_args;
 use super::job_object::JobObject;
-use super::parser::{parse_ntttcp_xml, NtttcpParsedResult, NtttcpRole};
+use super::parser::{NtttcpParsedResult, NtttcpRole, parse_ntttcp_xml};
 use crate::model::plan::BenchmarkPlan;
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -22,7 +22,10 @@ impl NtttcpProcess {
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
         let hash = hasher.finalize();
-        let actual_hex = hash.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let actual_hex = hash
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
         Ok(actual_hex.eq_ignore_ascii_case(expected_sha256.trim()))
     }
 
@@ -70,19 +73,23 @@ impl NtttcpProcess {
             let status = child.wait().await?;
             if !status.success() {
                 let _ = fs::remove_file(&self.xml_path);
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    format!("ntttcp terminó con código de error: {:?}", status.code()),
-                ));
+                return Err(Error::other(format!(
+                    "ntttcp terminó con código de error: {:?}",
+                    status.code()
+                )));
             }
 
             let xml_content = fs::read_to_string(&self.xml_path)?;
             let _ = fs::remove_file(&self.xml_path);
 
-            parse_ntttcp_xml(&xml_content)
-                .map_err(|e| Error::new(ErrorKind::InvalidData, format!("Fallo al parsear XML: {:?}", e)))
+            parse_ntttcp_xml(&xml_content).map_err(|e| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    format!("Fallo al parsear XML: {:?}", e),
+                )
+            })
         } else {
-            Err(Error::new(ErrorKind::Other, "Proceso ya no está activo"))
+            Err(Error::other("Proceso ya no está activo"))
         }
     }
 

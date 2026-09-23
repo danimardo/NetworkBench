@@ -35,17 +35,17 @@ impl SampleCollector {
         cpu_percent: Option<f64>,
     ) {
         // Detectar si hubo un hueco temporal superior a 1.5x el intervalo (p. ej. > 750 ms)
-        if let Some(last_t) = self.last_sample_t_ms {
-            if t_ms.saturating_sub(last_t) > SAMPLE_INTERVAL_MS + 250 {
-                // Registrar hueco explícito sin inventar valores
-                self.samples.push(SamplePoint {
-                    t_ms: last_t + SAMPLE_INTERVAL_MS,
-                    direction: direction.to_string(),
-                    bps: 0,
-                    cpu_percent: None,
-                    gap: true,
-                });
-            }
+        if let Some(last_t) = self.last_sample_t_ms
+            && t_ms.saturating_sub(last_t) > SAMPLE_INTERVAL_MS + 250
+        {
+            // Registrar hueco explícito sin inventar valores
+            self.samples.push(SamplePoint {
+                t_ms: last_t + SAMPLE_INTERVAL_MS,
+                direction: direction.to_string(),
+                bps: 0,
+                cpu_percent: None,
+                gap: true,
+            });
         }
 
         self.samples.push(SamplePoint {

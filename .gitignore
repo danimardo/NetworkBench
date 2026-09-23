@@ -17,6 +17,9 @@ release/
 .specify/integrations/.cache/
 src-tauri/gen/schemas/
 
+# Informes de cobertura, regenerados en cada medición
+artifacts/coverage/
+
 # IDEs and OS
 .claude/settings.local.json
 .vscode/

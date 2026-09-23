@@ -15,7 +15,10 @@ fn test_happy_path_state_transitions() {
     assert!(sm.current_state().is_active());
 
     // 2. Connecting -> HelloPending
-    assert!(sm.transition_to(SessionState::HelloPending, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::HelloPending, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::HelloPending);
 
     // 3. HelloPending -> Pairing
@@ -23,27 +26,45 @@ fn test_happy_path_state_transitions() {
     assert_eq!(sm.current_state(), SessionState::Pairing);
 
     // 4. Pairing -> Requesting
-    assert!(sm.transition_to(SessionState::Requesting, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::Requesting, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::Requesting);
 
     // 5. Requesting -> Preparing
-    assert!(sm.transition_to(SessionState::Preparing, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::Preparing, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::Preparing);
 
     // 6. Preparing -> RunningSend
-    assert!(sm.transition_to(SessionState::RunningSend, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::RunningSend, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::RunningSend);
 
     // 7. RunningSend -> RunningReceive
-    assert!(sm.transition_to(SessionState::RunningReceive, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::RunningReceive, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::RunningReceive);
 
     // 8. RunningReceive -> Analyzing
-    assert!(sm.transition_to(SessionState::Analyzing, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::Analyzing, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::Analyzing);
 
     // 9. Analyzing -> Completed
-    assert!(sm.transition_to(SessionState::Completed, session_id).is_ok());
+    assert!(
+        sm.transition_to(SessionState::Completed, session_id)
+            .is_ok()
+    );
     assert_eq!(sm.current_state(), SessionState::Completed);
     assert!(sm.current_state().is_terminal());
     assert!(!sm.current_state().is_active());
@@ -210,10 +231,12 @@ fn test_unidirectional_transitions() {
     let p2_id = Uuid::new_v4();
 
     sm2.start_session(s2_id, p2_id).unwrap();
-    sm2.transition_to(SessionState::HelloPending, s2_id).unwrap();
+    sm2.transition_to(SessionState::HelloPending, s2_id)
+        .unwrap();
     sm2.transition_to(SessionState::Requesting, s2_id).unwrap();
     sm2.transition_to(SessionState::Preparing, s2_id).unwrap();
-    sm2.transition_to(SessionState::RunningReceive, s2_id).unwrap();
+    sm2.transition_to(SessionState::RunningReceive, s2_id)
+        .unwrap();
     assert!(sm2.transition_to(SessionState::Analyzing, s2_id).is_ok());
     assert_eq!(sm2.current_state(), SessionState::Analyzing);
 }
@@ -226,4 +249,3 @@ fn test_running_both_serialization() {
     let de: SessionState = serde_json::from_str(&json).unwrap();
     assert_eq!(de, SessionState::RunningBoth);
 }
-

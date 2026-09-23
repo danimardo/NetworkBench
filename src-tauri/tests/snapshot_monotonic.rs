@@ -39,7 +39,7 @@ fn test_snapshot_monotonic_updates() {
         s.is_session_active = true;
     });
     assert_eq!(snap3.revision, 3);
-    assert_eq!(snap3.is_session_active, true);
+    assert!(snap3.is_session_active);
     assert_eq!(manager.current_revision(), 3);
 }
 

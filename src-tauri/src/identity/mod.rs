@@ -31,24 +31,23 @@ impl InstanceIdentity {
     /// Genera una nueva identidad local usando certificado Ed25519 autofirmado y UUID v4.
     pub fn generate(display_name: String) -> Result<Self> {
         let instance_id = Uuid::new_v4();
-        let key_pair = KeyPair::generate_for(&PKCS_ED25519).map_err(|e| {
-            Error::new(ErrorKind::Other, format!("Error generando par Ed25519: {}", e))
-        })?;
+        let key_pair = KeyPair::generate_for(&PKCS_ED25519)
+            .map_err(|e| Error::other(format!("Error generando par Ed25519: {}", e)))?;
 
         let mut params = CertificateParams::new(vec![
             format!("netbench-{}", instance_id),
             "localhost".to_string(),
         ])
-        .map_err(|e| Error::new(ErrorKind::Other, format!("Error creando params cert: {}", e)))?;
+        .map_err(|e| Error::other(format!("Error creando params cert: {}", e)))?;
 
         params.distinguished_name.push(
             rcgen::DnType::CommonName,
             format!("NetworkBench-{}", display_name),
         );
 
-        let cert = params.self_signed(&key_pair).map_err(|e| {
-            Error::new(ErrorKind::Other, format!("Error autofirmando cert: {}", e))
-        })?;
+        let cert = params
+            .self_signed(&key_pair)
+            .map_err(|e| Error::other(format!("Error autofirmando cert: {}", e)))?;
 
         let cert_der = cert.der().to_vec();
         let cert_pem = cert.pem();
@@ -58,7 +57,10 @@ impl InstanceIdentity {
         let mut hasher = Sha256::new();
         hasher.update(&cert_der);
         let hash = hasher.finalize();
-        let fingerprint = hash.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+        let fingerprint = hash
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
 
         Ok(Self {
             instance_id,
@@ -96,8 +98,8 @@ impl InstanceIdentity {
     /// Carga una identidad previamente persistida descifrando la clave privada con DPAPI.
     pub fn load_from_dir(dir: &Path) -> Result<Self> {
         let meta_raw = fs::read(dir.join("identity.json"))?;
-        let meta: serde_json::Value = serde_json::from_slice(&meta_raw)
-            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        let meta: serde_json::Value =
+            serde_json::from_slice(&meta_raw).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         let instance_id = Uuid::parse_str(
             meta["instanceId"]
@@ -116,8 +118,8 @@ impl InstanceIdentity {
 
         let protected_key = fs::read(dir.join("key.dpapi"))?;
         let key_bytes = dpapi::unprotect_bytes(&protected_key)?;
-        let private_key_pem = String::from_utf8(key_bytes)
-            .map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
+        let private_key_pem =
+            String::from_utf8(key_bytes).map_err(|e| Error::new(ErrorKind::InvalidData, e))?;
 
         Ok(Self {
             instance_id,

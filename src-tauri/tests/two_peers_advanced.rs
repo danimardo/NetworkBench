@@ -1,11 +1,11 @@
 use networkbench_lib::control::ports::allocate_ports_for_plan;
 use networkbench_lib::control::transport::{recv_envelope, send_envelope};
 use networkbench_lib::control::{SessionState, SessionStateMachine};
-use networkbench_lib::diagnostic::{evaluate_udp_diagnostics, UdpLossLevel};
+use networkbench_lib::diagnostic::{UdpLossLevel, evaluate_udp_diagnostics};
 use networkbench_lib::model::plan::{BenchmarkDirection, BenchmarkPlan, BenchmarkProtocol};
 use networkbench_lib::model::protocol::{
-    HelloPayload, PairRequestPayload, PairResultPayload, ProtocolEnvelope,
-    ProtocolMessageType, RequestPayload, ResponsePayload,
+    HelloPayload, PairRequestPayload, PairResultPayload, ProtocolEnvelope, ProtocolMessageType,
+    RequestPayload, ResponsePayload,
 };
 use networkbench_lib::pairing::derive_pairing_code;
 use tokio::net::TcpListener;
@@ -46,7 +46,8 @@ async fn test_two_peers_unidirectional_forward() {
         };
         send_envelope(&mut writer, &hello_b).await.unwrap();
 
-        let pair_req: ProtocolEnvelope<PairRequestPayload> = recv_envelope(&mut reader).await.unwrap();
+        let pair_req: ProtocolEnvelope<PairRequestPayload> =
+            recv_envelope(&mut reader).await.unwrap();
         let pair_res = ProtocolEnvelope {
             msg_type: ProtocolMessageType::PairResult,
             id: Uuid::new_v4(),
@@ -109,8 +110,10 @@ async fn test_two_peers_unidirectional_forward() {
         let _hello_b: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut reader).await.unwrap();
 
         // PAIRING
-        sm_a.transition_to(SessionState::HelloPending, session_id).unwrap();
-        sm_a.transition_to(SessionState::Pairing, session_id).unwrap();
+        sm_a.transition_to(SessionState::HelloPending, session_id)
+            .unwrap();
+        sm_a.transition_to(SessionState::Pairing, session_id)
+            .unwrap();
 
         let code = derive_pairing_code(fp_a, fp_b, &session_id).unwrap();
         let pair_req = ProtocolEnvelope {
@@ -119,15 +122,15 @@ async fn test_two_peers_unidirectional_forward() {
             session_id: Some(session_id),
             ts: "2026-09-22T08:00:01Z".into(),
             in_reply_to: None,
-            payload: PairRequestPayload {
-                pairing_code: code,
-            },
+            payload: PairRequestPayload { pairing_code: code },
         };
         send_envelope(&mut writer, &pair_req).await.unwrap();
-        let _pair_res: ProtocolEnvelope<PairResultPayload> = recv_envelope(&mut reader).await.unwrap();
+        let _pair_res: ProtocolEnvelope<PairResultPayload> =
+            recv_envelope(&mut reader).await.unwrap();
 
         // REQUEST con plan unidireccional
-        sm_a.transition_to(SessionState::Requesting, session_id).unwrap();
+        sm_a.transition_to(SessionState::Requesting, session_id)
+            .unwrap();
         let mut plan = BenchmarkPlan::new_standard_tcp(5001);
         plan.direction = BenchmarkDirection::Forward;
         plan.streams = 4;
@@ -149,10 +152,14 @@ async fn test_two_peers_unidirectional_forward() {
         assert!(resp.payload.accepted);
 
         // Transición unidireccional: Preparing -> RunningSend -> Analyzing -> Completed (omitiendo reverse)
-        sm_a.transition_to(SessionState::Preparing, session_id).unwrap();
-        sm_a.transition_to(SessionState::RunningSend, session_id).unwrap();
-        sm_a.transition_to(SessionState::Analyzing, session_id).unwrap();
-        sm_a.transition_to(SessionState::Completed, session_id).unwrap();
+        sm_a.transition_to(SessionState::Preparing, session_id)
+            .unwrap();
+        sm_a.transition_to(SessionState::RunningSend, session_id)
+            .unwrap();
+        sm_a.transition_to(SessionState::Analyzing, session_id)
+            .unwrap();
+        sm_a.transition_to(SessionState::Completed, session_id)
+            .unwrap();
         assert_eq!(sm_a.current_state(), SessionState::Completed);
     });
 
@@ -177,12 +184,16 @@ async fn test_two_peers_simultaneous_running_both_and_cancellation() {
     let peer_id = Uuid::new_v4();
     let mut sm = SessionStateMachine::new();
     sm.start_session(session_id, peer_id).unwrap();
-    sm.transition_to(SessionState::HelloPending, session_id).unwrap();
-    sm.transition_to(SessionState::Requesting, session_id).unwrap();
-    sm.transition_to(SessionState::Preparing, session_id).unwrap();
+    sm.transition_to(SessionState::HelloPending, session_id)
+        .unwrap();
+    sm.transition_to(SessionState::Requesting, session_id)
+        .unwrap();
+    sm.transition_to(SessionState::Preparing, session_id)
+        .unwrap();
 
     // Entrar en RUNNING_BOTH
-    sm.transition_to(SessionState::RunningBoth, session_id).unwrap();
+    sm.transition_to(SessionState::RunningBoth, session_id)
+        .unwrap();
     assert_eq!(sm.current_state(), SessionState::RunningBoth);
     assert!(sm.current_state().is_active());
 

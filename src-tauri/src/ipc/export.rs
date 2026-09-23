@@ -1,6 +1,6 @@
 use crate::app::AppState;
 use crate::errors::{AppError, AppIssue, ErrorCode, ErrorSeverity};
-use crate::export::csv::{export_samples_csv, export_summary_csv, SampleCsvRow};
+use crate::export::csv::{SampleCsvRow, export_samples_csv, export_summary_csv};
 use crate::export::json::export_sessions_to_json;
 use crate::export::pdf::write_pdf_atomically;
 use crate::history::queries::get_session_detail;
@@ -52,7 +52,13 @@ pub struct ExportExecuteResponse {
 
 fn sanitize_filename_component(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -78,13 +84,17 @@ pub fn export_preview(
 ) -> IpcResult<ExportPreviewResponse> {
     if request.session_ids.is_empty() {
         return IpcResult::err(
-            AppError::new(ErrorCode::ParamRejected, ErrorSeverity::Warning, "errors.NB-PARAM-001")
-                .with_issue(AppIssue {
-                    path: "export.preview".into(),
-                    code: "EMPTY_SESSIONS".into(),
-                    message_key: "errors.NB-PARAM-001".into(),
-                    safe_params: None,
-                }),
+            AppError::new(
+                ErrorCode::ParamRejected,
+                ErrorSeverity::Warning,
+                "errors.NB-PARAM-001",
+            )
+            .with_issue(AppIssue {
+                path: "export.preview".into(),
+                code: "EMPTY_SESSIONS".into(),
+                message_key: "errors.NB-PARAM-001".into(),
+                safe_params: None,
+            }),
         );
     }
 
@@ -104,13 +114,17 @@ pub fn export_preview(
         Ok(Some(s)) => s,
         _ => {
             return IpcResult::err(
-                AppError::new(ErrorCode::ParamRejected, ErrorSeverity::Warning, "errors.NB-PARAM-001")
-                    .with_issue(AppIssue {
-                        path: "export.preview".into(),
-                        code: "SESSION_NOT_FOUND".into(),
-                        message_key: "errors.NB-PARAM-001".into(),
-                        safe_params: None,
-                    }),
+                AppError::new(
+                    ErrorCode::ParamRejected,
+                    ErrorSeverity::Warning,
+                    "errors.NB-PARAM-001",
+                )
+                .with_issue(AppIssue {
+                    path: "export.preview".into(),
+                    code: "SESSION_NOT_FOUND".into(),
+                    message_key: "errors.NB-PARAM-001".into(),
+                    safe_params: None,
+                }),
             );
         }
     };
@@ -142,17 +156,24 @@ pub fn export_preview(
             } else {
                 format!("NetworkBench_export_{time_str}")
             };
-            vec![format!("{base}_resumen.csv"), format!("{base}_muestras.csv")]
+            vec![
+                format!("{base}_resumen.csv"),
+                format!("{base}_muestras.csv"),
+            ]
         }
         _ => {
             return IpcResult::err(
-                AppError::new(ErrorCode::ParamRejected, ErrorSeverity::Warning, "errors.NB-PARAM-001")
-                    .with_issue(AppIssue {
-                        path: "export.preview.format".into(),
-                        code: "UNSUPPORTED_FORMAT".into(),
-                        message_key: "errors.NB-PARAM-001".into(),
-                        safe_params: None,
-                    }),
+                AppError::new(
+                    ErrorCode::ParamRejected,
+                    ErrorSeverity::Warning,
+                    "errors.NB-PARAM-001",
+                )
+                .with_issue(AppIssue {
+                    path: "export.preview.format".into(),
+                    code: "UNSUPPORTED_FORMAT".into(),
+                    message_key: "errors.NB-PARAM-001".into(),
+                    safe_params: None,
+                }),
             );
         }
     };
@@ -184,7 +205,8 @@ pub fn export_preview(
 fn write_text_atomically(dest_path: &Path, content: &str) -> Result<u64, String> {
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     if !parent.exists() {
-        fs::create_dir_all(parent).map_err(|e| format!("Fallo al crear directorio de destino: {e}"))?;
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Fallo al crear directorio de destino: {e}"))?;
     }
 
     let temp_filename = format!(".tmp_export_{}", Uuid::new_v4());
@@ -192,9 +214,12 @@ fn write_text_atomically(dest_path: &Path, content: &str) -> Result<u64, String>
 
     let bytes = content.as_bytes();
     let write_result = (|| {
-        let mut file = File::create(&temp_path).map_err(|e| format!("Error al crear archivo temporal: {e}"))?;
-        file.write_all(bytes).map_err(|e| format!("Error al escribir datos: {e}"))?;
-        file.sync_all().map_err(|e| format!("Error al sincronizar datos: {e}"))?;
+        let mut file = File::create(&temp_path)
+            .map_err(|e| format!("Error al crear archivo temporal: {e}"))?;
+        file.write_all(bytes)
+            .map_err(|e| format!("Error al escribir datos: {e}"))?;
+        file.sync_all()
+            .map_err(|e| format!("Error al sincronizar datos: {e}"))?;
         Ok(())
     })();
 
@@ -223,13 +248,17 @@ pub fn export_execute(
 
     if request.session_ids.is_empty() {
         return IpcResult::err(
-            AppError::new(ErrorCode::ParamRejected, ErrorSeverity::Warning, "errors.NB-PARAM-001")
-                .with_issue(AppIssue {
-                    path: "export.execute".into(),
-                    code: "EMPTY_SESSIONS".into(),
-                    message_key: "errors.NB-PARAM-001".into(),
-                    safe_params: None,
-                }),
+            AppError::new(
+                ErrorCode::ParamRejected,
+                ErrorSeverity::Warning,
+                "errors.NB-PARAM-001",
+            )
+            .with_issue(AppIssue {
+                path: "export.execute".into(),
+                code: "EMPTY_SESSIONS".into(),
+                message_key: "errors.NB-PARAM-001".into(),
+                safe_params: None,
+            }),
         );
     }
 
@@ -255,7 +284,10 @@ pub fn export_execute(
                 all_samples.push(SampleCsvRow {
                     session_id: *id,
                     direction: s.direction.clone(),
-                    endpoint: rec.peer_id.map(|p| p.to_string()).unwrap_or_else(|| "local".into()),
+                    endpoint: rec
+                        .peer_id
+                        .map(|p| p.to_string())
+                        .unwrap_or_else(|| "local".into()),
                     timestamp_ms: s.t_ms as i64,
                     rx_bps: s.bps.parse::<u64>().ok(),
                     tx_bps: s.bps.parse::<u64>().ok(),
@@ -263,11 +295,11 @@ pub fn export_execute(
                 });
             }
 
-            if let Some(ref r_json) = rec.result_json {
-                if let Ok(sr) = serde_json::from_str::<SessionResult>(r_json) {
-                    sessions.push(sr);
-                    continue;
-                }
+            if let Some(ref r_json) = rec.result_json
+                && let Ok(sr) = serde_json::from_str::<SessionResult>(r_json)
+            {
+                sessions.push(sr);
+                continue;
             }
 
             // Si no hay result_json, reconstruir SessionResult mínimo
@@ -280,7 +312,8 @@ pub fn export_execute(
             let peer_snap = crate::model::result::PeerSnapshot {
                 instance_id: rec.peer_id.unwrap_or_default(),
                 display_name: "Equipo Remoto".into(),
-                fingerprint: "0000000000000000000000000000000000000000000000000000000000000000".into(),
+                fingerprint: "0000000000000000000000000000000000000000000000000000000000000000"
+                    .into(),
                 address: "127.0.0.1:18400".into(),
             };
 
@@ -315,13 +348,17 @@ pub fn export_execute(
 
     if sessions.is_empty() {
         return IpcResult::err(
-            AppError::new(ErrorCode::ParamRejected, ErrorSeverity::Warning, "errors.NB-PARAM-001")
-                .with_issue(AppIssue {
-                    path: "export.execute".into(),
-                    code: "NO_VALID_SESSIONS".into(),
-                    message_key: "errors.NB-PARAM-001".into(),
-                    safe_params: None,
-                }),
+            AppError::new(
+                ErrorCode::ParamRejected,
+                ErrorSeverity::Warning,
+                "errors.NB-PARAM-001",
+            )
+            .with_issue(AppIssue {
+                path: "export.execute".into(),
+                code: "NO_VALID_SESSIONS".into(),
+                message_key: "errors.NB-PARAM-001".into(),
+                safe_params: None,
+            }),
         );
     }
 
@@ -344,16 +381,19 @@ pub fn export_execute(
             let json_content = match export_sessions_to_json(&sessions, request.anonymize) {
                 Ok(c) => c,
                 Err(e) => {
-                    return IpcResult::err(AppError::new(
-                        ErrorCode::InternalError,
-                        ErrorSeverity::Error,
-                        "errors.NB-INTERNAL-001",
-                    ).with_issue(AppIssue {
-                        path: "export.execute.json".into(),
-                        code: "SERIALIZATION_FAILED".into(),
-                        message_key: "errors.NB-INTERNAL-001".into(),
-                        safe_params: Some(serde_json::json!({ "details": e })),
-                    }));
+                    return IpcResult::err(
+                        AppError::new(
+                            ErrorCode::InternalError,
+                            ErrorSeverity::Error,
+                            "errors.NB-INTERNAL-001",
+                        )
+                        .with_issue(AppIssue {
+                            path: "export.execute.json".into(),
+                            code: "SERIALIZATION_FAILED".into(),
+                            message_key: "errors.NB-INTERNAL-001".into(),
+                            safe_params: Some(serde_json::json!({ "details": e })),
+                        }),
+                    );
                 }
             };
 
@@ -363,16 +403,19 @@ pub fn export_execute(
                     total_bytes_written += bytes;
                 }
                 Err(e) => {
-                    return IpcResult::err(AppError::new(
-                        ErrorCode::InternalError,
-                        ErrorSeverity::Error,
-                        "errors.NB-INTERNAL-001",
-                    ).with_issue(AppIssue {
-                        path: "export.execute.write".into(),
-                        code: "WRITE_FAILED".into(),
-                        message_key: "errors.NB-INTERNAL-001".into(),
-                        safe_params: Some(serde_json::json!({ "details": e })),
-                    }));
+                    return IpcResult::err(
+                        AppError::new(
+                            ErrorCode::InternalError,
+                            ErrorSeverity::Error,
+                            "errors.NB-INTERNAL-001",
+                        )
+                        .with_issue(AppIssue {
+                            path: "export.execute.write".into(),
+                            code: "WRITE_FAILED".into(),
+                            message_key: "errors.NB-INTERNAL-001".into(),
+                            safe_params: Some(serde_json::json!({ "details": e })),
+                        }),
+                    );
                 }
             }
         }
@@ -387,21 +430,25 @@ pub fn export_execute(
             };
 
             let summary_path = dest_dir.join(format!("{base_name}_resumen.csv"));
-            let summary_csv = match export_summary_csv(&sessions, request.anonymize, delimiter, decimal_sep) {
-                Ok(s) => s,
-                Err(e) => {
-                    return IpcResult::err(AppError::new(
-                        ErrorCode::InternalError,
-                        ErrorSeverity::Error,
-                        "errors.NB-INTERNAL-001",
-                    ).with_issue(AppIssue {
-                        path: "export.execute.csv_summary".into(),
-                        code: "CSV_FAILED".into(),
-                        message_key: "errors.NB-INTERNAL-001".into(),
-                        safe_params: Some(serde_json::json!({ "details": e })),
-                    }));
-                }
-            };
+            let summary_csv =
+                match export_summary_csv(&sessions, request.anonymize, delimiter, decimal_sep) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        return IpcResult::err(
+                            AppError::new(
+                                ErrorCode::InternalError,
+                                ErrorSeverity::Error,
+                                "errors.NB-INTERNAL-001",
+                            )
+                            .with_issue(AppIssue {
+                                path: "export.execute.csv_summary".into(),
+                                code: "CSV_FAILED".into(),
+                                message_key: "errors.NB-INTERNAL-001".into(),
+                                safe_params: Some(serde_json::json!({ "details": e })),
+                            }),
+                        );
+                    }
+                };
 
             match write_text_atomically(&summary_path, &summary_csv) {
                 Ok(bytes) => {
@@ -409,27 +456,30 @@ pub fn export_execute(
                     total_bytes_written += bytes;
                 }
                 Err(e) => {
-                    return IpcResult::err(AppError::new(
-                        ErrorCode::InternalError,
-                        ErrorSeverity::Error,
-                        "errors.NB-INTERNAL-001",
-                    ).with_issue(AppIssue {
-                        path: "export.execute.write_summary".into(),
-                        code: "WRITE_FAILED".into(),
-                        message_key: "errors.NB-INTERNAL-001".into(),
-                        safe_params: Some(serde_json::json!({ "details": e })),
-                    }));
+                    return IpcResult::err(
+                        AppError::new(
+                            ErrorCode::InternalError,
+                            ErrorSeverity::Error,
+                            "errors.NB-INTERNAL-001",
+                        )
+                        .with_issue(AppIssue {
+                            path: "export.execute.write_summary".into(),
+                            code: "WRITE_FAILED".into(),
+                            message_key: "errors.NB-INTERNAL-001".into(),
+                            safe_params: Some(serde_json::json!({ "details": e })),
+                        }),
+                    );
                 }
             }
 
             // Exportar también muestras si existen
             if !all_samples.is_empty() {
                 let samples_path = dest_dir.join(format!("{base_name}_muestras.csv"));
-                if let Ok(samples_csv) = export_samples_csv(&all_samples, delimiter, decimal_sep) {
-                    if let Ok(bytes) = write_text_atomically(&samples_path, &samples_csv) {
-                        exported_files.push(samples_path.to_string_lossy().to_string());
-                        total_bytes_written += bytes;
-                    }
+                if let Ok(samples_csv) = export_samples_csv(&all_samples, delimiter, decimal_sep)
+                    && let Ok(bytes) = write_text_atomically(&samples_path, &samples_csv)
+                {
+                    exported_files.push(samples_path.to_string_lossy().to_string());
+                    total_bytes_written += bytes;
                 }
             }
         }
@@ -440,24 +490,27 @@ pub fn export_execute(
             // Si el frontend envía el PDF generado vía PrintToPdf base64
             let pdf_bytes = if let Some(ref b64) = request.pdf_content_base64 {
                 // Limpiar posibles cabeceras data:application/pdf;base64,
-                let clean_b64 = b64.split(',').last().unwrap_or(b64);
+                let clean_b64 = b64.split(',').next_back().unwrap_or(b64);
                 // Decodificación base64 sencilla o directa
-                let decoded = match base64_decode(clean_b64) {
+
+                match base64_decode(clean_b64) {
                     Ok(b) => b,
                     Err(_) => {
-                        return IpcResult::err(AppError::new(
-                            ErrorCode::ParamRejected,
-                            ErrorSeverity::Error,
-                            "errors.NB-PARAM-001",
-                        ).with_issue(AppIssue {
-                            path: "export.execute.pdf_base64".into(),
-                            code: "INVALID_BASE64".into(),
-                            message_key: "errors.NB-PARAM-001".into(),
-                            safe_params: None,
-                        }));
+                        return IpcResult::err(
+                            AppError::new(
+                                ErrorCode::ParamRejected,
+                                ErrorSeverity::Error,
+                                "errors.NB-PARAM-001",
+                            )
+                            .with_issue(AppIssue {
+                                path: "export.execute.pdf_base64".into(),
+                                code: "INVALID_BASE64".into(),
+                                message_key: "errors.NB-PARAM-001".into(),
+                                safe_params: None,
+                            }),
+                        );
                     }
-                };
-                decoded
+                }
             } else {
                 // Fallback PDF bytes mínimos válidos si no hay renderizador
                 let fallback = format!(
@@ -472,16 +525,19 @@ pub fn export_execute(
                     total_bytes_written += pdf_bytes.len() as u64;
                 }
                 Err(e) => {
-                    return IpcResult::err(AppError::new(
-                        ErrorCode::InternalError,
-                        ErrorSeverity::Error,
-                        "errors.NB-INTERNAL-001",
-                    ).with_issue(AppIssue {
-                        path: "export.execute.write_pdf".into(),
-                        code: "WRITE_FAILED".into(),
-                        message_key: "errors.NB-INTERNAL-001".into(),
-                        safe_params: Some(serde_json::json!({ "details": e })),
-                    }));
+                    return IpcResult::err(
+                        AppError::new(
+                            ErrorCode::InternalError,
+                            ErrorSeverity::Error,
+                            "errors.NB-INTERNAL-001",
+                        )
+                        .with_issue(AppIssue {
+                            path: "export.execute.write_pdf".into(),
+                            code: "WRITE_FAILED".into(),
+                            message_key: "errors.NB-INTERNAL-001".into(),
+                            safe_params: Some(serde_json::json!({ "details": e })),
+                        }),
+                    );
                 }
             }
         }

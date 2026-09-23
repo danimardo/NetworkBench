@@ -107,7 +107,7 @@ impl BenchmarkPlan {
             let buf_val = buf_str
                 .parse::<u64>()
                 .map_err(|_| "El tamaño de buffer debe ser un número entero".to_string())?;
-            if buf_val < 4096 || buf_val > 4_194_304 || !buf_val.is_power_of_two() {
+            if !(4096..=4_194_304).contains(&buf_val) || !buf_val.is_power_of_two() {
                 return Err(format!(
                     "El tamaño de buffer debe ser potencia de 2 entre 4 KB (4096) y 4 MB (4194304) (recibido: {})",
                     buf_val
@@ -116,10 +116,10 @@ impl BenchmarkPlan {
         }
 
         if let Some(ref target_str) = self.udp_target_rate_bps {
-            let rate_val = target_str
-                .parse::<u64>()
-                .map_err(|_| "La tasa objetivo UDP debe ser un número entero de bit/s".to_string())?;
-            if rate_val < 1_000_000 || rate_val > 100_000_000_000 {
+            let rate_val = target_str.parse::<u64>().map_err(|_| {
+                "La tasa objetivo UDP debe ser un número entero de bit/s".to_string()
+            })?;
+            if !(1_000_000..=100_000_000_000).contains(&rate_val) {
                 return Err(format!(
                     "La tasa objetivo UDP debe estar entre 1 Mbit/s y 100 000 Mbit/s (recibido: {} bit/s)",
                     rate_val
@@ -127,20 +127,20 @@ impl BenchmarkPlan {
             }
         }
 
-        if let Some(pkt_size) = self.udp_packet_size_bytes {
-            if pkt_size < 64 || pkt_size > 65507 {
-                return Err(format!(
-                    "El tamaño de datagrama UDP debe estar entre 64 y 65 507 bytes (recibido: {})",
-                    pkt_size
-                ));
-            }
+        if let Some(pkt_size) = self.udp_packet_size_bytes
+            && (!(64..=65507).contains(&pkt_size))
+        {
+            return Err(format!(
+                "El tamaño de datagrama UDP debe estar entre 64 y 65 507 bytes (recibido: {})",
+                pkt_size
+            ));
         }
 
         if let Some(ref exp_str) = self.expected_capacity_bps {
-            let cap_val = exp_str
-                .parse::<u64>()
-                .map_err(|_| "La capacidad esperada debe ser un número entero de bit/s".to_string())?;
-            if cap_val < 1_000_000 || cap_val > 400_000_000_000 {
+            let cap_val = exp_str.parse::<u64>().map_err(|_| {
+                "La capacidad esperada debe ser un número entero de bit/s".to_string()
+            })?;
+            if !(1_000_000..=400_000_000_000).contains(&cap_val) {
                 return Err(format!(
                     "La capacidad esperada debe estar entre 1 Mbit/s y 400 000 Mbit/s (recibido: {} bit/s)",
                     cap_val

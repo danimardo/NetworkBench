@@ -1,8 +1,8 @@
 use networkbench_lib::model::{
-    decode_frame_length, encode_frame, BenchmarkDirection, BenchmarkPlan, BenchmarkProtocol,
-    CancelPayload, HeartbeatPayload, HelloPayload, PairRequestPayload, PairResultPayload, Peer,
+    BenchmarkDirection, BenchmarkPlan, BenchmarkProtocol, CancelPayload, HeartbeatPayload,
+    HelloPayload, MAX_FRAME_SIZE_BYTES, PairRequestPayload, PairResultPayload, Peer,
     ProtocolEnvelope, ProtocolMessageType, RequestPayload, ResponsePayload, TrustState,
-    MAX_FRAME_SIZE_BYTES,
+    decode_frame_length, encode_frame,
 };
 use uuid::Uuid;
 
@@ -39,8 +39,13 @@ fn test_peer_validation_and_normalization() {
     let fp = "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
     let name = " Sobremesa-Laboratorio ";
 
-    let peer = Peer::new(id, name.to_string(), fp.to_string(), vec!["192.168.1.10:7411".into()])
-        .expect("Peer debe ser válido");
+    let peer = Peer::new(
+        id,
+        name.to_string(),
+        fp.to_string(),
+        vec!["192.168.1.10:7411".into()],
+    )
+    .expect("Peer debe ser válido");
 
     assert_eq!(peer.display_name, "Sobremesa-Laboratorio");
     assert_eq!(
@@ -53,8 +58,24 @@ fn test_peer_validation_and_normalization() {
     // Nombre inválido
     assert!(Peer::new(id, "".to_string(), fp.to_string(), vec![]).is_err());
     assert!(Peer::new(id, "a".repeat(49), fp.to_string(), vec![]).is_err());
-    assert!(Peer::new(id, "Equipo\u{0000}Invalido".to_string(), fp.to_string(), vec![]).is_err());
-    assert!(Peer::new(id, "Equipo\u{202E}Invalido".to_string(), fp.to_string(), vec![]).is_err());
+    assert!(
+        Peer::new(
+            id,
+            "Equipo\u{0000}Invalido".to_string(),
+            fp.to_string(),
+            vec![]
+        )
+        .is_err()
+    );
+    assert!(
+        Peer::new(
+            id,
+            "Equipo\u{202E}Invalido".to_string(),
+            fp.to_string(),
+            vec![]
+        )
+        .is_err()
+    );
 
     // Huella inválida
     assert!(Peer::new(id, "PC".to_string(), "corto".to_string(), vec![]).is_err());

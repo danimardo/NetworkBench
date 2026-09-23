@@ -59,7 +59,9 @@ impl CleanupCoordinator {
             info!(target: "cleanup", pid = pid, "Terminando proceso hijo propio registrado");
             #[cfg(target_os = "windows")]
             {
-                use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+                use windows::Win32::System::Threading::{
+                    OpenProcess, PROCESS_TERMINATE, TerminateProcess,
+                };
                 unsafe {
                     if let Ok(handle) = OpenProcess(PROCESS_TERMINATE, false, pid) {
                         let _ = TerminateProcess(handle, 1);
@@ -74,10 +76,10 @@ impl CleanupCoordinator {
         }
 
         for file in files {
-            if file.exists() {
-                if let Err(e) = fs::remove_file(&file) {
-                    warn!(target: "cleanup", path = %file.display(), error = %e, "No se pudo eliminar archivo temporal");
-                }
+            if file.exists()
+                && let Err(e) = fs::remove_file(&file)
+            {
+                warn!(target: "cleanup", path = %file.display(), error = %e, "No se pudo eliminar archivo temporal");
             }
         }
     }

@@ -1,7 +1,7 @@
 use networkbench_lib::history::database::Database;
 use networkbench_lib::ipc::response::{IpcResult, OneTimeTokenStore};
 use networkbench_lib::ipc::snapshot::{AppSnapshot, SnapshotManager};
-use networkbench_lib::logging::{format_madrid_human, LogEvent, LogLevel, LogOrigin, Logger};
+use networkbench_lib::logging::{LogEvent, LogLevel, LogOrigin, Logger, format_madrid_human};
 use networkbench_lib::settings::{SettingsStore, ThemeMode};
 use std::collections::HashMap;
 use std::fs;
@@ -75,9 +75,17 @@ fn test_foundation_end_to_end_integration() {
     // 5. Tokens de un solo uso
     let token_store = OneTimeTokenStore::new();
     let token = token_store.issue("session.start", Some("plan_hash_1"), 60);
-    assert!(token_store.consume(&token, "session.start", Some("plan_hash_1")).is_ok());
+    assert!(
+        token_store
+            .consume(&token, "session.start", Some("plan_hash_1"))
+            .is_ok()
+    );
     // Segundo intento debe ser estrictamente rechazado
-    assert!(token_store.consume(&token, "session.start", Some("plan_hash_1")).is_err());
+    assert!(
+        token_store
+            .consume(&token, "session.start", Some("plan_hash_1"))
+            .is_err()
+    );
 
     // 6. IPC Result Envelope
     let ipc_success = IpcResult::ok(updated_snap);

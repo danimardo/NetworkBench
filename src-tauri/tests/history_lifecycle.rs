@@ -1,11 +1,11 @@
 use networkbench_lib::errors::ErrorCode;
 use networkbench_lib::history::database::Database;
 use networkbench_lib::history::delete::{
-    confirm_delete, preview_delete, DeleteTarget, DeleteTokenStore,
+    DeleteTarget, DeleteTokenStore, confirm_delete, preview_delete,
 };
 use networkbench_lib::history::migrations::CURRENT_SCHEMA_VERSION;
 use networkbench_lib::history::sessions::{
-    get_session_by_id, insert_session_idempotent, SampleRecord, SessionRecord,
+    SampleRecord, SessionRecord, get_session_by_id, insert_session_idempotent,
 };
 use networkbench_lib::history::upsert_peer;
 use networkbench_lib::model::peer::Peer;
@@ -141,7 +141,10 @@ fn test_ancient_schema_v1_migration_with_automatic_backup() {
 
     // Verificar que el backup automático .v1.bak existe
     let backup_file = db_path.with_extension("v1.bak");
-    assert!(backup_file.exists(), "Debe haberse creado la copia de seguridad v1.bak antes de migrar");
+    assert!(
+        backup_file.exists(),
+        "Debe haberse creado la copia de seguridad v1.bak antes de migrar"
+    );
 
     // Verificar que la columna client_interface agregada en v2 existe y es legible
     let (s_id, client_iface): (String, Option<String>) = conn
@@ -214,8 +217,20 @@ fn test_transactional_delete_preview_token_and_cascade() {
             created_at: "2026-09-01T12:00:00Z".into(),
             peer_id: Some(peer1_id),
             samples: vec![
-                SampleRecord { t_ms: 0, direction: "forward".into(), bps: "100".into(), cpu_percent: None, gap: false },
-                SampleRecord { t_ms: 500, direction: "forward".into(), bps: "100".into(), cpu_percent: None, gap: false },
+                SampleRecord {
+                    t_ms: 0,
+                    direction: "forward".into(),
+                    bps: "100".into(),
+                    cpu_percent: None,
+                    gap: false,
+                },
+                SampleRecord {
+                    t_ms: 500,
+                    direction: "forward".into(),
+                    bps: "100".into(),
+                    cpu_percent: None,
+                    gap: false,
+                },
             ],
             ..Default::default()
         },
@@ -230,9 +245,13 @@ fn test_transactional_delete_preview_token_and_cascade() {
             id: s2,
             created_at: "2026-09-10T12:00:00Z".into(),
             peer_id: Some(peer1_id),
-            samples: vec![
-                SampleRecord { t_ms: 0, direction: "forward".into(), bps: "100".into(), cpu_percent: None, gap: false },
-            ],
+            samples: vec![SampleRecord {
+                t_ms: 0,
+                direction: "forward".into(),
+                bps: "100".into(),
+                cpu_percent: None,
+                gap: false,
+            }],
             ..Default::default()
         },
     )
@@ -246,9 +265,13 @@ fn test_transactional_delete_preview_token_and_cascade() {
             id: s3,
             created_at: "2026-09-20T12:00:00Z".into(),
             peer_id: Some(peer2_id),
-            samples: vec![
-                SampleRecord { t_ms: 0, direction: "forward".into(), bps: "100".into(), cpu_percent: None, gap: false },
-            ],
+            samples: vec![SampleRecord {
+                t_ms: 0,
+                direction: "forward".into(),
+                bps: "100".into(),
+                cpu_percent: None,
+                gap: false,
+            }],
             ..Default::default()
         },
     )
@@ -271,14 +294,19 @@ fn test_transactional_delete_preview_token_and_cascade() {
     assert_eq!(ok_res.deleted_sessions, 2);
 
     // 4. Segundo intento con el mismo token -> token de un solo uso consumido
-    let consumed_res = confirm_delete(&mut conn, &preview.confirmation_token, &token_store).unwrap();
+    let consumed_res =
+        confirm_delete(&mut conn, &preview.confirmation_token, &token_store).unwrap();
     assert_eq!(consumed_res, None);
 
     // 5. Verificar que la sesión de Peer 2 sigue intacta con sus muestras
-    let remaining_sessions: i64 = conn.query_row("SELECT COUNT(*) FROM sessions;", [], |r| r.get(0)).unwrap();
+    let remaining_sessions: i64 = conn
+        .query_row("SELECT COUNT(*) FROM sessions;", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(remaining_sessions, 1);
 
-    let remaining_samples: i64 = conn.query_row("SELECT COUNT(*) FROM samples;", [], |r| r.get(0)).unwrap();
+    let remaining_samples: i64 = conn
+        .query_row("SELECT COUNT(*) FROM samples;", [], |r| r.get(0))
+        .unwrap();
     assert_eq!(remaining_samples, 1);
 
     let p2_session = get_session_by_id(&conn, &s3).unwrap();

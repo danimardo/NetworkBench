@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::Path;
-use std::process::{exit, Command};
-use serde::{Deserialize, Serialize};
+use std::process::{Command, exit};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,22 +33,27 @@ fn validate_request(req: &FirewallHelperRequest) -> Result<(), String> {
     }
 
     let prog_lower = req.program.to_lowercase();
-    let valid_prog = prog_lower.ends_with("networkbench.exe") 
-        || prog_lower.ends_with("ntttcp.exe") 
+    let valid_prog = prog_lower.ends_with("networkbench.exe")
+        || prog_lower.ends_with("ntttcp.exe")
         || prog_lower.is_empty();
 
     if !valid_prog {
-        return Err(format!("Programa '{}' no autorizado en lista blanca", req.program));
+        return Err(format!(
+            "Programa '{}' no autorizado en lista blanca",
+            req.program
+        ));
     }
 
     if req.port_range.contains('-') {
         let parts: Vec<&str> = req.port_range.split('-').collect();
-        if parts.len() == 2 {
-            if let (Ok(start), Ok(end)) = (parts[0].parse::<u16>(), parts[1].parse::<u16>()) {
-                if end < start || (end - start + 1) > 64 {
-                    return Err(format!("Rango de puertos excede el límite de 64: {}", req.port_range));
-                }
-            }
+        if parts.len() == 2
+            && let (Ok(start), Ok(end)) = (parts[0].parse::<u16>(), parts[1].parse::<u16>())
+            && (end < start || (end - start + 1) > 64)
+        {
+            return Err(format!(
+                "Rango de puertos excede el límite de 64: {}",
+                req.port_range
+            ));
         }
     }
 
@@ -62,7 +67,13 @@ fn apply_rule(req: &FirewallHelperRequest) -> Result<(), String> {
     {
         if req.operation == "remove" {
             let output = Command::new("netsh")
-                .args(["advfirewall", "firewall", "delete", "rule", &format!("name={}", req.rule_name)])
+                .args([
+                    "advfirewall",
+                    "firewall",
+                    "delete",
+                    "rule",
+                    &format!("name={}", req.rule_name),
+                ])
                 .output()
                 .map_err(|e| format!("Fallo al ejecutar netsh delete: {}", e))?;
 
@@ -76,7 +87,13 @@ fn apply_rule(req: &FirewallHelperRequest) -> Result<(), String> {
         if req.operation == "add" {
             // Eliminar primero para evitar reglas duplicadas si ya existe
             let _ = Command::new("netsh")
-                .args(["advfirewall", "firewall", "delete", "rule", &format!("name={}", req.rule_name)])
+                .args([
+                    "advfirewall",
+                    "firewall",
+                    "delete",
+                    "rule",
+                    &format!("name={}", req.rule_name),
+                ])
                 .output();
 
             let profiles_str = if req.profiles.is_empty() {

@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, Result};
 
 #[cfg(windows)]
 pub struct JobObject {
@@ -9,13 +9,14 @@ pub struct JobObject {
 impl JobObject {
     pub fn create_kill_on_close() -> Result<Self> {
         use windows::Win32::System::JobObjects::{
-            CreateJobObjectW, SetInformationJobObject, JobObjectExtendedLimitInformation,
-            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+            CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+            SetInformationJobObject,
         };
 
         unsafe {
             let handle = CreateJobObjectW(None, None)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("CreateJobObjectW falló: {}", e)))?;
+                .map_err(|e| Error::other(format!("CreateJobObjectW falló: {}", e)))?;
 
             let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
             info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -28,7 +29,7 @@ impl JobObject {
             )
             .map_err(|e| {
                 let _ = windows::Win32::Foundation::CloseHandle(handle);
-                Error::new(ErrorKind::Other, format!("SetInformationJobObject falló: {}", e))
+                Error::other(format!("SetInformationJobObject falló: {}", e))
             })?;
 
             Ok(Self { handle })
@@ -40,7 +41,7 @@ impl JobObject {
 
         unsafe {
             AssignProcessToJobObject(self.handle, process_handle)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("AssignProcessToJobObject falló: {}", e)))?;
+                .map_err(|e| Error::other(format!("AssignProcessToJobObject falló: {}", e)))?;
             Ok(())
         }
     }
@@ -75,6 +76,9 @@ mod tests {
     #[test]
     fn test_create_job_object() {
         let job = JobObject::create_kill_on_close();
-        assert!(job.is_ok(), "Debe crear el Job Object con KILL_ON_JOB_CLOSE");
+        assert!(
+            job.is_ok(),
+            "Debe crear el Job Object con KILL_ON_JOB_CLOSE"
+        );
     }
 }

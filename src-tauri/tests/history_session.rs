@@ -1,7 +1,7 @@
 use networkbench_lib::history::database::Database;
 use networkbench_lib::history::{
-    get_peer_by_fingerprint, get_session_by_id, insert_session_idempotent, upsert_peer,
-    SampleRecord, SessionRecord,
+    SampleRecord, SessionRecord, get_peer_by_fingerprint, get_session_by_id,
+    insert_session_idempotent, upsert_peer,
 };
 use networkbench_lib::model::peer::{Peer, TrustState};
 use std::fs;
@@ -34,7 +34,9 @@ fn test_peer_persistence_and_upsert() {
     // 1. Insertar peer
     upsert_peer(&conn, &peer).expect("Insertar peer");
 
-    let loaded = get_peer_by_fingerprint(&conn, fp).expect("Cargar peer").expect("Peer debe existir");
+    let loaded = get_peer_by_fingerprint(&conn, fp)
+        .expect("Cargar peer")
+        .expect("Peer debe existir");
     assert_eq!(loaded.instance_id, p_id);
     assert_eq!(loaded.display_name, "Servidor-Pruebas");
     assert_eq!(loaded.alias.as_deref(), Some("Mi Servidor"));
@@ -45,7 +47,9 @@ fn test_peer_persistence_and_upsert() {
     peer.last_seen = "2026-09-21T21:00:00Z".into();
     upsert_peer(&conn, &peer).expect("Actualizar peer");
 
-    let updated = get_peer_by_fingerprint(&conn, fp).expect("Cargar peer actualizado").unwrap();
+    let updated = get_peer_by_fingerprint(&conn, fp)
+        .expect("Cargar peer actualizado")
+        .unwrap();
     assert_eq!(updated.display_name, "Servidor-Renombrado");
     assert_eq!(updated.alias.as_deref(), Some("Mi Servidor")); // Mantiene alias
     assert_eq!(updated.trust_state, TrustState::Trusted); // Mantiene confianza
@@ -123,14 +127,16 @@ fn test_session_persistence_idempotence_and_samples() {
     assert_eq!(retrieved.forward_bps.as_deref(), Some("945000000"));
     assert_eq!(retrieved.reverse_bps.as_deref(), Some("942000000"));
     assert_eq!(retrieved.samples.len(), 3);
-    assert_eq!(retrieved.samples[2].gap, true);
+    assert!(retrieved.samples[2].gap);
 
     // 2. Re-inserción idempotente con actualización
     let mut updated_session = session.clone();
     updated_session.forward_bps = Some("948000000".into());
     insert_session_idempotent(&mut conn, &updated_session).expect("Re-inserción idempotente");
 
-    let re_retrieved = get_session_by_id(&conn, &session_id).expect("Consulta").unwrap();
+    let re_retrieved = get_session_by_id(&conn, &session_id)
+        .expect("Consulta")
+        .unwrap();
     assert_eq!(re_retrieved.forward_bps.as_deref(), Some("948000000"));
     // Las muestras se deben haber reescrito limpiamente, no duplicado a 6
     assert_eq!(re_retrieved.samples.len(), 3);
@@ -170,8 +176,11 @@ fn test_cascade_deletion_of_samples() {
     insert_session_idempotent(&mut conn, &session).expect("Insertar sesión");
 
     // Borrar la sesión
-    conn.execute("DELETE FROM sessions WHERE id = ?1", rusqlite::params![session_id.to_string()])
-        .expect("Borrar sesión");
+    conn.execute(
+        "DELETE FROM sessions WHERE id = ?1",
+        rusqlite::params![session_id.to_string()],
+    )
+    .expect("Borrar sesión");
 
     // Verificar que las muestras se eliminaron por cascade
     let count: i64 = conn
@@ -182,7 +191,10 @@ fn test_cascade_deletion_of_samples() {
         )
         .expect("Contar muestras");
 
-    assert_eq!(count, 0, "Las muestras deben eliminarse en cascada con la sesión");
+    assert_eq!(
+        count, 0,
+        "Las muestras deben eliminarse en cascada con la sesión"
+    );
 
     drop(conn);
     let _ = fs::remove_dir_all(&tmp_dir);

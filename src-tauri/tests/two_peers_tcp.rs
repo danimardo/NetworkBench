@@ -50,7 +50,8 @@ async fn test_two_peers_happy_path() {
         send_envelope(&mut writer, &hello_b).await.unwrap();
 
         // 3. Recibir PAIR_REQUEST
-        let pair_req: ProtocolEnvelope<PairRequestPayload> = recv_envelope(&mut reader).await.unwrap();
+        let pair_req: ProtocolEnvelope<PairRequestPayload> =
+            recv_envelope(&mut reader).await.unwrap();
         let expected_code = derive_pairing_code(fp_a, fp_b, &session_id).unwrap();
         assert_eq!(pair_req.payload.pairing_code, expected_code);
 
@@ -117,7 +118,8 @@ async fn test_two_peers_happy_path() {
     let hello_b: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut reader).await.unwrap();
     assert_eq!(hello_b.payload.instance_id, peer_b_id);
     assert!(!hello_b.payload.is_busy);
-    sm_a.transition_to(SessionState::HelloPending, session_id).unwrap();
+    sm_a.transition_to(SessionState::HelloPending, session_id)
+        .unwrap();
 
     // 3. Enviar PAIR_REQUEST
     let pairing_code = derive_pairing_code(fp_a, fp_b, &session_id).unwrap();
@@ -130,7 +132,8 @@ async fn test_two_peers_happy_path() {
         payload: PairRequestPayload { pairing_code },
     };
     send_envelope(&mut writer, &pair_req).await.unwrap();
-    sm_a.transition_to(SessionState::Pairing, session_id).unwrap();
+    sm_a.transition_to(SessionState::Pairing, session_id)
+        .unwrap();
 
     // 4. Recibir PAIR_RESULT
     let pair_res: ProtocolEnvelope<PairResultPayload> = recv_envelope(&mut reader).await.unwrap();
@@ -150,7 +153,8 @@ async fn test_two_peers_happy_path() {
         },
     };
     send_envelope(&mut writer, &req).await.unwrap();
-    sm_a.transition_to(SessionState::Requesting, session_id).unwrap();
+    sm_a.transition_to(SessionState::Requesting, session_id)
+        .unwrap();
 
     // 6. Recibir RESPONSE
     let resp: ProtocolEnvelope<ResponsePayload> = recv_envelope(&mut reader).await.unwrap();

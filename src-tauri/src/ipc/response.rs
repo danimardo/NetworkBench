@@ -166,15 +166,15 @@ impl OneTimeTokenStore {
             .with_action(ErrorAction::RetryPairing));
         }
 
-        if let Some(expected_hash) = expected_payload_hash {
-            if entry.payload_hash.as_deref() != Some(expected_hash) {
-                return Err(AppError::new(
-                    ErrorCode::PeerPairingMismatch,
-                    ErrorSeverity::Error,
-                    "errors.NB-PEER-001",
-                )
-                .with_action(ErrorAction::RetryPairing));
-            }
+        if let Some(expected_hash) = expected_payload_hash
+            && entry.payload_hash.as_deref() != Some(expected_hash)
+        {
+            return Err(AppError::new(
+                ErrorCode::PeerPairingMismatch,
+                ErrorSeverity::Error,
+                "errors.NB-PEER-001",
+            )
+            .with_action(ErrorAction::RetryPairing));
         }
 
         // Consumo exitoso de un solo uso: invalidación permanente

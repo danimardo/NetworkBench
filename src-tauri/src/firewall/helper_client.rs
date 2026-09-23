@@ -1,16 +1,16 @@
+use crate::errors::{AppError, ErrorCode};
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use serde::{Deserialize, Serialize};
-use crate::errors::{AppError, ErrorCode};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FirewallHelperRequest {
     pub operation: String, // "add" | "remove"
     pub rule_name: String,
-    pub protocol: String, // "TCP" | "UDP"
+    pub protocol: String,   // "TCP" | "UDP"
     pub port_range: String, // e.g. "5001-5064" o "5201"
     pub program: String,
     pub profiles: Vec<String>, // "Domain", "Private", "Public"
@@ -29,12 +29,12 @@ pub struct FirewallHelperClient;
 impl FirewallHelperClient {
     /// Obtiene la ruta al binario del helper auxiliar
     pub fn get_helper_path() -> PathBuf {
-        if let Ok(current_exe) = env::current_exe() {
-            if let Some(parent) = current_exe.parent() {
-                let helper_exe = parent.join("networkbench-firewall-helper.exe");
-                if helper_exe.exists() {
-                    return helper_exe;
-                }
+        if let Ok(current_exe) = env::current_exe()
+            && let Some(parent) = current_exe.parent()
+        {
+            let helper_exe = parent.join("networkbench-firewall-helper.exe");
+            if helper_exe.exists() {
+                return helper_exe;
             }
         }
         PathBuf::from("networkbench-firewall-helper.exe")
@@ -51,23 +51,28 @@ impl FirewallHelperClient {
         }
 
         let prog_lower = req.program.to_lowercase();
-        let valid_program = prog_lower.ends_with("networkbench.exe") 
+        let valid_program = prog_lower.ends_with("networkbench.exe")
             || prog_lower.ends_with("ntttcp.exe")
             || prog_lower.is_empty();
 
         if !valid_program {
-            return Err(format!("Programa no autorizado en lista blanca: {}", req.program));
+            return Err(format!(
+                "Programa no autorizado en lista blanca: {}",
+                req.program
+            ));
         }
 
         // Validar rango de puertos <= 64 puertos
         if req.port_range.contains('-') {
             let parts: Vec<&str> = req.port_range.split('-').collect();
-            if parts.len() == 2 {
-                if let (Ok(start), Ok(end)) = (parts[0].parse::<u16>(), parts[1].parse::<u16>()) {
-                    if end < start || (end - start + 1) > 64 {
-                        return Err(format!("Rango de puertos excede el límite de 64: {}", req.port_range));
-                    }
-                }
+            if parts.len() == 2
+                && let (Ok(start), Ok(end)) = (parts[0].parse::<u16>(), parts[1].parse::<u16>())
+                && (end < start || (end - start + 1) > 64)
+            {
+                return Err(format!(
+                    "Rango de puertos excede el límite de 64: {}",
+                    req.port_range
+                ));
             }
         }
 
@@ -86,11 +91,14 @@ impl FirewallHelperClient {
         let temp_req_file = temp_dir.join(format!("nb_fw_req_{}.json", std::process::id()));
         let temp_res_file = temp_dir.join(format!("nb_fw_res_{}.json", std::process::id()));
 
-        let json_data = serde_json::to_string_pretty(requests)
-            .map_err(|e| AppError::from_code(ErrorCode::InternalError).with_diagnostic_id(e.to_string()))?;
+        let json_data = serde_json::to_string_pretty(requests).map_err(|e| {
+            AppError::from_code(ErrorCode::InternalError).with_diagnostic_id(e.to_string())
+        })?;
 
         if let Err(e) = fs::write(&temp_req_file, json_data) {
-            return Err(AppError::from_code(ErrorCode::InternalError).with_diagnostic_id(e.to_string()));
+            return Err(
+                AppError::from_code(ErrorCode::InternalError).with_diagnostic_id(e.to_string())
+            );
         }
 
         let helper_path = Self::get_helper_path();

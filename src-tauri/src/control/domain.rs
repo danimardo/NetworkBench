@@ -41,10 +41,18 @@ impl SessionState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StateMachineError {
-    SessionAlreadyActive { active_session_id: Uuid },
+    SessionAlreadyActive {
+        active_session_id: Uuid,
+    },
     NoActiveSession,
-    IllegalTransition { from: SessionState, to: SessionState },
-    SessionIdMismatch { expected: Uuid, actual: Uuid },
+    IllegalTransition {
+        from: SessionState,
+        to: SessionState,
+    },
+    SessionIdMismatch {
+        expected: Uuid,
+        actual: Uuid,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -170,13 +178,13 @@ impl SessionStateMachine {
 
     /// Cancela la sesión activa de manera idempotente.
     pub fn cancel(&mut self, session_id: Uuid) -> Result<(), StateMachineError> {
-        if let Some(active_id) = self.session_id {
-            if active_id != session_id {
-                return Err(StateMachineError::SessionIdMismatch {
-                    expected: active_id,
-                    actual: session_id,
-                });
-            }
+        if let Some(active_id) = self.session_id
+            && active_id != session_id
+        {
+            return Err(StateMachineError::SessionIdMismatch {
+                expected: active_id,
+                actual: session_id,
+            });
         }
 
         if !self.current_state.is_active() {
@@ -197,13 +205,13 @@ impl SessionStateMachine {
 
     /// Falla la sesión con un error terminal.
     pub fn fail(&mut self, session_id: Uuid) -> Result<(), StateMachineError> {
-        if let Some(active_id) = self.session_id {
-            if active_id != session_id {
-                return Err(StateMachineError::SessionIdMismatch {
-                    expected: active_id,
-                    actual: session_id,
-                });
-            }
+        if let Some(active_id) = self.session_id
+            && active_id != session_id
+        {
+            return Err(StateMachineError::SessionIdMismatch {
+                expected: active_id,
+                actual: session_id,
+            });
         }
 
         self.current_state = SessionState::Failed;

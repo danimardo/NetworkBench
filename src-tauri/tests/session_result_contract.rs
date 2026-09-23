@@ -1,7 +1,7 @@
 use networkbench_lib::diagnostic::{
     AsymmetryStats, CapacityReference, CapacitySource, CpuLevel, DiagnosticItem,
     RetransmissionLevel, RetransmissionStats, SessionVerdict, StabilityLevel, StabilityStats,
-    VerdictLevel, THRESHOLDS_HASH,
+    THRESHOLDS_HASH, VerdictLevel,
 };
 use networkbench_lib::model::plan::BenchmarkPlan;
 use networkbench_lib::model::result::{
@@ -125,7 +125,9 @@ fn test_session_result_serde_roundtrip_completed() {
 
     let json = serde_json::to_string(&session).expect("serialización fallida");
     assert!(json.contains("\"officialBps\":\"948000000\""));
-    assert!(json.contains("\"thresholdsHash\":\"b65f73615249f16c22fa3d63685f792b7f94661eed4f7e0eea454d1dba8923c0\""));
+    assert!(json.contains(
+        "\"thresholdsHash\":\"b65f73615249f16c22fa3d63685f792b7f94661eed4f7e0eea454d1dba8923c0\""
+    ));
 
     let deserialized: SessionResult = serde_json::from_str(&json).expect("deserialización fallida");
     assert_eq!(session, deserialized);

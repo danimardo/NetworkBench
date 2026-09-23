@@ -13,7 +13,10 @@ fn test_pairing_code_symmetry_between_peers() {
     // B deriva con (fp_b, fp_a)
     let code_b = derive_pairing_code(fp_b, fp_a, &session_id).expect("Derivación B");
 
-    assert_eq!(code_a, code_b, "Ambos peers deben obtener exactamente el mismo código");
+    assert_eq!(
+        code_a, code_b,
+        "Ambos peers deben obtener exactamente el mismo código"
+    );
     assert_eq!(code_a.len(), 6);
     assert!(code_a.chars().all(|c| c.is_ascii_digit()));
 }

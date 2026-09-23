@@ -3,7 +3,7 @@ use crate::history::database::Database;
 use crate::identity::InstanceIdentity;
 use crate::ipc::response::{IpcResult, OneTimeTokenStore};
 use crate::ipc::snapshot::{AppSnapshot, SnapshotManager};
-use crate::logging::{init_logger, LogLevel};
+use crate::logging::{LogLevel, init_logger};
 use crate::settings::SettingsStore;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -18,9 +18,7 @@ pub struct AppState {
     pub delete_tokens: Arc<crate::history::delete::DeleteTokenStore>,
 }
 
-use crate::platform::window::{
-    normalize_or_fallback_geometry, MonitorBounds, WindowGeometry,
-};
+use crate::platform::window::{MonitorBounds, WindowGeometry, normalize_or_fallback_geometry};
 
 #[tauri::command]
 pub fn app_get_snapshot(state: tauri::State<AppState>) -> IpcResult<AppSnapshot> {
@@ -80,7 +78,10 @@ pub fn window_restore_and_show(
 
     let target_geom = normalize_or_fallback_geometry(saved, primary, &monitors);
 
-    let _ = window.set_size(tauri::LogicalSize::new(target_geom.width, target_geom.height));
+    let _ = window.set_size(tauri::LogicalSize::new(
+        target_geom.width,
+        target_geom.height,
+    ));
     let _ = window.set_position(tauri::LogicalPosition::new(target_geom.x, target_geom.y));
     if target_geom.is_maximized {
         let _ = window.maximize();
@@ -104,7 +105,10 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let database = Arc::new(Database::open(db_path)?);
     let tokens = Arc::new(OneTimeTokenStore::new());
 
-    let identity = Arc::new(InstanceIdentity::get_or_create(&identity_dir, "NetworkBench")?);
+    let identity = Arc::new(InstanceIdentity::get_or_create(
+        &identity_dir,
+        "NetworkBench",
+    )?);
     let session_service = Arc::new(SessionService::new());
     let delete_tokens = Arc::new(crate::history::delete::DeleteTokenStore::new());
 

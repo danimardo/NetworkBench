@@ -14,8 +14,8 @@ fn test_settings_initial_defaults() {
     assert_eq!(prefs.theme, ThemeMode::Dark);
     assert_eq!(prefs.locale, "es");
     assert_eq!(prefs.log_level, LogLevel::Warn);
-    assert_eq!(prefs.reduce_motion, false);
-    assert_eq!(prefs.auto_accept_trusted, false);
+    assert!(!prefs.reduce_motion);
+    assert!(!prefs.auto_accept_trusted);
 
     assert!(prefs_file.exists());
 
@@ -38,14 +38,14 @@ fn test_settings_atomic_update() {
 
     assert_eq!(updated.theme, ThemeMode::Light);
     assert_eq!(updated.locale, "en");
-    assert_eq!(updated.reduce_motion, true);
+    assert!(updated.reduce_motion);
 
     // Reabrir desde disco para verificar persistencia real
     let store2 = SettingsStore::new(prefs_file.clone());
     let reloaded = store2.get();
     assert_eq!(reloaded.theme, ThemeMode::Light);
     assert_eq!(reloaded.locale, "en");
-    assert_eq!(reloaded.reduce_motion, true);
+    assert!(reloaded.reduce_motion);
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }
@@ -77,7 +77,8 @@ fn test_settings_corrupt_file_quarantine_and_recovery() {
 
 #[test]
 fn test_settings_future_schema_version_preserved() {
-    let tmp_dir = std::env::temp_dir().join(format!("nb_test_future_pref_{}", uuid::Uuid::new_v4()));
+    let tmp_dir =
+        std::env::temp_dir().join(format!("nb_test_future_pref_{}", uuid::Uuid::new_v4()));
     let prefs_file = tmp_dir.join("settings.json");
     let _ = fs::create_dir_all(&tmp_dir);
 

@@ -4,17 +4,13 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub enum TrustState {
+    #[default]
     Unknown,
     Known,
     Trusted,
     TrustedAutoAccept,
-}
-
-impl Default for TrustState {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -32,9 +28,11 @@ pub struct Peer {
 }
 
 fn system_time_to_iso8601(time: SystemTime) -> String {
-    let dur = time.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+    let dur = time
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
     let total_secs = dur.as_secs();
-    
+
     // Cálculo de fecha/hora UTC desde segundos UNIX
     let sec = total_secs % 60;
     let min = (total_secs / 60) % 60;
@@ -55,7 +53,18 @@ fn system_time_to_iso8601(time: SystemTime) -> String {
 
     let is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     let days_in_months = [
-        31, if is_leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+        31,
+        if is_leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
 
     let mut month = 1;
@@ -89,12 +98,18 @@ impl Peer {
         if cleaned_name.chars().count() > 48 {
             return Err("El nombre de equipo no puede exceder 48 caracteres".to_string());
         }
-        if cleaned_name.chars().any(|c| c.is_control() || ('\u{202A}'..='\u{202E}').contains(&c) || ('\u{2066}'..='\u{2069}').contains(&c)) {
+        if cleaned_name.chars().any(|c| {
+            c.is_control()
+                || ('\u{202A}'..='\u{202E}').contains(&c)
+                || ('\u{2066}'..='\u{2069}').contains(&c)
+        }) {
             return Err("El nombre no puede contener caracteres de control ni bidi".to_string());
         }
         let fp_norm = fingerprint.trim().to_lowercase();
         if fp_norm.len() != 64 || !fp_norm.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Err("La huella debe ser un hash SHA-256 de 64 caracteres hexadecimales".to_string());
+            return Err(
+                "La huella debe ser un hash SHA-256 de 64 caracteres hexadecimales".to_string(),
+            );
         }
 
         Ok(Self {

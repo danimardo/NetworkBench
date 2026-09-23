@@ -65,7 +65,9 @@ pub async fn session_cancel(
 }
 
 #[tauri::command]
-pub async fn session_get_state(state: State<'_, AppState>) -> Result<IpcResult<SessionState>, String> {
+pub async fn session_get_state(
+    state: State<'_, AppState>,
+) -> Result<IpcResult<SessionState>, String> {
     let current = state.session_service.current_state().await;
     Ok(IpcResult::ok(current))
 }

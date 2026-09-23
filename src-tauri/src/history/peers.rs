@@ -1,5 +1,5 @@
 use crate::model::peer::{Peer, TrustState};
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result, params};
 use uuid::Uuid;
 
 pub fn upsert_peer(conn: &Connection, peer: &Peer) -> Result<()> {

@@ -99,7 +99,10 @@ mod tests {
         let s_id = service.start_session(peer, plan).await.expect("Iniciar");
         assert_eq!(service.current_state().await, SessionState::Connecting);
 
-        service.transition_to(SessionState::HelloPending, s_id).await.unwrap();
+        service
+            .transition_to(SessionState::HelloPending, s_id)
+            .await
+            .unwrap();
         assert_eq!(service.current_state().await, SessionState::HelloPending);
 
         service.cancel(s_id).await.expect("Cancelar sesión");

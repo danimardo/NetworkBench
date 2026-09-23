@@ -31,7 +31,17 @@ pub fn set_autostart(enabled: bool) -> Result<(), String> {
             let value_data = format!("\"{}\" --minimized", exe_str);
 
             let output = Command::new("reg")
-                .args(["add", RUN_KEY, "/v", APP_VALUE_NAME, "/t", "REG_SZ", "/d", &value_data, "/f"])
+                .args([
+                    "add",
+                    RUN_KEY,
+                    "/v",
+                    APP_VALUE_NAME,
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &value_data,
+                    "/f",
+                ])
                 .output()
                 .map_err(|e| format!("Failed to write autostart registry key: {}", e))?;
 

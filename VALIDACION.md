@@ -124,6 +124,50 @@ Los estados válidos son: `VERIFICADO`, `DOCUMENTADO`, `INFERIDO`, `NO VERIFICAB
   - Binario ejecutable `engine/ntttcp.exe` pendiente de incorporación física por el operador antes de las pruebas de H1.
 - **Estado**: `DOCUMENTADO` (metadatos y licencia verificados; binario físico no incorporado al árbol de Git)
 
+### 1.6 Baseline de cobertura y gate Q2 (T155 / T162)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, Node 24.21.0, pnpm 12.5.1
+- **Comando**: `pnpm test:coverage` y `pnpm test:coverage:rust`
+- **Resultado — frontend (Vitest/V8)**:
+  ```text
+  % Stmts 67.40 | % Branch 49.46 | % Funcs 68.96 | % Lines 68.06
+  ```
+- **Resultado — Rust (cargo-llvm-cov)**: total del crate **56,93 %** de líneas.
+  De los 17 módulos críticos, **5 alcanzan el 90 %** exigido por Q2:
+  `control/plan.rs` y `diagnostic/udp.rs` (100 %), `engine/ntttcp/parser.rs` (94,57 %),
+  `export/redact.rs` (94,29 %) y `netinfo/resolve.rs` (92,75 %).
+  Los 12 restantes no: `control/service.rs` 89,61 · `control/preflight.rs` 88,83 ·
+  `model/plan.rs` 85,86 · `control/cleanup.rs` 85,42 · `diagnostic/capacity.rs` 84,88 ·
+  `pairing/mod.rs` 81,01 · `control/domain.rs` 79,84 · `control/ports.rs` 78,87 ·
+  `diagnostic/rules.rs` 54,59 · `control/transport.rs` 53,70 ·
+  `logging/diagnostics.rs` 16,80 · `control/repeat.rs` 0,00.
+- **Gate configurado**: umbrales Q2 en `vitest.config.ts` (80 % en las cuatro métricas)
+  y en `scripts/test/coverage-rust.mjs` (80 % total, 90 % por módulo crítico).
+  **Ambos fallan hoy a propósito**, con 13 incumplimientos en el lado Rust. La
+  constitución es explícita: ningún porcentaje inferior se interpreta como aprobación.
+  `pnpm verify` no los invoca —ejecuta `test:unit`—, así que la cadena de desarrollo
+  sigue en verde; el gate actúa en `pnpm test:coverage` y en CI.
+- **Lectura**: el rojo mide deuda preexistente, no una regresión introducida hoy. Los dos
+  casos que más importan por lo que son, no por la cifra: `diagnostic/rules.rs`, el motor
+  de interpretación del producto, al 54,59 %, y `control/transport.rs`, que enmarca el
+  protocolo entre peers, al 53,70 %.
+- **Estado**: `VERIFICADO` (baseline y gate) · `NO PRESENTE` (conformidad con Q2)
+
+### 1.7 Auditoría de dependencias (T158)
+- **Entorno**: Host local Windows 11 x64
+- **Comando**: `node scripts/security/scan-security.mjs`, que ahora encadena inventario,
+  `cargo audit --file src-tauri/Cargo.lock` y `pnpm audit`
+- **Resultado**:
+  ```text
+  Inventario de dependencias directas: 24 JS/TS, 19 Rust
+  cargo audit: 541 dependencias analizadas, 0 vulnerabilidades, 7 avisos
+  pnpm audit: No known vulnerabilities found
+  ```
+- **Los 7 avisos**: seis crates sin mantenimiento (`proc-macro-error` y la familia
+  `unic-*`) y uno de unsoundness (`glib` 0.18.5, RUSTSEC-2024-0429). Todos transitivos.
+  El escáner los informa y **no bloquea**: el criterio es que una vulnerabilidad detiene
+  la verificación y un aviso no. Cambiarlo exige decisión explícita.
+- **Estado**: `VERIFICADO`
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)

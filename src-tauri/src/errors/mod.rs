@@ -215,95 +215,179 @@ impl AppError {
 
     pub fn from_code(code: ErrorCode) -> Self {
         match code {
-            ErrorCode::ConnCannotReach => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-001")
-                .with_actions([ErrorAction::Retry, ErrorAction::ChangeAddress, ErrorAction::ShowDetails]),
-            ErrorCode::ConnDnsUnresolvable => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-002")
-                .with_actions([ErrorAction::ChangeAddress, ErrorAction::ShowDetails]),
+            ErrorCode::ConnCannotReach => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-001").with_actions([
+                    ErrorAction::Retry,
+                    ErrorAction::ChangeAddress,
+                    ErrorAction::ShowDetails,
+                ])
+            }
+            ErrorCode::ConnDnsUnresolvable => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-002")
+                    .with_actions([ErrorAction::ChangeAddress, ErrorAction::ShowDetails])
+            }
             ErrorCode::ConnRejected => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-003")
                 .with_actions([ErrorAction::Retry, ErrorAction::ShowDetails]),
-            ErrorCode::ConnNotNetworkBench => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-004")
-                .with_actions([ErrorAction::ChangePort, ErrorAction::ShowDetails]),
-            ErrorCode::ConnInterrupted => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-005")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::CheckConnection]),
-            ErrorCode::ConnTlsFailure => Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-006")
-                .with_actions([ErrorAction::ShowDetails]),
+            ErrorCode::ConnNotNetworkBench => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-004")
+                    .with_actions([ErrorAction::ChangePort, ErrorAction::ShowDetails])
+            }
+            ErrorCode::ConnInterrupted => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-005")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::CheckConnection])
+            }
+            ErrorCode::ConnTlsFailure => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-CONN-006")
+                    .with_actions([ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::VersionIncompatible => Self::new(code, ErrorSeverity::Error, "errors.NB-VERSION-001")
-                .with_actions([ErrorAction::UpdateApp]),
+            ErrorCode::VersionIncompatible => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-VERSION-001")
+                    .with_actions([ErrorAction::UpdateApp])
+            }
 
             ErrorCode::PeerRejected => Self::new(code, ErrorSeverity::Info, "errors.NB-PEER-001")
                 .with_actions([ErrorAction::Retry]),
-            ErrorCode::PeerPairingExpired => Self::new(code, ErrorSeverity::Warning, "errors.NB-PEER-002")
-                .with_actions([ErrorAction::Retry]),
+            ErrorCode::PeerPairingExpired => {
+                Self::new(code, ErrorSeverity::Warning, "errors.NB-PEER-002")
+                    .with_actions([ErrorAction::Retry])
+            }
             ErrorCode::PeerBusy => Self::new(code, ErrorSeverity::Warning, "errors.NB-PEER-003")
                 .with_actions([ErrorAction::Retry]),
             ErrorCode::PeerCancelled => Self::new(code, ErrorSeverity::Info, "errors.NB-PEER-004")
                 .with_actions([ErrorAction::RepeatTest]),
-            ErrorCode::PeerPairingMismatch => Self::new(code, ErrorSeverity::Error, "errors.NB-PEER-005")
-                .with_actions([ErrorAction::Retry, ErrorAction::ShowDetails]),
-            ErrorCode::PeerIdentityChanged => Self::new(code, ErrorSeverity::Error, "errors.NB-PEER-006")
-                .with_actions([ErrorAction::ReverifyIdentity, ErrorAction::ShowDetails]),
+            ErrorCode::PeerPairingMismatch => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PEER-005")
+                    .with_actions([ErrorAction::Retry, ErrorAction::ShowDetails])
+            }
+            ErrorCode::PeerIdentityChanged => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PEER-006")
+                    .with_actions([ErrorAction::ReverifyIdentity, ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::ParamRejected => Self::new(code, ErrorSeverity::Error, "errors.NB-PARAM-001")
-                .with_actions([ErrorAction::ShowDetails]),
+            ErrorCode::ParamRejected => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PARAM-001")
+                    .with_actions([ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::PortControlInUse => Self::new(code, ErrorSeverity::Error, "errors.NB-PORT-001")
-                .with_actions([ErrorAction::ChangePort]),
-            ErrorCode::PortDataRangeInUse => Self::new(code, ErrorSeverity::Error, "errors.NB-PORT-002")
-                .with_actions([ErrorAction::ChangePort, ErrorAction::ShowDetails]),
+            ErrorCode::PortControlInUse => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PORT-001")
+                    .with_actions([ErrorAction::ChangePort])
+            }
+            ErrorCode::PortDataRangeInUse => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PORT-002")
+                    .with_actions([ErrorAction::ChangePort, ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::FirewallBlockedControl => Self::new(code, ErrorSeverity::Error, "errors.NB-FW-001")
-                .with_actions([ErrorAction::ShowFirewallInstructions, ErrorAction::Retry]),
-            ErrorCode::FirewallBlockedNtttcp => Self::new(code, ErrorSeverity::Error, "errors.NB-FW-002")
-                .with_actions([ErrorAction::ConfigureFirewall, ErrorAction::ShowFirewallInstructions]),
-            ErrorCode::FirewallPolicyManaged => Self::new(code, ErrorSeverity::Error, "errors.NB-FW-003")
-                .with_actions([ErrorAction::ShowFirewallInstructions, ErrorAction::CopyDiagnostics]),
-            ErrorCode::FirewallUacRejected => Self::new(code, ErrorSeverity::Warning, "errors.NB-FW-004")
-                .with_actions([ErrorAction::RetryAsAdmin, ErrorAction::ShowFirewallInstructions]),
-            ErrorCode::FirewallExternalBlocked => Self::new(code, ErrorSeverity::Error, "errors.NB-FW-005")
-                .with_actions([ErrorAction::ShowFirewallInstructions, ErrorAction::ShowDetails]),
+            ErrorCode::FirewallBlockedControl => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-FW-001")
+                    .with_actions([ErrorAction::ShowFirewallInstructions, ErrorAction::Retry])
+            }
+            ErrorCode::FirewallBlockedNtttcp => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-FW-002").with_actions([
+                    ErrorAction::ConfigureFirewall,
+                    ErrorAction::ShowFirewallInstructions,
+                ])
+            }
+            ErrorCode::FirewallPolicyManaged => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-FW-003").with_actions([
+                    ErrorAction::ShowFirewallInstructions,
+                    ErrorAction::CopyDiagnostics,
+                ])
+            }
+            ErrorCode::FirewallUacRejected => {
+                Self::new(code, ErrorSeverity::Warning, "errors.NB-FW-004").with_actions([
+                    ErrorAction::RetryAsAdmin,
+                    ErrorAction::ShowFirewallInstructions,
+                ])
+            }
+            ErrorCode::FirewallExternalBlocked => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-FW-005").with_actions([
+                    ErrorAction::ShowFirewallInstructions,
+                    ErrorAction::ShowDetails,
+                ])
+            }
 
-            ErrorCode::EngineNotFound => Self::new(code, ErrorSeverity::Fatal, "errors.NB-ENGINE-001")
-                .with_actions([ErrorAction::ShowDetails, ErrorAction::Reinstall]),
-            ErrorCode::EngineHashMismatch => Self::new(code, ErrorSeverity::Fatal, "errors.NB-ENGINE-002")
-                .with_actions([ErrorAction::ShowDetails]),
-            ErrorCode::EngineReceiverNotListening => Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-003")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ChangePort, ErrorAction::ShowDetails]),
-            ErrorCode::EngineTimeout => Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-004")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails]),
-            ErrorCode::EngineTerminatedError => Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-005")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails]),
-            ErrorCode::EngineXmlInvalid => Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-006")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails]),
+            ErrorCode::EngineNotFound => {
+                Self::new(code, ErrorSeverity::Fatal, "errors.NB-ENGINE-001")
+                    .with_actions([ErrorAction::ShowDetails, ErrorAction::Reinstall])
+            }
+            ErrorCode::EngineHashMismatch => {
+                Self::new(code, ErrorSeverity::Fatal, "errors.NB-ENGINE-002")
+                    .with_actions([ErrorAction::ShowDetails])
+            }
+            ErrorCode::EngineReceiverNotListening => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-003").with_actions([
+                    ErrorAction::RepeatTest,
+                    ErrorAction::ChangePort,
+                    ErrorAction::ShowDetails,
+                ])
+            }
+            ErrorCode::EngineTimeout => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-004")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails])
+            }
+            ErrorCode::EngineTerminatedError => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-005")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails])
+            }
+            ErrorCode::EngineXmlInvalid => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-ENGINE-006")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::ResultIncomplete => Self::new(code, ErrorSeverity::Warning, "errors.NB-RESULT-001")
-                .with_actions([ErrorAction::RepeatTest]),
-            ErrorCode::ResultInconsistent => Self::new(code, ErrorSeverity::Warning, "errors.NB-RESULT-002")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails]),
+            ErrorCode::ResultIncomplete => {
+                Self::new(code, ErrorSeverity::Warning, "errors.NB-RESULT-001")
+                    .with_actions([ErrorAction::RepeatTest])
+            }
+            ErrorCode::ResultInconsistent => {
+                Self::new(code, ErrorSeverity::Warning, "errors.NB-RESULT-002")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::NicDisconnected => Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-001")
-                .with_actions([ErrorAction::ChooseInterface, ErrorAction::OpenNetworkSettings]),
-            ErrorCode::NicStateChanged => Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-002")
-                .with_actions([ErrorAction::RepeatTest, ErrorAction::ChooseInterface]),
-            ErrorCode::NicIpFamilyMismatch => Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-003")
-                .with_actions([ErrorAction::ChooseInterface, ErrorAction::ShowDetails]),
-            ErrorCode::NicNoneConnected => Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-004")
-                .with_actions([ErrorAction::OpenNetworkSettings]),
+            ErrorCode::NicDisconnected => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-001").with_actions([
+                    ErrorAction::ChooseInterface,
+                    ErrorAction::OpenNetworkSettings,
+                ])
+            }
+            ErrorCode::NicStateChanged => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-002")
+                    .with_actions([ErrorAction::RepeatTest, ErrorAction::ChooseInterface])
+            }
+            ErrorCode::NicIpFamilyMismatch => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-003")
+                    .with_actions([ErrorAction::ChooseInterface, ErrorAction::ShowDetails])
+            }
+            ErrorCode::NicNoneConnected => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-NIC-004")
+                    .with_actions([ErrorAction::OpenNetworkSettings])
+            }
 
-            ErrorCode::PermissionDenied => Self::new(code, ErrorSeverity::Error, "errors.NB-PERM-001")
-                .with_actions([ErrorAction::RetryAsAdmin, ErrorAction::ShowDetails]),
+            ErrorCode::PermissionDenied => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-PERM-001")
+                    .with_actions([ErrorAction::RetryAsAdmin, ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::DiskSpaceLow => Self::new(code, ErrorSeverity::Warning, "errors.NB-DISK-001")
-                .with_actions([ErrorAction::FreeSpace]),
+            ErrorCode::DiskSpaceLow => {
+                Self::new(code, ErrorSeverity::Warning, "errors.NB-DISK-001")
+                    .with_actions([ErrorAction::FreeSpace])
+            }
 
-            ErrorCode::DatabaseCorrupt => Self::new(code, ErrorSeverity::Fatal, "errors.NB-DATA-001")
-                .with_actions([ErrorAction::ShowDetails]),
+            ErrorCode::DatabaseCorrupt => {
+                Self::new(code, ErrorSeverity::Fatal, "errors.NB-DATA-001")
+                    .with_actions([ErrorAction::ShowDetails])
+            }
 
-            ErrorCode::UnexpectedError => Self::new(code, ErrorSeverity::Error, "errors.NB-UNEXPECTED-001")
-                .with_actions([ErrorAction::CopyDiagnostics, ErrorAction::Retry]),
+            ErrorCode::UnexpectedError => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-UNEXPECTED-001")
+                    .with_actions([ErrorAction::CopyDiagnostics, ErrorAction::Retry])
+            }
 
-            ErrorCode::InternalError => Self::new(code, ErrorSeverity::Error, "errors.NB-INTERNAL-001")
-                .with_actions([ErrorAction::CopyDiagnostics, ErrorAction::Retry]),
+            ErrorCode::InternalError => {
+                Self::new(code, ErrorSeverity::Error, "errors.NB-INTERNAL-001")
+                    .with_actions([ErrorAction::CopyDiagnostics, ErrorAction::Retry])
+            }
         }
     }
 }

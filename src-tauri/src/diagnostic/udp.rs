@@ -19,7 +19,7 @@ pub struct UdpThresholds {
 impl Default for UdpThresholds {
     fn default() -> Self {
         Self {
-            low_loss_max_ratio: 0.001,  // 0.1 %
+            low_loss_max_ratio: 0.001,     // 0.1 %
             moderate_loss_max_ratio: 0.01, // 1.0 %
         }
     }
@@ -85,7 +85,10 @@ pub fn evaluate_udp_diagnostics(
     let (loss_level, title_key) = if loss_ratio < thresholds.low_loss_max_ratio {
         (UdpLossLevel::Low, "diagnostics.udp.loss_low".to_string())
     } else if loss_ratio <= thresholds.moderate_loss_max_ratio {
-        (UdpLossLevel::Moderate, "diagnostics.udp.loss_moderate".to_string())
+        (
+            UdpLossLevel::Moderate,
+            "diagnostics.udp.loss_moderate".to_string(),
+        )
     } else {
         (UdpLossLevel::High, "diagnostics.udp.loss_high".to_string())
     };
@@ -94,11 +97,11 @@ pub fn evaluate_udp_diagnostics(
     let mut is_target_exceeded = false;
 
     // Si la tasa real emitida superó ref_bps, añadir observación (§18)
-    if let Some(ref_bps) = capacity_ref_bps {
-        if emitted_rate_bps > ref_bps {
-            is_target_exceeded = true;
-            observations.push("diagnostics.udp.target_exceeded_capacity".to_string());
-        }
+    if let Some(ref_bps) = capacity_ref_bps
+        && emitted_rate_bps > ref_bps
+    {
+        is_target_exceeded = true;
+        observations.push("diagnostics.udp.target_exceeded_capacity".to_string());
     }
 
     UdpDiagnosticResult {
@@ -131,7 +134,15 @@ mod tests {
     #[test]
     fn test_udp_diagnostics_low_loss() {
         // 50 perdidos de 100_000 = 0.05 % < 0.1 %
-        let res = evaluate_udp_diagnostics(100_000, 99_950, 100_000_000, 99_950_000, Some(100_000_000), Some(1_000_000_000), None);
+        let res = evaluate_udp_diagnostics(
+            100_000,
+            99_950,
+            100_000_000,
+            99_950_000,
+            Some(100_000_000),
+            Some(1_000_000_000),
+            None,
+        );
         assert_eq!(res.loss_level, UdpLossLevel::Low);
         assert_eq!(res.title_key, "diagnostics.udp.loss_low");
         assert_eq!(res.packets_lost, 50);
@@ -142,7 +153,15 @@ mod tests {
     #[test]
     fn test_udp_diagnostics_moderate_loss() {
         // 500 perdidos de 100_000 = 0.5 % (entre 0.1 % y 1.0 %)
-        let res = evaluate_udp_diagnostics(100_000, 99_500, 100_000_000, 99_500_000, Some(100_000_000), Some(1_000_000_000), None);
+        let res = evaluate_udp_diagnostics(
+            100_000,
+            99_500,
+            100_000_000,
+            99_500_000,
+            Some(100_000_000),
+            Some(1_000_000_000),
+            None,
+        );
         assert_eq!(res.loss_level, UdpLossLevel::Moderate);
         assert_eq!(res.title_key, "diagnostics.udp.loss_moderate");
         assert_eq!(res.packets_lost, 500);
@@ -152,7 +171,15 @@ mod tests {
     #[test]
     fn test_udp_diagnostics_high_loss() {
         // 2500 perdidos de 100_000 = 2.5 % > 1.0 %
-        let res = evaluate_udp_diagnostics(100_000, 97_500, 100_000_000, 97_500_000, Some(100_000_000), Some(1_000_000_000), None);
+        let res = evaluate_udp_diagnostics(
+            100_000,
+            97_500,
+            100_000_000,
+            97_500_000,
+            Some(100_000_000),
+            Some(1_000_000_000),
+            None,
+        );
         assert_eq!(res.loss_level, UdpLossLevel::High);
         assert_eq!(res.title_key, "diagnostics.udp.loss_high");
         assert_eq!(res.packets_lost, 2500);
@@ -162,8 +189,19 @@ mod tests {
     #[test]
     fn test_udp_target_exceeded_capacity_observation() {
         // Emitted rate 1.2 Gbps > capacity ref 1.0 Gbps
-        let res = evaluate_udp_diagnostics(100_000, 95_000, 1_200_000_000, 950_000_000, Some(1_200_000_000), Some(1_000_000_000), None);
+        let res = evaluate_udp_diagnostics(
+            100_000,
+            95_000,
+            1_200_000_000,
+            950_000_000,
+            Some(1_200_000_000),
+            Some(1_000_000_000),
+            None,
+        );
         assert!(res.is_target_exceeded);
-        assert!(res.observations.contains(&"diagnostics.udp.target_exceeded_capacity".to_string()));
+        assert!(
+            res.observations
+                .contains(&"diagnostics.udp.target_exceeded_capacity".to_string())
+        );
     }
 }

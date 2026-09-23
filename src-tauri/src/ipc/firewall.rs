@@ -1,6 +1,8 @@
-use serde::{Deserialize, Serialize};
-use crate::firewall::{FirewallHelperClient, FirewallHelperRequest, FirewallInspection, FirewallInspector};
+use crate::firewall::{
+    FirewallHelperClient, FirewallHelperRequest, FirewallInspection, FirewallInspector,
+};
 use crate::ipc::response::IpcResult;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

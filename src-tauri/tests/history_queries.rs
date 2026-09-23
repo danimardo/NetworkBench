@@ -1,7 +1,7 @@
 use networkbench_lib::history::database::Database;
 use networkbench_lib::history::{
-    get_session_detail, insert_session_idempotent, query_history, upsert_peer, HistoryFilter,
-    Pagination, SampleRecord, SessionRecord,
+    HistoryFilter, Pagination, SampleRecord, SessionRecord, get_session_detail,
+    insert_session_idempotent, query_history, upsert_peer,
 };
 use networkbench_lib::model::peer::Peer;
 use std::fs;
@@ -42,7 +42,10 @@ fn test_pagination_and_total_count() {
     let page1 = query_history(
         &conn,
         &HistoryFilter::default(),
-        &Pagination { limit: 10, offset: 0 },
+        &Pagination {
+            limit: 10,
+            offset: 0,
+        },
     )
     .unwrap();
     assert_eq!(page1.total_count, 25);
@@ -53,7 +56,10 @@ fn test_pagination_and_total_count() {
     let page2 = query_history(
         &conn,
         &HistoryFilter::default(),
-        &Pagination { limit: 10, offset: 10 },
+        &Pagination {
+            limit: 10,
+            offset: 10,
+        },
     )
     .unwrap();
     assert_eq!(page2.total_count, 25);
@@ -64,7 +70,10 @@ fn test_pagination_and_total_count() {
     let page3 = query_history(
         &conn,
         &HistoryFilter::default(),
-        &Pagination { limit: 10, offset: 20 },
+        &Pagination {
+            limit: 10,
+            offset: 20,
+        },
     )
     .unwrap();
     assert_eq!(page3.total_count, 25);
@@ -302,22 +311,25 @@ fn test_reopen_detail_and_retention_without_expiration() {
     insert_session_idempotent(&mut conn, &session).unwrap();
 
     // 1. Reapertura íntegra mediante get_session_detail
-    let detail = get_session_detail(&conn, &s_id).unwrap().expect("Sesión debe existir");
+    let detail = get_session_detail(&conn, &s_id)
+        .unwrap()
+        .expect("Sesión debe existir");
     assert_eq!(detail.id, s_id);
     assert_eq!(detail.created_at, old_date);
     assert_eq!(detail.client_interface.as_deref(), Some("Ethernet 10GbE"));
-    assert_eq!(detail.server_interface.as_deref(), Some("Mellanox ConnectX"));
-    assert_eq!(detail.result_json.as_deref(), Some(r#"{"fullResult":true}"#));
+    assert_eq!(
+        detail.server_interface.as_deref(),
+        Some("Mellanox ConnectX")
+    );
+    assert_eq!(
+        detail.result_json.as_deref(),
+        Some(r#"{"fullResult":true}"#)
+    );
     assert_eq!(detail.samples.len(), 2);
     assert_eq!(detail.samples[1].t_ms, 500);
 
     // 2. Retención sin caducidad: la sesión antigua sigue presente en query_history
-    let page = query_history(
-        &conn,
-        &HistoryFilter::default(),
-        &Pagination::default(),
-    )
-    .unwrap();
+    let page = query_history(&conn, &HistoryFilter::default(), &Pagination::default()).unwrap();
     assert_eq!(page.total_count, 1);
     assert_eq!(page.items[0].id, s_id);
 

@@ -16,12 +16,15 @@ pub fn show_desktop_notification(title: &str, body: &str) -> Result<(), String> 
         body: body.to_string(),
         icon: Some("networkbench".to_string()),
     };
-    
+
     // Log informativo para diagnóstico
     crate::logging::log(
         crate::logging::LogLevel::Info,
         "platform.notification",
-        &format!("Toast notification triggered: {} - {}", payload.title, payload.body),
+        &format!(
+            "Toast notification triggered: {} - {}",
+            payload.title, payload.body
+        ),
     );
 
     Ok(())

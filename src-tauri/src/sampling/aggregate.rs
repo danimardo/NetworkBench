@@ -52,7 +52,7 @@ impl SampleBatcher {
             return None;
         }
 
-        let samples: Vec<SamplePoint> = self.pending.drain(..).collect();
+        let samples: Vec<SamplePoint> = std::mem::take(&mut self.pending);
         let latest = samples.last()?;
         let latest_bps = latest.bps;
         let latest_cpu_percent = latest.cpu_percent;

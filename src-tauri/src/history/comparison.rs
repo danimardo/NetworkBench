@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -66,8 +66,10 @@ pub fn evaluate_cohort_comparison(
     let diff = (current_bps as f64 - average_bps as f64).abs();
     let diff_percent = (diff / average_bps as f64) * 100.0;
 
-    let is_significantly_lower = current_bps < average_bps && diff_percent > COHORT_DIFFERENCE_THRESHOLD_PERCENT;
-    let is_significantly_higher = current_bps > average_bps && diff_percent > COHORT_DIFFERENCE_THRESHOLD_PERCENT;
+    let is_significantly_lower =
+        current_bps < average_bps && diff_percent > COHORT_DIFFERENCE_THRESHOLD_PERCENT;
+    let is_significantly_higher =
+        current_bps > average_bps && diff_percent > COHORT_DIFFERENCE_THRESHOLD_PERCENT;
 
     let observation_text = if is_significantly_lower {
         let avg_str = format_bps_human(average_bps);
@@ -130,7 +132,8 @@ pub fn compare_session_with_cohort(
         ))
     })?;
 
-    let (peer_id, protocol, status, is_partial, forward_bps, client_interface, server_interface) = current;
+    let (peer_id, protocol, status, is_partial, forward_bps, client_interface, server_interface) =
+        current;
 
     // Solo se evalúa cohorte para TCP completadas con peer conocido y velocidad válida
     if protocol.to_lowercase() != "tcp" || status != "completed" || is_partial {
@@ -209,7 +212,10 @@ pub fn get_peer_trend(
     )?;
 
     let rows = stmt.query_map(
-        params![peer_id.to_string(), protocol_filter.map(|p| p.to_lowercase())],
+        params![
+            peer_id.to_string(),
+            protocol_filter.map(|p| p.to_lowercase())
+        ],
         |r| {
             let id_str: String = r.get(0)?;
             let created_at: String = r.get(1)?;

@@ -23,7 +23,7 @@ pub async fn peers_list(state: State<'_, AppState>) -> Result<IpcResult<Vec<Peer
                 ErrorCode::InternalError,
                 ErrorSeverity::Error,
                 format!("Error consultando peers: {}", e),
-            )))
+            )));
         }
     };
 
@@ -63,15 +63,13 @@ pub async fn peers_list(state: State<'_, AppState>) -> Result<IpcResult<Vec<Peer
                 ErrorCode::InternalError,
                 ErrorSeverity::Error,
                 format!("Error mapeando peers: {}", e),
-            )))
+            )));
         }
     };
 
     let mut list = Vec::new();
-    for p in rows {
-        if let Ok(peer) = p {
-            list.push(peer);
-        }
+    for peer in rows.flatten() {
+        list.push(peer);
     }
 
     Ok(IpcResult::ok(list))
@@ -91,7 +89,7 @@ pub async fn peers_manual_connect(
                 ErrorCode::ConnCannotReach,
                 ErrorSeverity::Error,
                 format!("Error conectando manualmente: {}", e),
-            )))
+            )));
         }
     };
 

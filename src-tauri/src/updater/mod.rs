@@ -68,11 +68,15 @@ pub fn validate_download_url(url: &str, candidate_version: &str) -> Result<(), &
     let expected_tag_v = format!("releases/download/v{}/", candidate_version);
     let expected_tag = format!("releases/download/{}/", candidate_version);
     if !url.contains(&expected_tag_v) && !url.contains(&expected_tag) {
-        return Err("Download URL must point to an immutable release asset tagged with candidate version");
+        return Err(
+            "Download URL must point to an immutable release asset tagged with candidate version",
+        );
     }
 
     if !url.ends_with(".exe") && !url.ends_with(".msi") && !url.ends_with(".zip") {
-        return Err("Download URL must end with supported installer artifact extension (.exe, .msi, .zip)");
+        return Err(
+            "Download URL must end with supported installer artifact extension (.exe, .msi, .zip)",
+        );
     }
 
     Ok(())
@@ -91,17 +95,19 @@ pub fn evaluate_manifest(
         return Ok(UpdateStatus::DeferredDueToActiveSession);
     }
 
-    let manifest: UpdateManifest = serde_json::from_str(manifest_json)
-        .map_err(|e| format!("Invalid manifest JSON: {}", e))?;
+    let manifest: UpdateManifest =
+        serde_json::from_str(manifest_json).map_err(|e| format!("Invalid manifest JSON: {}", e))?;
 
     if !is_newer_version(current_version, &manifest.version) {
         return Ok(UpdateStatus::UpToDate);
     }
 
-    let platform = manifest
-        .platforms
-        .get(target_platform)
-        .ok_or_else(|| format!("Platform '{}' not found in update manifest", target_platform))?;
+    let platform = manifest.platforms.get(target_platform).ok_or_else(|| {
+        format!(
+            "Platform '{}' not found in update manifest",
+            target_platform
+        )
+    })?;
 
     if platform.signature.trim().is_empty() {
         return Err("Missing cryptographic signature for platform artifact".to_string());

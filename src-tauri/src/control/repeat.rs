@@ -51,9 +51,8 @@ pub fn reconstruct_repeat_plan(
 
     // Reconstruir o deserializar plan
     let plan = if let Some(ref plan_json) = session.plan_json {
-        serde_json::from_str::<BenchmarkPlan>(plan_json).unwrap_or_else(|_| {
-            fallback_plan_from_session(&session)
-        })
+        serde_json::from_str::<BenchmarkPlan>(plan_json)
+            .unwrap_or_else(|_| fallback_plan_from_session(&session))
     } else {
         fallback_plan_from_session(&session)
     };

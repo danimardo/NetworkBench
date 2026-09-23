@@ -38,8 +38,13 @@ pub fn build_ntttcp_args(
             NtttcpArgError::InvalidPlan("Se requiere dirección destino para el emisor".to_string())
         })?;
         // Evitar inyección en el host
-        if host.chars().any(|c| c.is_whitespace() || c == '"' || c == ';') {
-            return Err(NtttcpArgError::IllegalFlag("Caracteres inválidos en host destino".to_string()));
+        if host
+            .chars()
+            .any(|c| c.is_whitespace() || c == '"' || c == ';')
+        {
+            return Err(NtttcpArgError::IllegalFlag(
+                "Caracteres inválidos en host destino".to_string(),
+            ));
         }
         format!("({},*,{},{})", plan.streams, host, plan.port)
     } else {
@@ -88,9 +93,9 @@ pub fn build_ntttcp_args(
     }
 
     // 9. Archivo de salida XML (-xml)
-    let path_str = xml_output_file
-        .to_str()
-        .ok_or_else(|| NtttcpArgError::InvalidTargetPath("Ruta de archivo XML no es UTF-8".to_string()))?;
+    let path_str = xml_output_file.to_str().ok_or_else(|| {
+        NtttcpArgError::InvalidTargetPath("Ruta de archivo XML no es UTF-8".to_string())
+    })?;
     args.push("-xml".to_string());
     args.push(path_str.to_string());
 

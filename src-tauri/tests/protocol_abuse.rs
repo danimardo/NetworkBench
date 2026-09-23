@@ -1,8 +1,8 @@
-use uuid::Uuid;
-use networkbench_lib::control::domain::{SessionStateMachine, SessionState};
+use networkbench_lib::control::domain::{SessionState, SessionStateMachine};
 use networkbench_lib::errors::ErrorCode;
 use networkbench_lib::model::peer::{Peer, TrustState};
 use networkbench_lib::model::protocol::{ProtocolEnvelope, ProtocolMessageType};
+use uuid::Uuid;
 
 #[test]
 fn test_oversized_payload_rejected() {

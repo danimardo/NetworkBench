@@ -11,17 +11,12 @@ pub const CURRENT_SETTINGS_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum ThemeMode {
     System,
     Light,
+    #[default]
     Dark,
-}
-
-impl Default for ThemeMode {
-    fn default() -> Self {
-        // Por FR-037 y constitución, el tema inicial por defecto es Oscuro
-        Self::Dark
-    }
 }
 
 fn default_mdns_enabled() -> bool {
@@ -105,7 +100,8 @@ impl SettingsStore {
         mutate(&mut candidate);
 
         if is_session_active {
-            let network_critical_changed = candidate.custom_control_port != prev.custom_control_port
+            let network_critical_changed = candidate.custom_control_port
+                != prev.custom_control_port
                 || candidate.auto_accept_trusted != prev.auto_accept_trusted
                 || candidate.mdns_enabled != prev.mdns_enabled;
 
@@ -149,13 +145,12 @@ impl SettingsStore {
         };
 
         // Comprobar si es un JSON válido con esquema futuro antes de deserializar Preferences
-        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-            if let Some(v) = val.get("schemaVersion").and_then(|v| v.as_u64()) {
-                if v as u32 > CURRENT_SETTINGS_VERSION {
-                    // Esquema futuro: no sobrescribir en disco, usar defaults en memoria
-                    return Preferences::default();
-                }
-            }
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content)
+            && let Some(v) = val.get("schemaVersion").and_then(|v| v.as_u64())
+            && v as u32 > CURRENT_SETTINGS_VERSION
+        {
+            // Esquema futuro: no sobrescribir en disco, usar defaults en memoria
+            return Preferences::default();
         }
 
         match serde_json::from_str::<Preferences>(&content) {

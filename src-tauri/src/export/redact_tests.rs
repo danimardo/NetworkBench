@@ -20,16 +20,20 @@ fn test_redact_individual_identifiers() {
     assert!(!redacted_mac.contains("A4-BB-6D-80-01-22"));
     assert!(redacted_mac.contains(REDACTED_MAC_PLACEHOLDER));
 
-    let raw_fp = "Huella cert: a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123 verificada";
+    let raw_fp =
+        "Huella cert: a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123 verificada";
     let redacted_fp = redact_fingerprints(raw_fp);
-    assert!(!redacted_fp.contains("a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123"));
+    assert!(
+        !redacted_fp.contains("a1b2c3d4e5f60123456789abcdef0123456789abcdef0123456789abcdef0123")
+    );
     assert!(redacted_fp.contains(REDACTED_FINGERPRINT_PLACEHOLDER));
 }
 
 #[test]
 fn test_redact_session_fixture_with_canaries_no_leaks() {
     let fixture_str = include_str!("../../../tests/fixtures/export/session_with_canaries.json");
-    let session: SessionResult = serde_json::from_str(fixture_str).expect("Deserializar fixture con canarios");
+    let session: SessionResult =
+        serde_json::from_str(fixture_str).expect("Deserializar fixture con canarios");
 
     // Lista explícita de canarios sensibles
     let canaries = vec![
@@ -53,7 +57,8 @@ fn test_redact_session_fixture_with_canaries_no_leaks() {
 
     // Redactar la sesión
     let redacted_session = redact_session_result(&session, true);
-    let serialized_redacted = serde_json::to_string(&redacted_session).expect("Serializar sesión redactada");
+    let serialized_redacted =
+        serde_json::to_string(&redacted_session).expect("Serializar sesión redactada");
 
     // Criterio AC-NB-12: ningún canario identificativo debe aparecer en el JSON resultante
     for canary in &canaries {
@@ -68,10 +73,26 @@ fn test_redact_session_fixture_with_canaries_no_leaks() {
     assert!(serialized_redacted.contains(RAW_OMITTED_PLACEHOLDER));
 
     // Comprobar que las huellas y direcciones se anonimizaron
-    assert_eq!(redacted_session.initiator.fingerprint, REDACTED_FINGERPRINT_PLACEHOLDER);
-    assert_eq!(redacted_session.responder.fingerprint, REDACTED_FINGERPRINT_PLACEHOLDER);
-    assert!(redacted_session.initiator.address.contains(REDACTED_IP_PLACEHOLDER));
-    assert!(redacted_session.responder.address.contains(REDACTED_IP_PLACEHOLDER));
+    assert_eq!(
+        redacted_session.initiator.fingerprint,
+        REDACTED_FINGERPRINT_PLACEHOLDER
+    );
+    assert_eq!(
+        redacted_session.responder.fingerprint,
+        REDACTED_FINGERPRINT_PLACEHOLDER
+    );
+    assert!(
+        redacted_session
+            .initiator
+            .address
+            .contains(REDACTED_IP_PLACEHOLDER)
+    );
+    assert!(
+        redacted_session
+            .responder
+            .address
+            .contains(REDACTED_IP_PLACEHOLDER)
+    );
 
     // Las métricas numéricas esenciales (throughput, bytes, etc.) deben conservarse intactas
     assert_eq!(redacted_session.status, "completed");
@@ -88,7 +109,13 @@ fn test_unredacted_session_preserves_original_values() {
 
     let preserved = redact_session_result(&session, false);
     assert_eq!(preserved.initiator.address, session.initiator.address);
-    assert_eq!(preserved.initiator.fingerprint, session.initiator.fingerprint);
+    assert_eq!(
+        preserved.initiator.fingerprint,
+        session.initiator.fingerprint
+    );
     assert_eq!(preserved.responder.address, session.responder.address);
-    assert_eq!(preserved.directions[0].sender.as_ref().unwrap().raw, session.directions[0].sender.as_ref().unwrap().raw);
+    assert_eq!(
+        preserved.directions[0].sender.as_ref().unwrap().raw,
+        session.directions[0].sender.as_ref().unwrap().raw
+    );
 }

@@ -114,23 +114,20 @@ impl Database {
                         })
                     })?;
 
-                    tx.execute(
-                        &format!("PRAGMA user_version = {};", migration.version),
-                        [],
-                    )
-                    .map_err(|e| {
-                        AppError::new(
-                            ErrorCode::InternalError,
-                            ErrorSeverity::Fatal,
-                            "errors.NB-INTERNAL-001",
-                        )
-                        .with_issue(crate::errors::AppIssue {
-                            path: "database.set_version".to_string(),
-                            code: "SET_VERSION_FAILED".to_string(),
-                            message_key: "errors.NB-INTERNAL-001".to_string(),
-                            safe_params: Some(serde_json::json!({ "details": e.to_string() })),
-                        })
-                    })?;
+                    tx.execute(&format!("PRAGMA user_version = {};", migration.version), [])
+                        .map_err(|e| {
+                            AppError::new(
+                                ErrorCode::InternalError,
+                                ErrorSeverity::Fatal,
+                                "errors.NB-INTERNAL-001",
+                            )
+                            .with_issue(crate::errors::AppIssue {
+                                path: "database.set_version".to_string(),
+                                code: "SET_VERSION_FAILED".to_string(),
+                                message_key: "errors.NB-INTERNAL-001".to_string(),
+                                safe_params: Some(serde_json::json!({ "details": e.to_string() })),
+                            })
+                        })?;
 
                     tx.commit().map_err(|e| {
                         AppError::new(

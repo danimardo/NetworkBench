@@ -1,6 +1,6 @@
 use networkbench_lib::platform::window::{
-    is_geometry_visible_on_monitors, normalize_or_fallback_geometry, MonitorBounds, WindowGeometry,
-    MIN_HEIGHT, MIN_WIDTH,
+    MIN_HEIGHT, MIN_WIDTH, MonitorBounds, WindowGeometry, is_geometry_visible_on_monitors,
+    normalize_or_fallback_geometry,
 };
 
 #[test]
@@ -61,7 +61,10 @@ fn test_window_geometry_100x100_visible_rule() {
         height: 720,
         is_maximized: false,
     };
-    assert!(!is_geometry_visible_on_monitors(&geom_disconnected, &monitors));
+    assert!(!is_geometry_visible_on_monitors(
+        &geom_disconnected,
+        &monitors
+    ));
 }
 
 #[test]

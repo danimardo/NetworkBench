@@ -35,7 +35,10 @@ fn test_parse_corrupted_and_empty_xml() {
     let corrupted = include_str!("../../../../tests/fixtures/ntttcp/corrupted.xml");
     let res_corr = parse_ntttcp_xml(corrupted);
     assert!(res_corr.is_err());
-    assert!(matches!(res_corr.unwrap_err(), NtttcpParseError::MalformedXml(_) | NtttcpParseError::MissingField(_)));
+    assert!(matches!(
+        res_corr.unwrap_err(),
+        NtttcpParseError::MalformedXml(_) | NtttcpParseError::MissingField(_)
+    ));
 
     let empty = include_str!("../../../../tests/fixtures/ntttcp/empty.xml");
     let res_empty = parse_ntttcp_xml(empty);
@@ -83,7 +86,9 @@ fn test_build_allowlisted_args_sender_and_injection_prevention() {
 
     // Rechazo ante inyección de argumentos o caracteres no permitidos en el host
     let malicious_host = "192.168.1.50; rm -rf";
-    assert!(build_ntttcp_args(NtttcpRole::Sender, &plan, Some(malicious_host), output_path).is_err());
+    assert!(
+        build_ntttcp_args(NtttcpRole::Sender, &plan, Some(malicious_host), output_path).is_err()
+    );
 }
 
 #[test]
@@ -117,4 +122,3 @@ fn test_build_allowlisted_args_udp() {
     assert!(args.contains(&"-l".to_string()));
     assert!(args.contains(&"1472".to_string()));
 }
-

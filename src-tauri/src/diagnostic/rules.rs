@@ -1,6 +1,23 @@
 use super::capacity::CapacityReference;
 use serde::{Deserialize, Serialize};
 
+/// Entrada de `DiagnosticEngine::generate_verdict`.
+///
+/// Agrupa los hechos de la sesión en un único valor con nombres explícitos: evita
+/// una lista de argumentos posicionales donde dos `Option<&StabilityStats>` o dos
+/// `Option<u64>` consecutivos se pueden intercambiar sin que el compilador avise.
+pub struct VerdictInput<'a> {
+    pub capacity: &'a CapacityReference,
+    pub forward_bps: Option<u64>,
+    pub reverse_bps: Option<u64>,
+    pub forward_stability: Option<&'a StabilityStats>,
+    pub reverse_stability: Option<&'a StabilityStats>,
+    pub asymmetry: Option<&'a AsymmetryStats>,
+    pub retransmissions: Option<&'a RetransmissionStats>,
+    pub max_cpu_percent: Option<f64>,
+    pub is_completed: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum VerdictLevel {
@@ -103,6 +120,12 @@ pub struct DiagnosticEngine {
     pub rules_version: String,
 }
 
+impl Default for DiagnosticEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DiagnosticEngine {
     pub fn new() -> Self {
         Self {
@@ -133,7 +156,8 @@ impl DiagnosticEngine {
         let sum: f64 = samples.iter().sum();
         let mean = sum / count;
 
-        let variance: f64 = samples.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (count - 1.0);
+        let variance: f64 =
+            samples.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (count - 1.0);
         let std_dev = variance.sqrt();
         let cv = if mean > 0.0 { std_dev / mean } else { 0.0 };
 
@@ -163,7 +187,9 @@ impl DiagnosticEngine {
             base_level = match base_level {
                 StabilityLevel::VeryStable => StabilityLevel::Stable,
                 StabilityLevel::Stable => StabilityLevel::Variable,
-                StabilityLevel::Variable | StabilityLevel::VeryVariable => StabilityLevel::VeryVariable,
+                StabilityLevel::Variable | StabilityLevel::VeryVariable => {
+                    StabilityLevel::VeryVariable
+                }
                 StabilityLevel::NotEvaluable => StabilityLevel::NotEvaluable,
             };
         }
@@ -185,7 +211,11 @@ impl DiagnosticEngine {
     }
 
     /// Evalúa la asimetría entre dos velocidades secuenciales.
-    pub fn evaluate_asymmetry(&self, bps_a_to_b: Option<u64>, bps_b_to_a: Option<u64>) -> Option<AsymmetryStats> {
+    pub fn evaluate_asymmetry(
+        &self,
+        bps_a_to_b: Option<u64>,
+        bps_b_to_a: Option<u64>,
+    ) -> Option<AsymmetryStats> {
         match (bps_a_to_b, bps_b_to_a) {
             (Some(v1), Some(v2)) if v1 > 0 && v2 > 0 => {
                 let max_v = v1.max(v2) as f64;
@@ -202,7 +232,11 @@ impl DiagnosticEngine {
     }
 
     /// Evalúa la tasa de retransmisiones TCP.
-    pub fn evaluate_retransmissions(&self, sent: Option<u64>, retrans: Option<u64>) -> RetransmissionStats {
+    pub fn evaluate_retransmissions(
+        &self,
+        sent: Option<u64>,
+        retrans: Option<u64>,
+    ) -> RetransmissionStats {
         match (sent, retrans) {
             (Some(s), Some(r)) if s > 0 => {
                 let ratio = r as f64 / s as f64;
@@ -240,18 +274,18 @@ impl DiagnosticEngine {
     }
 
     /// Genera el veredicto global de la sesión.
-    pub fn generate_verdict(
-        &self,
-        capacity: &CapacityReference,
-        forward_bps: Option<u64>,
-        reverse_bps: Option<u64>,
-        forward_stability: Option<&StabilityStats>,
-        reverse_stability: Option<&StabilityStats>,
-        asymmetry: Option<&AsymmetryStats>,
-        retransmissions: Option<&RetransmissionStats>,
-        max_cpu_percent: Option<f64>,
-        is_completed: bool,
-    ) -> SessionVerdict {
+    pub fn generate_verdict(&self, input: VerdictInput<'_>) -> SessionVerdict {
+        let VerdictInput {
+            capacity,
+            forward_bps,
+            reverse_bps,
+            forward_stability,
+            reverse_stability,
+            asymmetry,
+            retransmissions,
+            max_cpu_percent,
+            is_completed,
+        } = input;
         if !is_completed {
             return SessionVerdict {
                 rules_version: self.rules_version.clone(),
@@ -316,7 +350,9 @@ impl DiagnosticEngine {
                 observations.push(DiagnosticItem {
                     rule_id: "OBS_PERF_WARN".into(),
                     message_key: "observations.perf_warn".into(),
-                    safe_params: Some(serde_json::json!({ "utilization": (util * 100.0).round() as u64 })),
+                    safe_params: Some(
+                        serde_json::json!({ "utilization": (util * 100.0).round() as u64 }),
+                    ),
                     evidence_refs: vec![],
                 });
                 causes.push(DiagnosticItem {
@@ -336,7 +372,9 @@ impl DiagnosticEngine {
                 observations.push(DiagnosticItem {
                     rule_id: "OBS_PERF_PROBLEM".into(),
                     message_key: "observations.perf_problem".into(),
-                    safe_params: Some(serde_json::json!({ "utilization": (util * 100.0).round() as u64 })),
+                    safe_params: Some(
+                        serde_json::json!({ "utilization": (util * 100.0).round() as u64 }),
+                    ),
                     evidence_refs: vec![],
                 });
                 causes.push(DiagnosticItem {
@@ -356,16 +394,21 @@ impl DiagnosticEngine {
 
         // 2. Estabilidad
         let stability_level = match (forward_stability, reverse_stability) {
-            (Some(s1), Some(s2)) => {
-                let worst = match (s1.level, s2.level) {
-                    (StabilityLevel::VeryVariable, _) | (_, StabilityLevel::VeryVariable) => StabilityLevel::VeryVariable,
-                    (StabilityLevel::Variable, _) | (_, StabilityLevel::Variable) => StabilityLevel::Variable,
-                    (StabilityLevel::Stable, _) | (_, StabilityLevel::Stable) => StabilityLevel::Stable,
-                    (StabilityLevel::VeryStable, StabilityLevel::VeryStable) => StabilityLevel::VeryStable,
-                    (StabilityLevel::NotEvaluable, other) | (other, StabilityLevel::NotEvaluable) => other,
-                };
-                worst
-            }
+            (Some(s1), Some(s2)) => match (s1.level, s2.level) {
+                (StabilityLevel::VeryVariable, _) | (_, StabilityLevel::VeryVariable) => {
+                    StabilityLevel::VeryVariable
+                }
+                (StabilityLevel::Variable, _) | (_, StabilityLevel::Variable) => {
+                    StabilityLevel::Variable
+                }
+                (StabilityLevel::Stable, _) | (_, StabilityLevel::Stable) => StabilityLevel::Stable,
+                (StabilityLevel::VeryStable, StabilityLevel::VeryStable) => {
+                    StabilityLevel::VeryStable
+                }
+                (StabilityLevel::NotEvaluable, other) | (other, StabilityLevel::NotEvaluable) => {
+                    other
+                }
+            },
             (Some(s), None) | (None, Some(s)) => s.level,
             (None, None) => StabilityLevel::NotEvaluable,
         };
@@ -429,7 +472,9 @@ impl DiagnosticEngine {
         }
 
         // 4. Retransmisiones
-        let retransmission_level = retransmissions.map(|r| r.level).unwrap_or(RetransmissionLevel::NotAvailable);
+        let retransmission_level = retransmissions
+            .map(|r| r.level)
+            .unwrap_or(RetransmissionLevel::NotAvailable);
         if retransmission_level == RetransmissionLevel::Elevated {
             observations.push(DiagnosticItem {
                 rule_id: "OBS_RETRANS_ELEVATED".into(),
@@ -467,7 +512,9 @@ impl DiagnosticEngine {
         // 5. CPU
         let cpu_level = self.evaluate_cpu(max_cpu_percent);
         if cpu_level == CpuLevel::High {
-            let util_under_85 = performance_level.map(|p| p != VerdictLevel::Ok).unwrap_or(true);
+            let util_under_85 = performance_level
+                .map(|p| p != VerdictLevel::Ok)
+                .unwrap_or(true);
             if util_under_85 {
                 causes.push(DiagnosticItem {
                     rule_id: "CAUSE_CPU_HIGH".into(),

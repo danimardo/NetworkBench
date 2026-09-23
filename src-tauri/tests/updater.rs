@@ -1,5 +1,5 @@
 use networkbench_lib::updater::{
-    evaluate_manifest, is_newer_version, parse_version, validate_download_url, UpdateStatus,
+    UpdateStatus, evaluate_manifest, is_newer_version, parse_version, validate_download_url,
 };
 
 #[test]
@@ -75,14 +75,16 @@ fn test_updater_manifest_same_or_lower_version_up_to_date() {
             }
         }
     }"#;
-    let res_downgrade = evaluate_manifest(downgrade_json, "1.0.0", "windows-x86_64", false).unwrap();
+    let res_downgrade =
+        evaluate_manifest(downgrade_json, "1.0.0", "windows-x86_64", false).unwrap();
     assert_eq!(res_downgrade, UpdateStatus::UpToDate);
 }
 
 #[test]
 fn test_updater_rejects_mutable_latest_urls() {
     // Prohibición constitucional y ADR-007 de URLs flotantes/mutables como /latest/
-    let mutable_url_1 = "https://github.com/danimardo/NetworkBench/releases/latest/download/NetworkBench.exe";
+    let mutable_url_1 =
+        "https://github.com/danimardo/NetworkBench/releases/latest/download/NetworkBench.exe";
     let mutable_url_2 = "https://example.com/downloads/latest.exe";
     let valid_url = "https://github.com/danimardo/NetworkBench/releases/download/v1.2.0/NetworkBench-Setup-v1.2.0.exe";
 
@@ -118,7 +120,10 @@ fn test_updater_rejects_missing_signature_or_platform() {
         }
     }"#;
     let res_no_plat = evaluate_manifest(no_plat_json, "1.0.0", "windows-x86_64", false);
-    assert!(res_no_plat.is_err(), "Debe rechazar si la plataforma solicitada no está en el manifiesto");
+    assert!(
+        res_no_plat.is_err(),
+        "Debe rechazar si la plataforma solicitada no está en el manifiesto"
+    );
 }
 
 #[test]
@@ -146,5 +151,8 @@ fn test_updater_deferred_during_active_session() {
 fn test_updater_corrupted_or_invalid_json_manifest() {
     let invalid_json = "<html><body>404 Not Found</body></html>";
     let res = evaluate_manifest(invalid_json, "1.0.0", "windows-x86_64", false);
-    assert!(res.is_err(), "Debe reportar error ante contenido HTML o JSON corrupto");
+    assert!(
+        res.is_err(),
+        "Debe reportar error ante contenido HTML o JSON corrupto"
+    );
 }

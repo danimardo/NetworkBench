@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -66,10 +66,10 @@ impl DeleteTokenStore {
 
     pub fn validate_and_consume(&self, token: &str) -> Option<DeleteTarget> {
         let mut map = self.tokens.lock().unwrap();
-        if let Some(entry) = map.remove(token) {
-            if entry.created_at.elapsed() < DELETE_TOKEN_TTL {
-                return Some(entry.target);
-            }
+        if let Some(entry) = map.remove(token)
+            && entry.created_at.elapsed() < DELETE_TOKEN_TTL
+        {
+            return Some(entry.target);
         }
         None
     }

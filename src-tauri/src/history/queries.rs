@@ -1,5 +1,5 @@
 use crate::history::sessions::SessionRecord;
-use rusqlite::{params_from_iter, Connection, Result};
+use rusqlite::{Connection, Result, params_from_iter};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -124,10 +124,15 @@ pub fn query_history(
     );
 
     let mut count_stmt = conn.prepare(&count_sql)?;
-    let total_count: u32 = count_stmt.query_row(params_from_iter(count_params.clone()), |r| r.get(0))?;
+    let total_count: u32 =
+        count_stmt.query_row(params_from_iter(count_params.clone()), |r| r.get(0))?;
 
     // 2. Consulta de página ordenada por fecha descendente
-    let limit = if pagination.limit == 0 { 20 } else { pagination.limit.min(100) };
+    let limit = if pagination.limit == 0 {
+        20
+    } else {
+        pagination.limit.min(100)
+    };
     let offset = pagination.offset;
 
     let query_sql = format!(

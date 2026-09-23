@@ -108,7 +108,9 @@ pub mod opt_u64_decimal {
 
         match Option::<OptNumOrStr>::deserialize(deserializer)? {
             Some(OptNumOrStr::Num(n)) => Ok(Some(n)),
-            Some(OptNumOrStr::Str(s)) => s.parse::<u64>().map(Some).map_err(serde::de::Error::custom),
+            Some(OptNumOrStr::Str(s)) => {
+                s.parse::<u64>().map(Some).map_err(serde::de::Error::custom)
+            }
             Some(OptNumOrStr::None) | None => Ok(None),
         }
     }
