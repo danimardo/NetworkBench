@@ -77,8 +77,10 @@ jobs:
         shell: pwsh
         run: |
           # DoD punto 1: el hash del motor se comprueba aquí, no solo se anota.
+          # El valor sale de engine/SHA256, el mismo fichero que compila dentro del
+          # binario como ENGINE_SHA256. Una sola fuente, dos consumidores.
           $exe = 'engine/ntttcp.exe'
-          $esperado = 'f66561d09af91305412fd60ca4b28d57c7b650035d3c1edcc00a57b079e2247e'
+          $esperado = (Get-Content 'engine/SHA256' -Raw).Trim()
           if (-not (Test-Path $exe)) {
             Write-Host "::error::$exe NO PRESENTE. G1 sigue abierta: sin el motor no hay release."
             exit 1

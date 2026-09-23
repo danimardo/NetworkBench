@@ -193,6 +193,36 @@ Los estados válidos son: `VERIFICADO`, `DOCUMENTADO`, `INFERIDO`, `NO VERIFICAB
 - **Estado**: `VERIFICADO` (mTLS, huella y saludo en proceso) ·
   `NO VERIFICABLE` aquí (dos equipos reales)
 
+### 1.9 Orquestación de la medida (T144 parcial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1
+- **Comando**: `cargo test --manifest-path src-tauri/Cargo.toml`
+- **Resultado**: 177 pruebas en verde, 9 nuevas. El motor deja de ser código muerto:
+  - `control/engine_port.rs`: el motor se alcanza por el trait `MotorDeMedida`.
+    `MotorNtttcp` verifica el SHA-256 **antes de cada ejecución**, no una vez al
+    instalar (FR-063). `MotorDeLaboratorio` permite probar la orquestación sin binario.
+  - `control/orquestador.rs`: ejecuta la mitad local de una dirección, ensambla
+    `DirectionResult` y `SessionResult` y aplica el diagnóstico existente.
+  - `app::init` construye el orquestador con el motor real apuntando al ejecutable
+    que quedará junto a la aplicación tras la instalación.
+- **Invariantes con prueba propia**: `officialBps` procede solo del receptor aunque el
+  emisor declare más (FR-027); sin receptor la dirección queda `incomplete` y **sin**
+  velocidad oficial, no a cero (FR-030, FR-034); una sola dirección no produce veredicto
+  de asimetría (US5/AC4); un motor alterado no produce medida.
+- **Fuente única del hash del motor**: `engine/SHA256`, leído por `ENGINE_SHA256` con
+  `include_str!` y por el paso de integridad de CI. Antes el valor vivía duplicado en
+  `VALIDACION.md` y en el workflow, donde podía quedar obsoleto sin aviso.
+- **`unsafe impl Send/Sync for JobObject`**: necesario porque el proceso del motor
+  sobrevive a un `await` y Tokio puede moverlo de hilo. Un HANDLE de Windows es válido
+  en todo el proceso; `AssignProcessToJobObject` es segura entre hilos y `CloseHandle`
+  exige `&mut self`. Justificación completa en el propio fichero.
+- **Lo que sigue sin estar**: el diálogo con el peer (PREPARE/READY/START), el muestreo
+  en vivo durante la ejecución y la persistencia automática al cerrar sesión. **Ninguna
+  medición real se ha ejecutado**: `engine/ntttcp.exe` no está en el árbol, y toda la
+  evidencia de esta tanda procede del motor de laboratorio, que no mide nada.
+- **Efecto en cobertura**: total de Rust del 56,93 % al 60,58 %. El gate Q2 sigue en rojo.
+- **Estado**: `VERIFICADO` (orquestación con motor simulado) ·
+  `NO PRESENTE` (medición real con NTTTCP)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)

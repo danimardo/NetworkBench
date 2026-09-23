@@ -5,6 +5,20 @@ pub struct JobObject {
     handle: windows::Win32::Foundation::HANDLE,
 }
 
+// SEGURIDAD: un HANDLE de Windows es un valor válido en todo el proceso, no una
+// referencia ligada a un hilo, así que mover el `JobObject` entre hilos —o compartirlo
+// por referencia— es seguro. Las dos únicas operaciones sobre el handle son
+// `AssignProcessToJobObject`, que la API garantiza segura entre hilos, y `CloseHandle`
+// en `Drop`, que exige `&mut self` y por tanto acceso exclusivo.
+//
+// Hace falta porque el orquestador mantiene vivo el proceso del motor a través de un
+// `await`, y el ejecutor de Tokio puede moverlo de hilo.
+#[cfg(windows)]
+unsafe impl Send for JobObject {}
+
+#[cfg(windows)]
+unsafe impl Sync for JobObject {}
+
 #[cfg(windows)]
 impl JobObject {
     pub fn create_kill_on_close() -> Result<Self> {

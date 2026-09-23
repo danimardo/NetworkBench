@@ -1,5 +1,8 @@
+use crate::control::engine_port::MotorNtttcp;
+use crate::control::orquestador::Orquestador;
 use crate::control::server::ControlServer;
 use crate::control::service::SessionService;
+use crate::engine::ntttcp::engine_sha256;
 use crate::history::database::Database;
 use crate::identity::InstanceIdentity;
 use crate::ipc::response::{IpcResult, OneTimeTokenStore};
@@ -17,6 +20,10 @@ pub struct AppState {
     pub identity: Arc<InstanceIdentity>,
     pub session_service: Arc<SessionService>,
     pub delete_tokens: Arc<crate::history::delete::DeleteTokenStore>,
+    /// Orquestador de medida, con el motor real detrás de su puerto. Que exista no
+    /// significa que el motor esté: `engine/ntttcp.exe` puede faltar, y entonces cada
+    /// medición devuelve `MotorError::NoDisponible` en vez de un resultado inventado.
+    pub orquestador: Arc<Orquestador>,
 }
 
 use crate::platform::window::{MonitorBounds, WindowGeometry, normalize_or_fallback_geometry};
@@ -113,6 +120,17 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let session_service = Arc::new(SessionService::new());
     let delete_tokens = Arc::new(crate::history::delete::DeleteTokenStore::new());
 
+    // Ruta del motor junto al ejecutable, como quedará tras la instalación NSIS.
+    let engine_path = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("ntttcp.exe")))
+        .unwrap_or_else(|| PathBuf::from("engine/ntttcp.exe"));
+    let orquestador = Arc::new(Orquestador::new(Arc::new(MotorNtttcp::new(
+        engine_path,
+        engine_sha256().to_string(),
+        app_dir.join("tmp"),
+    ))));
+
     let initial_prefs = settings.get();
     let snapshot = Arc::new(SnapshotManager::new(AppSnapshot {
         revision: 1,
@@ -138,6 +156,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         identity,
         session_service,
         delete_tokens,
+        orquestador,
     })
 }
 
