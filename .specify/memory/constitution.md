@@ -1,11 +1,13 @@
 <!--
 Sync Impact Report — 2026-09-21
-Versión: 0.4.0 -> 0.5.0 -> 0.6.0.
+Versión: 0.4.0 -> 0.5.0 -> 0.6.0 -> 0.7.0.
+0.7.0: principio VIII, umbrales de cobertura Q2 decididos (80 % por capa y métrica; 90 %
+en módulos críticos Rust).
 0.5.0: principio VI, accesibilidad básica desde H1 y revisión completa en H2 (decisión Q3).
 0.6.0: matriz Windows 10 22H2 (build 19045) y Windows 11, solo x64 (decisión Q1).
 0.4.0 había añadido el principio XIII (logging) y las tablas de versiones, CI y discrepancias.
 No se eliminan principios. Solo se modifica constitution.md.
-Seguimiento: Q2 y Q4 abiertas, TODO(RATIFICATION_DATE), verificaciones V-01 a V-12 y puertas G1-G6.
+Seguimiento: Q4 abierta, TODO(RATIFICATION_DATE), verificaciones V-01 a V-12 y puertas G1-G6.
 Informe temporal de revisión: retirar antes del commit de ratificación.
 -->
 
@@ -213,8 +215,8 @@ La versión de la constitución es independiente de la versión de la aplicació
 - Fallos preexistentes DEBEN identificarse explícitamente con ubicación y evidencia de
   procedencia cuando sea posible. No se ocultan, ignoran ni corrigen fuera del alcance sin
   autorización. Su existencia mantiene el control fallido; se informa del bloqueo concreto.
-- Propuesta Q2: Rust, al menos 80 % de líneas; TypeScript/Svelte, al menos 80 % en cada
-  métrica de líneas, sentencias, funciones y ramas. No promediar capas ni métricas.
+- Q2 (decidido el 2026-09-21): Rust, al menos 80 % de líneas; TypeScript/Svelte, al menos
+  80 % en cada métrica de líneas, sentencias, funciones y ramas. No promediar capas ni métricas.
 - Cada módulo crítico Rust (estados/control, emparejamiento, planes, parser, diagnóstico,
   saneamiento) alcanza 90 % de líneas. Herramientas: cargo-llvm-cov y Vitest/V8.
 - Incluir código propio no ejecutado por tests. Excluir solo generado, terceros, fixtures,
@@ -672,7 +674,8 @@ Conservar motivos/evidencia en Git.
 ### Decisiones pendientes de respuesta
 
 - **Q1:** decidido el 2026-09-21: Windows 10 22H2 y Windows 11, solo x64.
-- **Q2:** 80 % general por capa y 90 % de líneas en módulos críticos Rust (propuesta).
+- **Q2:** decidido el 2026-09-21: 80 % general por capa y métrica; 90 % de líneas en
+  módulos críticos Rust.
 - **Q3:** adoptar offline, persistencia H1, máximo simultáneo de 32 streams por sentido y
   actualización por versión (propuesta). Accesibilidad: básica desde H1 y completa en H2
   (decidido el 2026-09-21).
@@ -685,4 +688,4 @@ transversal, el control Svelte y las políticas de entorno y logging están soli
 por el propietario. Primera versión ratificada: 1.0.0.
 Ratificar el marco no equivale a aprobar builds todavía no probadas.
 
-**Version**: 0.6.0 | **Ratified**: pendiente — TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-21
+**Version**: 0.7.0 | **Ratified**: pendiente — TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-21
