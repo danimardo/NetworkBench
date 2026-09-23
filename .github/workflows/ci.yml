@@ -1,43 +1,128 @@
 name: CI
 
+# Cubre los cinco puntos de la Definition of Done de la constitución.
+#
+# Las acciones van fijadas por SHA, no por etiqueta: una etiqueta es un puntero
+# mutable y quien controle el repositorio de la acción puede reapuntarla. El
+# comentario indica a qué versión corresponde cada SHA.
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+# Privilegio mínimo: el workflow solo necesita leer el código.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Verificación Canónica y Cobertura (Q2)
+    name: Verificación canónica, cobertura y build
     runs-on: windows-latest
+    timeout-minutes: 60
+
     steps:
       - name: Checkout del repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # --- DoD punto 1: instalación locked y comprobación de toolchains ---
 
       - name: Instalar Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           toolchain: 1.98.1
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy, llvm-tools-preview
 
       - name: Instalar pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 11.6.0
+          version: 12.5.1
 
       - name: Instalar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24
-          cache: "pnpm"
+          node-version: 24.21.0
+          cache: pnpm
 
-      - name: Instalar dependencias
+      - name: Comprobar que el toolchain coincide con la línea base
+        shell: pwsh
+        run: |
+          $esperado = @{ node = 'v24.21.0'; pnpm = '12.5.1'; rustc = '1.98.1' }
+          $real = @{
+            node  = (node -v)
+            pnpm  = (pnpm -v)
+            rustc = ((rustc --version) -split ' ')[1]
+          }
+          $fallos = 0
+          foreach ($k in $esperado.Keys) {
+            if ($real[$k] -ne $esperado[$k]) {
+              Write-Host "::error::$k = $($real[$k]), se esperaba $($esperado[$k])"
+              $fallos++
+            } else {
+              Write-Host "ok: $k = $($real[$k])"
+            }
+          }
+          if ($fallos -gt 0) { exit 1 }
+
+      - name: Instalar dependencias (locked)
         run: pnpm install --frozen-lockfile
 
-      - name: Verificación canónica frontend y linters
+      - name: Verificar integridad del motor NTTTCP
+        shell: pwsh
+        run: |
+          # DoD punto 1: el hash del motor se comprueba aquí, no solo se anota.
+          $exe = 'engine/ntttcp.exe'
+          $esperado = 'f66561d09af91305412fd60ca4b28d57c7b650035d3c1edcc00a57b079e2247e'
+          if (-not (Test-Path $exe)) {
+            Write-Host "::error::$exe NO PRESENTE. G1 sigue abierta: sin el motor no hay release."
+            exit 1
+          }
+          $real = (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLower()
+          if ($real -ne $esperado) {
+            Write-Host "::error::SHA-256 del motor no coincide. Esperado $esperado, obtenido $real"
+            exit 1
+          }
+          Write-Host "ok: motor verificado ($real)"
+
+      # --- DoD punto 2: estáticos, formato, lint y checks de arquitectura ---
+
+      - name: Verificación canónica
         run: pnpm verify
 
-      - name: Tests de integración y unitarios backend Rust
+      - name: Auditoría de seguridad y dependencias
+        run: node scripts/security/scan-security.mjs
+
+      # --- DoD punto 3: pruebas y cobertura con umbrales Q2 ---
+
+      - name: Tests de Rust
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
-      - name: Cobertura Frontend Vitest (Q2 Baseline)
+      - name: Cobertura frontend (umbral Q2, 80 % por métrica)
         run: pnpm test:coverage
+
+      - name: Instalar cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Cobertura Rust (umbral Q2, 80 % total y 90 % en críticos)
+        run: pnpm test:coverage:rust
+
+      # --- DoD punto 4: build release x64 ---
+
+      - name: Build release de Rust (x86_64-pc-windows-msvc)
+        run: cargo build --manifest-path src-tauri/Cargo.toml --release --target x86_64-pc-windows-msvc
+
+      # --- DoD punto 5: informes disponibles para el revisor ---
+
+      - name: Publicar informes de cobertura
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cobertura
+          path: artifacts/coverage/
+          if-no-files-found: warn
