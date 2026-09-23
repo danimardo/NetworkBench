@@ -21,6 +21,16 @@ pub mod updater;
 
 pub fn run() {
     let app_state = app::init().expect("fallo al inicializar el estado central de la aplicación");
+
+    // El canal de control se levanta antes que la ventana: una instancia debe poder
+    // recibir un saludo aunque su usuario no haya abierto nada todavía (FR-009).
+    let identity = std::sync::Arc::clone(&app_state.identity);
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = app::start_control_server(identity, discovery::CONTROL_PORT_DEFAULT).await {
+            tracing::error!("El canal de control no pudo arrancar: {e}");
+        }
+    });
+
     tauri::Builder::default()
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![

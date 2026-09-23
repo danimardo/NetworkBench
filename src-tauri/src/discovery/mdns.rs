@@ -1,54 +1,77 @@
+use crate::control::server::{VERSION_PROTOCOLO, VERSION_PROTOCOLO_MIN, ahora_rfc3339};
+use crate::control::tls::{client_config, peer_fingerprint};
 use crate::control::transport::{recv_envelope, send_envelope};
-use crate::identity::PublicIdentity;
+use crate::identity::InstanceIdentity;
 use crate::model::peer::Peer;
 use crate::model::protocol::{HelloPayload, ProtocolEnvelope, ProtocolMessageType};
 use crate::netinfo::resolve::{resolve_target_address, sanitize_display_name};
-use sha2::Digest;
+use rustls::pki_types::ServerName;
 use std::time::Duration;
 use tokio::time::timeout;
+use tokio_rustls::TlsConnector;
 use uuid::Uuid;
 
 pub const CONTROL_PORT_DEFAULT: u16 = 7411;
 pub const MDNS_SERVICE_TYPE: &str = "_netbench._tcp.local.";
 
-/// Realiza una conexión manual a un peer remoto vía IP o DNS, ejecuta el handshake HELLO y obtiene su identidad.
+/// Nombre presentado en el SNI. No identifica a nadie ni se valida: en este protocolo
+/// la identidad la da la huella del certificado, no el nombre de host (FR-011).
+const SNI: &str = "netbench";
+
+const PLAZO_CONEXION: Duration = Duration::from_secs(5);
+
+/// Conecta manualmente con un peer por IP o DNS y completa TLS mutuo más el saludo.
+///
+/// La huella del `Peer` devuelto procede **del certificado presentado en el handshake**,
+/// no del `instanceId` que el remoto declara. Es la diferencia entre una identidad que
+/// se demuestra poseyendo una clave privada y una que basta con afirmar.
 pub async fn manual_connect_peer(
     host: &str,
     port: u16,
-    local_identity: &PublicIdentity,
+    local_identity: &InstanceIdentity,
 ) -> Result<Peer, String> {
     let addrs = resolve_target_address(host, port).await?;
-    let target_addr = addrs
+    let target_addr = *addrs
         .first()
         .ok_or_else(|| "No se encontró ninguna dirección IP para el host".to_string())?;
 
-    // Intentar conectar con timeout de 5 segundos
-    let mut stream = match timeout(
-        Duration::from_secs(5),
-        tokio::net::TcpStream::connect(target_addr),
-    )
-    .await
-    {
+    let connector = TlsConnector::from(
+        client_config(local_identity).map_err(|e| format!("Error preparando TLS: {e}"))?,
+    );
+
+    let tcp = match timeout(PLAZO_CONEXION, tokio::net::TcpStream::connect(target_addr)).await {
         Ok(Ok(s)) => s,
-        Ok(Err(e)) => return Err(format!("No se pudo conectar a {}: {}", target_addr, e)),
+        Ok(Err(e)) => return Err(format!("No se pudo conectar a {target_addr}: {e}")),
         Err(_) => {
             return Err("Tiempo de espera agotado al conectar al equipo remoto (5 s)".to_string());
         }
     };
 
-    let (mut reader, mut writer) = stream.split();
+    let sni = ServerName::try_from(SNI).map_err(|e| format!("SNI no válido: {e}"))?;
+    let mut stream = match timeout(PLAZO_CONEXION, connector.connect(sni, tcp)).await {
+        Ok(Ok(s)) => s,
+        Ok(Err(e)) => return Err(format!("El canal seguro con {target_addr} falló: {e}")),
+        Err(_) => return Err("Tiempo de espera agotado en el canal seguro (5 s)".to_string()),
+    };
 
-    // 1. Enviar HELLO de la instancia local
+    // Huella del certificado del servidor. Sin certificado no se sigue: un extremo
+    // sin identidad criptográfica no puede convertirse en un peer conocido.
+    let fingerprint = {
+        let (_, conexion) = stream.get_ref();
+        peer_fingerprint(conexion.peer_certificates())
+            .ok_or_else(|| format!("El equipo {target_addr} no presentó certificado"))?
+    };
+
     let hello = ProtocolEnvelope {
         msg_type: ProtocolMessageType::Hello,
         id: Uuid::new_v4(),
         session_id: None,
-        ts: "2026-09-21T20:00:00Z".to_string(),
+        ts: ahora_rfc3339(),
         in_reply_to: None,
         payload: HelloPayload {
-            protocol_version: 1,
-            protocol_min: 1,
-            app_version: "0.1.0".to_string(),
+            protocol_version: VERSION_PROTOCOLO,
+            protocol_min: VERSION_PROTOCOLO_MIN,
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
             instance_id: local_identity.instance_id,
             display_name: local_identity.display_name.clone(),
             platform: "windows".to_string(),
@@ -56,16 +79,20 @@ pub async fn manual_connect_peer(
         },
     };
 
-    send_envelope(&mut writer, &hello)
+    send_envelope(&mut stream, &hello)
         .await
-        .map_err(|e| format!("Error enviando HELLO: {}", e))?;
+        .map_err(|e| format!("Error enviando HELLO: {e}"))?;
 
-    // 2. Recibir HELLO del peer remoto
     let remote_hello: ProtocolEnvelope<HelloPayload> =
-        timeout(Duration::from_secs(5), recv_envelope(&mut reader))
-            .await
-            .map_err(|_| "Tiempo de espera agotado esperando HELLO del equipo remoto".to_string())?
-            .map_err(|e| format!("Error recibiendo HELLO: {}", e))?;
+        match timeout(PLAZO_CONEXION, recv_envelope(&mut stream)).await {
+            Ok(Ok(env)) => env,
+            Ok(Err(e)) => return Err(format!("Error recibiendo HELLO: {e}")),
+            Err(_) => {
+                return Err(
+                    "Tiempo de espera agotado esperando HELLO del equipo remoto".to_string()
+                );
+            }
+        };
 
     if remote_hello.msg_type != ProtocolMessageType::Hello {
         return Err(format!(
@@ -74,78 +101,65 @@ pub async fn manual_connect_peer(
         ));
     }
 
-    // 3. Sanitizar nombre remoto (FR-056)
+    // Texto remoto: normalizado, acotado y no ejecutable (FR-056).
     let clean_name = sanitize_display_name(&remote_hello.payload.display_name);
 
-    // 4. Construir Peer
-    let hash = sha2::Sha256::digest(remote_hello.payload.instance_id.as_bytes());
-    let fingerprint = hash
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<String>();
-
-    let peer = Peer::new(
+    Peer::new(
         remote_hello.payload.instance_id,
         clean_name,
         fingerprint,
         vec![target_addr.to_string()],
-    )?;
-
-    Ok(peer)
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::net::TcpListener;
+    use crate::control::server::ControlServer;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::sync::Arc;
 
     #[tokio::test]
-    async fn test_manual_connect_handshake() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    async fn test_conexion_manual_toma_la_huella_del_certificado() {
+        let remoto =
+            Arc::new(InstanceIdentity::generate("<script>PC-Remoto</script>".into()).unwrap());
+        let local = InstanceIdentity::generate("Local-PC".into()).unwrap();
+        let huella_remota = remoto.fingerprint.clone();
+        let id_remoto = remoto.instance_id;
+
+        let servidor = ControlServer::bind(
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0),
+            Arc::clone(&remoto),
+        )
+        .await
+        .unwrap();
+        let port = servidor.local_addr().unwrap().port();
+        tokio::spawn(async move { servidor.accept_one().await });
+
+        let peer = manual_connect_peer("127.0.0.1", port, &local)
+            .await
+            .expect("conexión manual");
+
+        assert_eq!(peer.instance_id, id_remoto);
+        // La huella es la del certificado del servidor, no un hash del instanceId.
+        assert_eq!(peer.fingerprint, huella_remota);
+        // Y el nombre remoto llega saneado (FR-056).
+        assert_eq!(peer.display_name, "&lt;script&gt;PC-Remoto&lt;/script&gt;");
+    }
+
+    #[tokio::test]
+    async fn test_un_extremo_sin_tls_no_produce_peer() {
+        let local = InstanceIdentity::generate("Local-PC".into()).unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
 
-        let remote_id = Uuid::new_v4();
-
-        // Tarea del peer remoto simulado
+        // Servidor TCP en claro: acepta y no habla TLS.
         tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let (mut reader, mut writer) = socket.split();
-
-            let _req: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut reader).await.unwrap();
-
-            let resp = ProtocolEnvelope {
-                msg_type: ProtocolMessageType::Hello,
-                id: Uuid::new_v4(),
-                session_id: None,
-                ts: "2026-09-21T20:00:00Z".to_string(),
-                in_reply_to: None,
-                payload: HelloPayload {
-                    protocol_version: 1,
-                    protocol_min: 1,
-                    app_version: "0.1.0".to_string(),
-                    instance_id: remote_id,
-                    display_name: "<script>PC-Remoto</script>".to_string(),
-                    platform: "windows".to_string(),
-                    is_busy: false,
-                },
-            };
-            send_envelope(&mut writer, &resp).await.unwrap();
+            let _ = listener.accept().await;
+            tokio::time::sleep(Duration::from_secs(2)).await;
         });
 
-        let local_ident = PublicIdentity {
-            instance_id: Uuid::new_v4(),
-            display_name: "Local-PC".to_string(),
-            fingerprint: "1111111111111111111111111111111111111111111111111111111111111111"
-                .to_string(),
-            cert_pem: "".to_string(),
-        };
-
-        let peer = manual_connect_peer("127.0.0.1", port, &local_ident)
-            .await
-            .expect("Conexión manual");
-
-        assert_eq!(peer.instance_id, remote_id);
-        // Debe haberse sanitizado el HTML
-        assert_eq!(peer.display_name, "&lt;script&gt;PC-Remoto&lt;/script&gt;");
+        let resultado = manual_connect_peer("127.0.0.1", port, &local).await;
+        assert!(resultado.is_err(), "no debe producir un peer sin TLS");
     }
 }

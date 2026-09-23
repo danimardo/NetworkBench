@@ -168,6 +168,31 @@ Los estados válidos son: `VERIFICADO`, `DOCUMENTADO`, `INFERIDO`, `NO VERIFICAB
   la verificación y un aviso no. Cambiarlo exige decisión explícita.
 - **Estado**: `VERIFICADO`
 
+### 1.8 Canal de control con TLS mutuo (T141, T142, T143 parcial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1
+- **Comando**: `cargo test --manifest-path src-tauri/Cargo.toml`
+- **Resultado**: 168 pruebas en verde, 10 de ellas nuevas. El canal de control deja de
+  ser texto en claro:
+  - `src-tauri/src/control/tls.rs`: configuración mTLS con rustls sobre los certificados
+    Ed25519 que `identity` ya generaba. `client_auth_mandatory`: sin certificado no hay
+    conexión. Los verificadores comprueban **posesión de la clave privada y nada más**;
+    no validan cadena ni nombre porque en este protocolo no hay CA y el nombre de host
+    no prueba identidad (FR-011).
+  - `src-tauri/src/control/server.rs`: el servidor escucha, completa el saludo y declara
+    ocupación (FR-017). Arranca desde `app::start_control_server` antes que la ventana.
+  - `src-tauri/src/discovery/mdns.rs`: la conexión manual va sobre TLS y toma la huella
+    del certificado del par.
+- **El fallo corregido**: `mdns.rs` calculaba la huella como `SHA-256(instanceId)`, y el
+  `instanceId` lo envía el propio remoto en el payload. Cualquiera podía presentarse como
+  un peer de confianza conocido sin poseer clave alguna. La prueba
+  `test_un_instance_id_falsificado_no_cambia_la_huella` reproduce ese ataque y comprueba
+  que ahora la huella sigue siendo la del certificado.
+- **Lo que sigue sin estar**: el servidor llega hasta HELLO. PAIR, REQUEST y la sesión
+  son T144 y T153. Ninguna prueba de esta tanda se ha ejecutado entre dos equipos reales:
+  todas son en proceso sobre `127.0.0.1`.
+- **Estado**: `VERIFICADO` (mTLS, huella y saludo en proceso) ·
+  `NO VERIFICABLE` aquí (dos equipos reales)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)

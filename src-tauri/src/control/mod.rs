@@ -4,7 +4,9 @@ pub mod plan;
 pub mod ports;
 pub mod preflight;
 pub mod repeat;
+pub mod server;
 pub mod service;
+pub mod tls;
 pub mod transport;
 
 pub use cleanup::*;

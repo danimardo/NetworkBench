@@ -1,3 +1,4 @@
+use crate::control::server::ControlServer;
 use crate::control::service::SessionService;
 use crate::history::database::Database;
 use crate::identity::InstanceIdentity;
@@ -138,6 +139,62 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         session_service,
         delete_tokens,
     })
+}
+
+/// Arranca el servidor del canal de control y devuelve el puerto real.
+///
+/// Alcance deliberado: este bucle completa el handshake TLS mutuo y el saludo, y ahí
+/// termina. **No** atiende emparejamiento, solicitudes ni sesiones; eso es T144 y T153.
+/// Se conecta ahora porque sin un extremo que escuche ninguna de esas piezas puede
+/// siquiera probarse entre dos instancias.
+///
+/// Un fallo de una conexión no detiene el bucle: se registra y se sigue aceptando.
+pub async fn start_control_server(
+    identity: Arc<InstanceIdentity>,
+    puerto: u16,
+) -> Result<u16, Box<dyn std::error::Error>> {
+    use std::net::{IpAddr, Ipv6Addr, SocketAddr};
+
+    // `::` acepta también IPv4 mapeada, de modo que un solo socket cubre ambas
+    // familias sin abrir dos puertos (FR-010).
+    let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), puerto);
+    let servidor = match ControlServer::bind(addr, Arc::clone(&identity)).await {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::warn!(
+                "No se pudo ligar el canal de control a [::]:{puerto} ({e}); se reintenta en IPv4"
+            );
+            ControlServer::bind(
+                SocketAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), puerto),
+                identity,
+            )
+            .await?
+        }
+    };
+
+    let real = servidor.local_addr()?.port();
+    tracing::info!("Canal de control escuchando en el puerto {real}");
+
+    tauri::async_runtime::spawn(async move {
+        loop {
+            match servidor.accept_one().await {
+                Ok(saludo) => {
+                    // La huella es lo único con valor probatorio; el nombre que el par
+                    // declara no se registra aquí sin sanear ni se convierte en confianza.
+                    tracing::info!(
+                        "Saludo completado con {} (huella {}…)",
+                        saludo.remote_addr,
+                        &saludo.fingerprint[..8]
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!("Conexión entrante descartada: {e}");
+                }
+            }
+        }
+    });
+
+    Ok(real)
 }
 
 pub fn dirs_or_fallback() -> PathBuf {

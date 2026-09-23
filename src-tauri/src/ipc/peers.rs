@@ -81,8 +81,7 @@ pub async fn peers_manual_connect(
     port: u16,
     state: State<'_, AppState>,
 ) -> Result<IpcResult<Peer>, String> {
-    let local_pub = state.identity.to_public();
-    let peer = match manual_connect_peer(&host, port, &local_pub).await {
+    let peer = match manual_connect_peer(&host, port, &state.identity).await {
         Ok(p) => p,
         Err(e) => {
             return Ok(IpcResult::err(AppError::new(

@@ -141,6 +141,34 @@ pub fn format_madrid_human(time: SystemTime) -> String {
     )
 }
 
+/// Sello UTC en RFC 3339 con milisegundos (`2026-09-23T18:04:05.123Z`).
+///
+/// La constitución XIII lo exige en cada evento de log, y el protocolo entre peers usa
+/// el mismo formato en el campo `ts` de su sobre. Vive aquí, junto al resto del formateo
+/// de fechas, para que no existan dos implementaciones que puedan divergir.
+pub fn format_rfc3339_utc(time: SystemTime) -> String {
+    let dur = time
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default();
+    let total_secs = dur.as_secs() as i64;
+    let millis = dur.subsec_millis();
+
+    let days = total_secs.div_euclid(86400);
+    let day_secs = total_secs.rem_euclid(86400);
+    let (y, m, d) = days_to_ymd(days);
+
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+        y,
+        m,
+        d,
+        day_secs / 3600,
+        (day_secs % 3600) / 60,
+        day_secs % 60,
+        millis
+    )
+}
+
 fn days_to_ymd(days: i64) -> (i64, u32, u32) {
     let z = days + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
