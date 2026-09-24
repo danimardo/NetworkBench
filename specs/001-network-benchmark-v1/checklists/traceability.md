@@ -15,8 +15,9 @@ con comando y resultado) · `PARCIAL` (implementado, pero incompleto o sin ejecu
 camino completo) · `NO PRESENTE` (no existe código) · `NO VERIFICABLE` (exige dos
 equipos, elevación o una máquina que este entorno no tiene).
 
-**Recuento honesto**: de 67 FR, 47 `VERIFICADO`, 15 `PARCIAL`, 5 `NO PRESENTE`. De 15
-SC, 6 `VERIFICADO`, 4 `PARCIAL`, 4 `NO PRESENTE`, 1 `NO VERIFICABLE`. Nada de esto es
+**Recuento honesto** (actualizado el 2026-09-24 tras cerrar T169): de 67 FR, 47
+`VERIFICADO`, 15 `PARCIAL`, 5 `NO PRESENTE`. De 15 SC, 7 `VERIFICADO`, 3 `PARCIAL`, 4
+`NO PRESENTE`, 1 `NO VERIFICABLE`. Nada de esto es
 «100 % cobertura».
 
 ---
@@ -144,7 +145,7 @@ SC, 6 `VERIFICADO`, 4 `PARCIAL`, 4 `NO PRESENTE`, 1 `NO VERIFICABLE`. Nada de es
 | **SC-006** | 100 % de errores visibles con explicación, acción y código | `errors/mod.rs` catálogo completo, `ErrorResolution.test.ts` | `VERIFICADO` |
 | **SC-007** | Ningún recorrido ordinario menciona el motor fuera de detalles/licencias | Inspección de `locales/*.json` y pantallas: NTTTCP solo en `AboutScreen.svelte` y detalles técnicos | `VERIFICADO` |
 | **SC-008** | Todas las pantallas funcionan por teclado y escalan a 200 % | `e2e/accessibility/a11y.spec.ts` y `e2e/visual/visual.spec.ts` son `expect(true).toBe(true)` | `NO PRESENTE` |
-| **SC-009** | Español e inglés con las mismas claves y formatos/plurales coherentes | `check-locales.mjs` verifica claves (369 sincronizadas); formatos y plurales no comprobados (T169) | `PARCIAL` |
+| **SC-009** | Español e inglés con las mismas claves y formatos/plurales coherentes | `check-locales.mjs`: 369 claves sincronizadas, marcadores `{placeholder}` coherentes en las 7 claves interpoladas; sin claves de plural que verificar todavía (T169) | `VERIFICADO` |
 | **SC-010** | < 5 % de CPU y ≤ 4 Hz de refresco durante la prueba | `sampling/aggregate.rs` limita a ≤4 Hz por diseño; el «núcleo de referencia» no está definido (T168) y no hay medición real de CPU de la app en ejecución | `NO PRESENTE` |
 | **SC-011** | Ninguna entrada inválida/repetida/fuera de estado tiene efecto | `cargo test --test protocol_abuse`, validación Zod/Serde en fixtures | `VERIFICADO` |
 | **SC-012** | Toda migración conserva backup restaurable | `cargo test --test history_migrations` (`.v1.bak`, rechazo de esquema futuro) | `VERIFICADO` |
