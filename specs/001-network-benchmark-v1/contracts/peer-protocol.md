@@ -63,7 +63,7 @@ requerido o autorización incrementa la versión del protocolo.
 | `PREPARE` | initiator → peer | preparing | direction (`forward`, `reverse`, `both_sequential`, `both_simultaneous`), bounded port block, structured engine parameters |
 | `PREPARE_RESULT` | peer → initiator | preparing | ok, bounded checks, optional suggested port |
 | `READY` | engine receiver → peer | preparing | direction + opaque owned process reference; G2 decides PID exposure |
-| `START` | initiator → peer | preparing | direction, start marker, warmup/measure. En plan simultáneo activa `RUNNING_BOTH`. El marcador NO presupone relojes sincronizados: G2 fija negociación de inicio/offset y tolerancia antes de implementar (constitución VII) |
+| `START` | initiator → peer | preparing | direction, start marker, warmup/measure. En plan simultáneo activa `RUNNING_BOTH`. El marcador NO presupone relojes sincronizados: negociación cerrada, ver más abajo (constitución VII) |
 | `STARTED` | peer → initiator | running | direction |
 | `SAMPLE` | both | running | bounded observation; no response |
 | `ENGINE_DONE` | both | running | direction, role, bounded engine result |
@@ -78,6 +78,25 @@ requerido o autorización incrementa la versión del protocolo.
 
 `FIREWALL_FIX_REQUEST/RESULT` se añade en H2 solo después de que G2 defina solicitud remota y
 consentimiento local. El mensaje de red nunca concede elevación por sí solo.
+
+## Negociación de inicio (G2, constitución VII)
+
+**Cerrado el 2026-09-24** en `src-tauri/src/control/protocol.rs`, con evidencia en
+`VALIDACION.md`. No se compara ningún reloj de pared entre los dos equipos.
+
+1. Cada extremo mide el RTT enviando un `HEARTBEAT` con un nonce y esperando su eco
+   con el mismo nonce.
+2. A partir del RTT, ambos calculan **el mismo** `start_delay_ms` (`3 × RTT`, acotado
+   entre 100 ms y 2000 ms) y `tolerance_ms` (`RTT / 2`, acotado entre 50 ms y 1000 ms).
+   El cálculo es puro y determinista: mismo RTT, mismo plan, en cualquiera de los dos
+   extremos.
+3. `START` lleva ese `start_delay_ms`/`tolerance_ms` ya calculado. Cada extremo arranca
+   en `su propio` instante de recepción de `START` + `start_delay_ms`, medido con su
+   reloj monótono local (`Instant`), nunca contra una marca de tiempo del otro.
+4. Cada extremo compara **su propio** arranque real contra el esperado. Si el desvío
+   supera `tolerance_ms`, se declara `Degradado { desvio_ms }`, nunca se oculta
+   (FR-025). No se compara el arranque de un extremo contra el del otro: eso exigiría
+   la sincronización de reloj que este diseño evita.
 
 ## Emparejamiento y aceptación
 

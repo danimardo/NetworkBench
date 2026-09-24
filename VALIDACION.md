@@ -303,6 +303,32 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
   acentos debe usar las herramientas `Read`/`Write`/`Edit`, o Bash con `cat`/`sed`, y no
   `Get-Content`/`Set-Content` de PowerShell sin `-Encoding UTF8` explícito.
 
+### 1.12 Negociación de inicio sin reloj sincronizado (T152, cierra G2)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1
+- **Comando**: `cargo test --manifest-path src-tauri/Cargo.toml`
+- **Resultado**: 194 pruebas en verde, 9 nuevas en `control/protocol.rs`. El mensaje
+  `START` ya no es un campo sin implementar:
+  - El RTT se mide con un `HEARTBEAT` de nonce propio y su eco, sobre el canal TLS real.
+  - `start_delay_ms` (`3 × RTT`, 100–2000 ms) y `tolerance_ms` (`RTT / 2`, 50–1000 ms) se
+    calculan de forma pura y determinista: mismo RTT, mismo plan, en cualquiera de los
+    dos extremos.
+  - Cada extremo arranca en su **propio** instante de recepción de `START` más el
+    margen, medido con su reloj monótono (`Instant`). Nunca se compara una marca de
+    tiempo de un proceso contra la del otro.
+  - Un arranque fuera de tolerancia se declara `Degradado { desvio_ms }`, nunca se
+    oculta (FR-025).
+- **Prueba de extremo a extremo**: `test_negociacion_completa_sobre_el_canal_tls_real`
+  levanta un `ControlServer` real, mide el RTT por el canal TLS mutuo y comprueba que
+  los dos procesos, sin compartir reloj, calculan un desfase dentro de tolerancia al
+  arrancar «a la vez».
+- **Decisión registrada**: no se añadió la dependencia `rand`; el nonce del heartbeat
+  sale de los bits bajos de un UUID v4, ya generado por una dependencia existente.
+- **Lo que sigue sin estar**: esta negociación no está todavía invocada desde la
+  orquestación real de sesión (T144); es la pieza de protocolo que T144 debe consumir
+  al implementar el diálogo `PREPARE`/`READY`/`START` completo.
+- **Estado**: `VERIFICADO` (negociación, en proceso y sobre TLS real) ·
+  `NO PRESENTE` (invocación desde la orquestación de sesión)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)
