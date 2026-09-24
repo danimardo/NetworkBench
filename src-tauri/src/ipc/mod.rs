@@ -1,4 +1,5 @@
 ﻿pub mod diagnostics;
+pub mod events;
 pub mod export;
 pub mod firewall;
 pub mod history;

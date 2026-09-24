@@ -353,6 +353,29 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
   contratos y APIs legacy) sigue sin hacer.
 - **Estado**: `VERIFICADO`
 
+### 1.14 Emisión de eventos Tauri (T150 parcial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, Node 24.21.0
+- **Comando**: `cargo test --manifest-path src-tauri/Cargo.toml ipc::events` y
+  `pnpm test:unit tests/contracts/samples.test.ts`
+- **Resultado**: hasta esta tarea, cero llamadas a `.emit(` en todo el backend, pese a
+  que `src/lib/api/samples.ts` escucha `session://sample-batch` desde T058.
+  `ipc/events.rs` implementa `EmisorDeEventos` (patrón de puerto, igual que
+  `engine_port.rs`) con una implementación real sobre `AppHandle::emit` y un doble de
+  prueba. Dos pruebas en Rust confirman que el payload que sale de `SampleBatcher`
+  contiene exactamente los seis campos que el frontend espera
+  (`sessionId`/`direction`/`samples`/`latestBps`/`latestCpuPercent`/`hasGaps`) y que un
+  emisor que falla no bloquea nada. Cuatro pruebas en `tests/contracts/samples.test.ts`
+  confirman el mismo contrato desde el lado TypeScript, incluida una que reproduce el
+  patrón exacto del bug de T160 (un campo renombrado) y comprueba que Zod lo rechaza.
+- **Lo que sigue sin estar**: nada invoca `despachar_lote` desde un camino de ejecución
+  real. No hay bucle de muestreo en vivo durante una sesión —eso depende de que T144
+  complete el diálogo con el peer y la ejecución en curso—, y «progreso» y «cambios de
+  estado» no tienen contrato de evento definido en el frontend: hoy ese papel lo cumple
+  la suscripción con `revision` monotónica de `ipc/snapshot.rs` (T024). Inventar un
+  evento nuevo sin que nadie lo consuma habría sido una decisión de producto no pedida.
+- **Estado**: `VERIFICADO` (mecanismo de emisión, contrato en los dos lados) ·
+  `NO PRESENTE` (invocación desde una sesión real)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)
