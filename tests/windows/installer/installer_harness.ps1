@@ -1,126 +1,109 @@
-# Harness de Instalador NSIS Offline, Primer Arranque, Actualización y Desinstalación (T117)
-# Requisitos: PowerShell 5.1+, Windows 10 22H2 / Windows 11
+# Arnés del instalador NSIS (T117, T128).
+#
+# Comprueba lo que se puede comprobar sin elevar: que el instalador existe, que lleva
+# lo que debe llevar y que su configuración dice lo que debe decir.
+#
+# Su versión anterior afirmaba «7/7 pasadas» sobre variables fijadas a $true en el
+# propio script, incluida la preservación de datos de usuario al desinstalar. Nada de
+# eso se ejecutaba. Lo que de verdad exige instalar y desinstalar se declara PENDIENTE
+# y sale con código 2, no con éxito.
 
-param (
-    [switch]$VerboseOutput = $false
-)
+param ([switch]$VerboseOutput = $false)
 
 $ErrorActionPreference = "Stop"
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# tests/windows/installer -> raíz del repositorio
+$Raiz = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+Set-Location $Raiz
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Harness: Instalador Offline, Actualización y Limpieza   " -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
+$Triple = "x86_64-pc-windows-msvc"
+$Release = "src-tauri\target\$Triple\release"
 
-$TotalTests = 0
-$PassedTests = 0
+$Total = 0
+$Ok = 0
+$Pendientes = @()
 
-function Assert-Condition {
-    param (
-        [string]$Name,
-        [bool]$Condition,
-        [string]$Details = ""
-    )
-    $script:TotalTests++
-    if ($Condition) {
-        $script:PassedTests++
-        Write-Host "  [PASS] $Name" -ForegroundColor Green
-        if ($Details -and $VerboseOutput) {
-            Write-Host "         $Details" -ForegroundColor Gray
-        }
+function Comprobar {
+    param([string]$Nombre, [scriptblock]$Prueba, [string]$Detalle = "")
+    $script:Total++
+    $resultado = $false
+    try { $resultado = & $Prueba } catch { $resultado = $false }
+    if ($resultado) {
+        $script:Ok++
+        Write-Host "  [OK]   $Nombre" -ForegroundColor Green
     } else {
-        Write-Host "  [FAIL] $Name" -ForegroundColor Red
-        if ($Details) {
-            Write-Host "         Detalle: $Details" -ForegroundColor Yellow
-        }
+        Write-Host "  [FALLO] $Nombre" -ForegroundColor Red
+        if ($Detalle) { Write-Host "          $Detalle" -ForegroundColor Yellow }
     }
 }
 
-# 1. Verificación de configuración NSIS en tauri.conf.json
-$TauriConfPath = Join-Path $ScriptDir "..\..\..\src-tauri\tauri.conf.json"
-Assert-Condition -Name "tauri.conf.json presente" -Condition (Test-Path $TauriConfPath)
-
-$TauriConf = Get-Content $TauriConfPath -Raw | ConvertFrom-Json
-$Bundle = $TauriConf.bundle
-$Nsis = $Bundle.windows.nsis
-
-Assert-Condition -Name "Configuración NSIS presente en tauri.conf.json" `
-    -Condition ($null -ne $Nsis) `
-    -Details "Configuración NSIS detectada en bundle.windows"
-
-# 2. Simulación de estructura de instalación por máquina ($ProgramFiles\NetworkBench)
-$ExpectedInstallDir = "C:\Program Files\NetworkBench"
-$ExpectedBinaries = @("networkbench.exe", "networkbench-firewall-helper.exe", "ntttcp.exe")
-Assert-Condition -Name "Lista de binarios requeridos completa (app, helper, ntttcp)" `
-    -Condition ($ExpectedBinaries.Count -eq 3) `
-    -Details "Binarios esperados: $($ExpectedBinaries -join ', ')"
-
-# 3. Simulación de datos de usuario en AppData (preservación ante update/uninstall)
-$TestAppData = Join-Path $env:TEMP "nb_installer_test_appdata_$([guid]::NewGuid().ToString('N'))"
-New-Item -ItemType Directory -Path $TestAppData -Force | Out-Null
-$TestDb = Join-Path $TestAppData "history.db"
-$TestSettings = Join-Path $TestAppData "settings.json"
-Set-Content -Path $TestDb -Value "SQLITE_MOCK_DATA"
-Set-Content -Path $TestSettings -Value '{"schemaVersion":1,"theme":"dark","locale":"es"}'
-
-# Simular actualización v1.0.0 -> v1.1.0: la carpeta AppData no debe ser alterada
-$UpdatePreservedData = (Test-Path $TestDb) -and (Test-Path $TestSettings)
-Assert-Condition -Name "Actualización entre versiones preserva SQLite y settings.json" `
-    -Condition $UpdatePreservedData `
-    -Details "AppData no se sobreescribe durante el proceso de actualización"
-
-# 4. Simulación de desinstalación: preservación por defecto de datos de usuario
-$UninstallKeepUserData = $true
-if ($UninstallKeepUserData) {
-    # El desinstalador elimina el directorio de binarios de Program Files pero conserva AppData
-    $AppDataPreserved = (Test-Path $TestDb) -and (Test-Path $TestSettings)
-    Assert-Condition -Name "Desinstalación estándar conserva base de datos y preferencias" `
-        -Condition $AppDataPreserved `
-        -Details "Datos del usuario preservados en $TestAppData"
+function Pendiente {
+    param([string]$Nombre, [string]$Motivo)
+    $script:Pendientes += $Nombre
+    Write-Host "  [PENDIENTE] $Nombre" -ForegroundColor Yellow
+    Write-Host "              $Motivo" -ForegroundColor Gray
 }
 
-# 5. Simulación de limpieza de recursos propios del sistema (reglas de firewall y autoarranque)
-$RunRegistryKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
-$AppKeyName = "NetworkBench"
+Write-Host "=== Arnés del instalador NSIS ===" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Comprobable sin elevar:" -ForegroundColor Cyan
 
-# Limpieza comprobable
-$CleanupSimulated = $true
-Assert-Condition -Name "Limpieza de clave de autoarranque en Run Registry simulada correctamente" `
-    -Condition $CleanupSimulated
+$instalador = Get-ChildItem "$Release\bundle\nsis\*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 
-# 6. Detección de WebView2 Runtime Evergreen en Windows
-$EdgeRegistryKeys = @(
-    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
-    "HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
-    "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
-)
-$WebView2Detected = $false
-foreach ($k in $EdgeRegistryKeys) {
-    if (Test-Path $k) {
-        $pv = (Get-ItemProperty -Path $k -ErrorAction SilentlyContinue).pv
-        if ($pv -and [version]$pv -ge [version]"100.0.0.0") {
-            $WebView2Detected = $true
-            break
-        }
+Comprobar "El instalador existe" { $null -ne $instalador } `
+    "Constrúyelo con: node scripts/package/release.mjs"
+
+if ($instalador) {
+    # WebView2 offline pesa unos 150 MB. Un instalador de pocos MB significa que se
+    # coló un bootstrapper que exigiría red al instalar (FR-062, SC-014).
+    $mib = [math]::Round($instalador.Length / 1MB, 1)
+    Comprobar "Lleva el runtime WebView2 embebido ($mib MiB)" { $instalador.Length -gt 100MB } `
+        "Con menos de 100 MiB la instalación exigiría red"
+}
+
+Comprobar "El motor queda junto a la aplicación" { Test-Path "$Release\ntttcp.exe" }
+Comprobar "La aplicación principal se construyó" { Test-Path "$Release\NetworkBench.exe" }
+Comprobar "El helper elevado está empaquetado como recurso" {
+    (Test-Path "$Release\resources\networkbench-firewall-helper.exe") -or
+    (Test-Path "$Release\networkbench-firewall-helper.exe")
+}
+
+if (Test-Path "$Release\ntttcp.exe") {
+    $esperado = (Get-Content "engine\SHA256" -Raw).Trim()
+    $real = (Get-FileHash -Algorithm SHA256 "$Release\ntttcp.exe").Hash.ToLower()
+    Comprobar "La integridad del motor empaquetado coincide" { $real -eq $esperado } `
+        "esperado $esperado, obtenido $real"
+}
+
+$conf = Get-Content "src-tauri\tauri.conf.json" -Raw
+Comprobar "Instalación por máquina (perMachine)" { $conf -match '"installMode"\s*:\s*"perMachine"' }
+Comprobar "WebView2 en modo offline" { $conf -match '"type"\s*:\s*"offlineInstaller"' }
+Comprobar "Instalador bilingüe español e inglés" {
+    ($conf -match '"Spanish"') -and ($conf -match '"English"')
+}
+
+$hooks = Get-Content "src-tauri\nsis\hooks.nsh" -Raw -ErrorAction SilentlyContinue
+Comprobar "Los hooks de desinstalación existen" { $null -ne $hooks }
+if ($hooks) {
+    # Por grupo, no por nombre suelto: así la orden no puede alcanzar una regla ajena.
+    Comprobar "Las reglas de cortafuegos se retiran por grupo" { $hooks -match 'delete rule group="NetworkBench"' }
+    Comprobar "El autoarranque se retira" { $hooks -match 'CurrentVersion\\Run' }
+    Comprobar "Los datos de usuario NO se borran al desinstalar" {
+        ($hooks -notmatch 'RMDir\s+/r.*LOCALAPPDATA') -and ($hooks -match 'conservan')
     }
 }
-Assert-Condition -Name "Detección de WebView2 Runtime en el sistema anfitrión" `
-    -Condition $WebView2Detected `
-    -Details "WebView2 Runtime detectado en el registro de Windows"
-
-# Limpieza de carpeta temporal
-Remove-Item -Recurse -Force $TestAppData -ErrorAction SilentlyContinue
 
 Write-Host ""
-$SummaryColor = "Red"
-if ($PassedTests -eq $TotalTests) {
-    $SummaryColor = "Green"
-}
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Resumen de Pruebas de Instalador: $PassedTests / $TotalTests pasadas" -ForegroundColor $SummaryColor
-Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "Requiere elevación y una máquina limpia:" -ForegroundColor Cyan
+Pendiente "Instalación real sin red" "Exige ejecutar el instalador con privilegios de administrador"
+Pendiente "Primer arranque tras instalar" "Exige una sesión de escritorio"
+Pendiente "Actualización sobre una versión anterior" "Exige dos artefactos y una instalación previa"
+Pendiente "Desinstalación preservando %LOCALAPPDATA%\NetworkBench" "Exige instalar primero"
+Pendiente "Matriz Windows 10 22H2" "No hay una segunda máquina en este entorno"
 
-if ($PassedTests -ne $TotalTests) {
-    exit 1
-}
+Write-Host ""
+Write-Host "=== Resumen: $Ok/$Total comprobables superadas, $($Pendientes.Count) pendientes ===" -ForegroundColor Cyan
+Write-Host "Las pendientes NO cuentan como aprobadas." -ForegroundColor Yellow
+
+if ($Ok -ne $Total) { exit 1 }
+if ($Pendientes.Count -gt 0) { exit 2 }
 exit 0
