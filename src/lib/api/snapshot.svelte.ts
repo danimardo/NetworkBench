@@ -31,7 +31,7 @@ export class SnapshotStore {
     try {
       // 1. Obtener snapshot inicial
       const data = await invokeCommand<AppSnapshot>(
-        "app.getSnapshot",
+        "app_get_snapshot",
         undefined,
         appSnapshotSchema,
       );
@@ -104,7 +104,7 @@ export class SnapshotStore {
   async refresh(): Promise<void> {
     try {
       const fresh = await invokeCommand<AppSnapshot>(
-        "app.getSnapshot",
+        "app_get_snapshot",
         undefined,
         appSnapshotSchema,
       );

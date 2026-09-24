@@ -42,6 +42,7 @@ run("pnpm test:unit", "Tests unitarios frontend (Vitest)");
 
 // 6. Comprobaciones de arquitectura y convenciones
 run("node scripts/architecture/check-locales.mjs", "Paridad de claves locales (es/en)");
+run("node scripts/architecture/check-ipc-commands.mjs", "Comandos IPC frontend/backend");
 run("node scripts/architecture/check-imports.mjs", "Límites e imports de arquitectura");
 run("node scripts/architecture/check-logger.mjs", "Uso de logger único sin console.*");
 

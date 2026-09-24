@@ -88,7 +88,7 @@ describe("Atomic Subscription & Snapshot Contract Tests (contracts/ipc.md)", () 
   it("detecta huecos de revisión y solicita recuperación de snapshot completo", async () => {
     let mockRevision = 10;
     setTransportMock(async (cmd) => {
-      if (cmd === "app.getSnapshot") {
+      if (cmd === "app_get_snapshot") {
         return {
           ok: true,
           value: {

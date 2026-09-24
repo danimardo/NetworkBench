@@ -329,6 +329,30 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
 - **Estado**: `VERIFICADO` (negociación, en proceso y sobre TLS real) ·
   `NO PRESENTE` (invocación desde la orquestación de sesión)
 
+### 1.13 Comando IPC roto detectado y corregido, con check permanente (T160 parcial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64
+- **Hallazgo, al construir el arnés E2E de T147**: `src/lib/api/snapshot.svelte.ts`
+  invocaba `"app.getSnapshot"`. El backend registra el comando como `app_get_snapshot`
+  (nombre exacto de la función Rust, sin transformación de mayúsculas ni separadores).
+  Es la primera llamada que hace `App.svelte` al montar: **la aplicación real habría
+  fallado en cada arranque** al pedir el snapshot inicial.
+- **Por qué no lo detectó ningún test**: `tests/contracts/snapshot.test.ts` usa
+  `setTransportMock`, que sustituye el transporte entero, y el mock comprobaba el
+  mismo nombre incorrecto (`"app.getSnapshot"`). El test comparaba el código contra sí
+  mismo, nunca contra lo que Rust registra de verdad.
+- **Corrección**: los dos usos en `snapshot.svelte.ts` y el mock del test, a
+  `app_get_snapshot`.
+- **Comando**: `node scripts/architecture/check-ipc-commands.mjs`
+- **Resultado**: nuevo check que extrae los nombres reales de
+  `tauri::generate_handler![...]` en `src-tauri/src/lib.rs` y los compara contra cada
+  `invokeCommand("...")` del frontend. Probado deliberadamente: reintroducido el nombre
+  roto, el script lo detecta y sale con código 1; restaurado el nombre correcto, pasa
+  con «31 invocaciones coinciden». Cableado a `pnpm verify`.
+- **Alcance**: cubre coincidencia de nombre, no de forma de argumentos ni de tipo de
+  retorno — eso seguiría exigiendo ejecutar el comando. El resto de T160 (checks de
+  contratos y APIs legacy) sigue sin hacer.
+- **Estado**: `VERIFICADO`
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)
