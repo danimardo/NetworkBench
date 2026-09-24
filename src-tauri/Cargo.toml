@@ -6,6 +6,9 @@ authors = ["Daniel Diez Mardomingo"]
 license = "GPL-3.0-or-later"
 edition = "2024"
 rust-version = "1.98.1"
+# El crate produce dos binarios (la aplicación y el helper elevado). Sin esto, el
+# empaquetador de Tauri no sabe cuál es el principal y aborta.
+default-run = "NetworkBench"
 
 [lib]
 name = "networkbench_lib"

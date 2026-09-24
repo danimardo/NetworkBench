@@ -28,16 +28,29 @@ pub struct FirewallHelperClient;
 
 impl FirewallHelperClient {
     /// Obtiene la ruta al binario del helper auxiliar
+    /// Localiza el helper elevado.
+    ///
+    /// Hay dos disposiciones reales y las dos importan:
+    ///
+    /// - **En desarrollo**, cargo deja el helper junto al ejecutable principal.
+    /// - **Instalado**, va declarado como recurso de Tauri y queda en `resources/`.
+    ///   No es sidecar porque `tauri-build` valida los recursos durante la compilación
+    ///   del crate y el helper es ese mismo crate (ver `scripts/package/release.mjs`).
+    ///
+    /// Buscar solo junto al ejecutable funcionaba en desarrollo y fallaba tras instalar.
     pub fn get_helper_path() -> PathBuf {
+        const NOMBRE: &str = "networkbench-firewall-helper.exe";
+
         if let Ok(current_exe) = env::current_exe()
             && let Some(parent) = current_exe.parent()
         {
-            let helper_exe = parent.join("networkbench-firewall-helper.exe");
-            if helper_exe.exists() {
-                return helper_exe;
+            for candidato in [parent.join(NOMBRE), parent.join("resources").join(NOMBRE)] {
+                if candidato.exists() {
+                    return candidato;
+                }
             }
         }
-        PathBuf::from("networkbench-firewall-helper.exe")
+        PathBuf::from(NOMBRE)
     }
 
     /// Valida que una solicitud cumple la lista blanca estricta (ADR-002, ADR-005, §14.2)

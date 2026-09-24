@@ -28,3 +28,7 @@ artifacts/coverage/
 Thumbs.db
 *.tmp
 *.swp
+
+# Sidecars generados por scripts/package/prepare-bundle.mjs
+src-tauri/binaries/
+src-tauri/resources/

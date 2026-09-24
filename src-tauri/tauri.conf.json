@@ -30,14 +30,24 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "externalBin": ["binaries/ntttcp"],
+    "resources": [
+      "resources/networkbench-firewall-helper.exe",
+      "../engine/LICENSE",
+      "../engine/VERSION",
+      "../THIRD_PARTY_NOTICES.md",
+      "../LICENSE"
+    ],
+    "licenseFile": "../LICENSE",
     "windows": {
       "nsis": {
         "installMode": "perMachine",
         "languages": ["Spanish", "English"],
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "installerHooks": "nsis/hooks.nsh"
       },
       "webviewInstallMode": {
-        "type": "downloadBootstrapper"
+        "type": "offlineInstaller"
       }
     }
   }

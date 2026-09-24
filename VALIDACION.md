@@ -153,6 +153,39 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
 - **Estado**: `VERIFICADO` (ejecución real en bucle local) ·
   `NO VERIFICABLE` aquí (dos equipos)
 
+### 1.7ter Instalador construido (T145, T146, T157)
+- **Entorno**: Host local Windows 11 Pro 26200 x64
+- **Comando**: `node scripts/package/release.mjs`
+- **Resultado**:
+  ```text
+  Finished 1 bundle at:
+    src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/NetworkBench_0.1.0_x64-setup.exe
+  209.9 MiB
+  ```
+- **Contenido comprobado**: junto a `NetworkBench.exe` quedan `ntttcp.exe` (sidecar, la
+  ruta donde `app::init` lo busca) y `networkbench-firewall-helper.exe` como recurso.
+- **WebView2 offline**: `webviewInstallMode` pasa de `downloadBootstrapper` a
+  `offlineInstaller`. Los 209,9 MiB frente a los pocos MB de un bootstrapper son la
+  evidencia de que el runtime va dentro: la instalación ya no exige red (FR-062, SC-014).
+- **Desinstalación**: `src-tauri/nsis/hooks.nsh` retira las reglas de cortafuegos **por
+  grupo** —no por nombre suelto, para no poder alcanzar una regla ajena— y el
+  autoarranque, y **conserva** los datos de usuario de `%LOCALAPPDATA%\NetworkBench`
+  (FR-062).
+- **Dos defectos corregidos al empaquetar por primera vez**:
+  1. El crate tiene dos binarios y no declaraba `default-run`: el empaquetador abortaba
+     con «failed to find main binary».
+  2. `get_helper_path()` solo miraba junto al ejecutable. Instalado, el helper queda en
+     `resources/`, así que la búsqueda fallaba justo en el escenario real.
+- **Circularidad documentada**: `tauri-build` valida los recursos durante la compilación
+  del crate y el helper es ese mismo crate. `scripts/package/release.mjs` lo resuelve en
+  dos fases y restaura siempre `tauri.conf.json`, incluso ante interrupción. Alternativa
+  descartada por contradecir ADR-002: mover el helper a un crate propio.
+- **Lo que NO se ha hecho**: no se ha instalado ni desinstalado, no se ha probado en
+  Windows 10 22H2, no se ha firmado y no se ha publicado nada. El instalador existe;
+  que funcione es otra afirmación.
+- **Estado**: `VERIFICADO` (construcción y contenido) ·
+  `NO PRESENTE` (instalación, desinstalación, firma y matriz)
+
 ### 1.7 Motor Microsoft NTTTCP (v5.40 x64)
 - **Entorno**: Documentación oficial y repositorio local
 - **Comando**: `Get-FileHash -Algorithm SHA256 engine/ntttcp.exe (previsto)`
