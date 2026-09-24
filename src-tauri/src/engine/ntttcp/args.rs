@@ -31,27 +31,36 @@ pub fn build_ntttcp_args(
         }
     }
 
-    // 2. Mapeo de streams, procesadores y puerto: -m <threads_per_port>,*,<port>
-    // En NTTTCP: -m (threads_per_port,cpu_core,port) o -m (threads,*,host,port)
-    let mapping = if role == NtttcpRole::Sender {
-        let host = target_host.ok_or_else(|| {
-            NtttcpArgError::InvalidPlan("Se requiere dirección destino para el emisor".to_string())
-        })?;
-        // Evitar inyección en el host
-        if host
+    // 2. Mapeo: `-m <hilos>,<procesador>,<dirección>`, sin paréntesis y SIN el puerto.
+    //
+    // Comprobado contra NTTTCP 5.40 el 2026-09-23: el puerto va en `-p`, no dentro del
+    // mapeo, y los paréntesis que aparecen en el XML de salida no forman parte del
+    // argumento. La forma anterior, `(1,*,host,puerto)`, hacía que el motor terminara
+    // con código 9 —error de uso— y ninguna prueba lo detectaba porque no había motor.
+    //
+    // La dirección es obligatoria en los dos roles: el emisor indica a dónde conecta y
+    // el receptor a qué interfaz se liga. `*` deja la afinidad de procesador al sistema.
+    let host = target_host.ok_or_else(|| {
+        NtttcpArgError::InvalidPlan(
+            "Se requiere dirección: destino para el emisor, interfaz local para el receptor"
+                .to_string(),
+        )
+    })?;
+    if host.is_empty()
+        || host
             .chars()
-            .any(|c| c.is_whitespace() || c == '"' || c == ';')
-        {
-            return Err(NtttcpArgError::IllegalFlag(
-                "Caracteres inválidos en host destino".to_string(),
-            ));
-        }
-        format!("({},*,{},{})", plan.streams, host, plan.port)
-    } else {
-        format!("({},0,{})", plan.streams, plan.port)
-    };
+            .any(|c| c.is_whitespace() || c == '"' || c == ';' || c == ',')
+    {
+        return Err(NtttcpArgError::IllegalFlag(
+            "Caracteres inválidos en la dirección".to_string(),
+        ));
+    }
     args.push("-m".to_string());
-    args.push(mapping);
+    args.push(format!("{},*,{}", plan.streams, host));
+
+    // 2b. Puerto base. Cada stream usa `puerto + i` (V-01).
+    args.push("-p".to_string());
+    args.push(plan.port.to_string());
 
     // 3. Tamaño de buffer: por defecto 64KB (65536) para TCP, o datagrama UDP (1472 por defecto)
     let buffer_size = if plan.protocol == BenchmarkProtocol::Udp {

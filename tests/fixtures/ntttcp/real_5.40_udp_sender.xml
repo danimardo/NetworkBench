@@ -1,0 +1,71 @@
+<ntttcps computername="RYZEN" version="5.40">
+	<parameters>
+		<send_socket_buff>-1</send_socket_buff>
+		<recv_socket_buff>-1</recv_socket_buff>
+		<port>5002</port>
+		<sync_port>False</sync_port>
+		<no_sync>False</no_sync>
+		<wait_timeout_milliseconds>600000</wait_timeout_milliseconds>
+		<async>False</async>
+		<verbose>False</verbose>
+		<wsa>False</wsa>
+		<use_ipv6>False</use_ipv6>
+		<udp>True</udp>
+		<udp_unconnected>False</udp_unconnected>
+		<verify_data>False</verify_data>
+		<wait_all>False</wait_all>
+		<run_time>3000</run_time>
+		<warmup_time>0</warmup_time>
+		<cooldown_time>0</cooldown_time>
+		<dash_n_timeout>10800000</dash_n_timeout>
+		<bind_sender>False</bind_sender>
+		<sender_name></sender_name>
+		<max_active_threads>1</max_active_threads>
+		<udp_uso_size>0</udp_uso_size>
+		<udp_receive_coalescing>0</udp_receive_coalescing>
+		<tp>False</tp>
+		<use_hvsocket_flag>False</use_hvsocket_flag>
+		<no_stdio_buffer>False</no_stdio_buffer>
+		<throughput_Bpms>0</throughput_Bpms>
+		<cpu_burn>0</cpu_burn>
+		<latency_measurement>False</latency_measurement>
+		<use_io_compl_ports>False</use_io_compl_ports>
+		<cpu_from_idle_flag>False</cpu_from_idle_flag>
+		<get_estats>False</get_estats>
+		<qos_flag>False</qos_flag>
+		<jitter_measurement>False</jitter_measurement>
+		<packet_spacing>0</packet_spacing>
+	</parameters>
+	<thread index="0">
+		<realtime metric="s">0.000</realtime>
+		<throughput metric="KB/s">7232.064</throughput>
+		<throughput metric="MB/s">7.063</throughput>
+		<throughput metric="mbps">59.245</throughput>
+		<throughput metric="Bps">7405633.9</throughput>
+		<avg_bytes_per_compl metric="B">128.000</avg_bytes_per_compl>
+	</thread>
+	<total_bytes metric="MB">21.295288</total_bytes>
+	<realtime metric="s">3.015235</realtime>
+	<avg_bytes_per_compl metric="B">128.000</avg_bytes_per_compl>
+	<threads_avg_bytes_per_compl metric="B">128.000</threads_avg_bytes_per_compl>
+	<avg_frame_size metric="B">128.008</avg_frame_size>
+	<throughput metric="MB/s">7.063</throughput>
+	<throughput metric="mbps">59.245</throughput>
+	<throughput metric="Bps">7405633.9</throughput>
+	<total_buffers>174451.000</total_buffers>
+	<throughput metric="buffers/s">57856.515</throughput>
+	<avg_packets_per_interrupt metric="packets/interrupt">0.712</avg_packets_per_interrupt>
+	<interrupts metric="count/sec">81289.844</interrupts>
+	<dpcs metric="count/sec">2195.849</dpcs>
+	<avg_packets_per_dpc metric="packets/dpc">26.352</avg_packets_per_dpc>
+	<cycles metric="cycles/byte">4164.012</cycles>
+	<packets_sent>174440</packets_sent>
+	<packets_received>174475</packets_received>
+	<packets_retransmitted>0</packets_retransmitted>
+	<errors>0</errors>
+	<cpu metric="%">71.382</cpu>
+	<num_processors>12</num_processors>
+	<bufferCount>9223372036854775807</bufferCount>
+	<bufferLen>128</bufferLen>
+	<io>2</io>
+</ntttcps>

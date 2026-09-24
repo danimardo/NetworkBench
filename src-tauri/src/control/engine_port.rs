@@ -151,6 +151,7 @@ impl MotorDeLaboratorio {
             errors_count: 0,
             packets_sent: None,
             packets_received: None,
+            packets_retransmitted: None,
         }
     }
 }

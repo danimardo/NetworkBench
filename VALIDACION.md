@@ -114,6 +114,45 @@ Los estados válidos son: `VERIFICADO`, `DOCUMENTADO`, `INFERIDO`, `NO VERIFICAB
 - **Resultado**: `153.0.4234.48` (WebView2 Runtime de Microsoft Edge x64)
 - **Estado**: `VERIFICADO`
 
+### 1.7bis Puerta G1 — el motor ejecuta y su salida se interpreta (2026-09-24)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, NTTTCP 5.40 x64 en `engine/ntttcp.exe`
+- **Integridad**: `Get-FileHash -Algorithm SHA256 engine/ntttcp.exe` →
+  `f66561d09af91305412fd60ca4b28d57c7b650035d3c1edcc00a57b079e2247e`, **coincide** con
+  `engine/SHA256`.
+- **Comando**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --test engine_real -- --ignored --test-threads=1`
+- **Resultado**: 2 pruebas en verde. Una medición TCP real de 5 s en bucle local
+  atraviesa `MotorNtttcp` completo —argumentos, proceso, Job Object y parser— y devuelve
+  caudal, bytes, duración y CPU coherentes. La segunda comprueba que, con un hash
+  esperado distinto, **el binario auténtico tampoco se ejecuta** (FR-063).
+
+#### Dos defectos que solo aparecieron al haber motor
+
+Ambos estaban cubiertos por pruebas en verde contra ficheros inventados.
+
+1. **El parser no funcionaba con la salida real.** Devolvía `MissingField("role")`
+   porque buscaba un elemento `<role>` que NTTTCP no emite: el rol está en la raíz,
+   `<ntttcpr>` o `<ntttcps>`. Además `total_bytes` llega en MB con decimales,
+   `total_buffers` como `83445.000`, `<realtime>` aparece dos veces a distinta
+   profundidad y `<throughput>` cinco veces con métricas distintas —un parser que
+   tomara la última leía `buffers/s` como caudal—. Y `packets_sent`/`packets_received`
+   se rellenaban con `total_buffers` en lugar de leerse, lo que falseaba la pérdida
+   UDP (V-02). Reescrito y comprobado contra los cuatro fixtures reales.
+2. **Los argumentos eran inválidos.** `build_ntttcp_args` producía
+   `-m (1,*,host,puerto)`; la forma real es `-m 1,*,dirección` sin paréntesis y con el
+   puerto en `-p`. El motor terminaba con código 9, error de uso.
+
+Los fixtures sintéticos (`receiver_success.xml`, `sender_success.xml`, `udp_*.xml`) se
+han **eliminado**: raíz `<ntttcprun>`, elemento `<role>` y un `<throughput_bps>` que no
+existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos roles.
+
+- **Alcance**: medido sobre `127.0.0.1`. **No valida una red real** ni la medición entre
+  dos equipos, que sigue siendo trabajo de laboratorio. G1 queda cerrada en lo relativo
+  a integridad, ejecución, argumentos y parser; abierta en cuanto a medición entre
+  equipos y a V-01/V-02/V-05.
+- **Estado**: `VERIFICADO` (ejecución real en bucle local) ·
+  `NO VERIFICABLE` aquí (dos equipos)
+
 ### 1.7 Motor Microsoft NTTTCP (v5.40 x64)
 - **Entorno**: Documentación oficial y repositorio local
 - **Comando**: `Get-FileHash -Algorithm SHA256 engine/ntttcp.exe (previsto)`
