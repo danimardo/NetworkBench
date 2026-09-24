@@ -1,7 +1,8 @@
-pub mod diagnostics;
+﻿pub mod diagnostics;
 pub mod export;
 pub mod firewall;
 pub mod history;
+pub mod pairing;
 pub mod peers;
 pub mod response;
 pub mod session;

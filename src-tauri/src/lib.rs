@@ -41,6 +41,8 @@ pub fn run() {
             ipc::peers::peers_list,
             ipc::peers::peers_manual_connect,
             ipc::peers::peers_set_trust,
+            ipc::pairing::peers_pairing_start,
+            ipc::pairing::peers_pairing_confirm,
             ipc::session::session_start,
             ipc::session::session_cancel,
             ipc::session::session_get_state,

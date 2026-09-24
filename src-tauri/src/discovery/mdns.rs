@@ -30,6 +30,21 @@ pub async fn manual_connect_peer(
     port: u16,
     local_identity: &InstanceIdentity,
 ) -> Result<Peer, String> {
+    conectar_y_saludar(host, port, local_identity)
+        .await
+        .map(|(peer, _)| peer)
+}
+
+/// Igual que `manual_connect_peer`, pero conserva el canal abierto.
+///
+/// El emparejamiento necesita dos interacciones con el usuario —enseñar el código y
+/// recoger su decisión— sobre **la misma conexión**. Reconectar entre ambas rompería la
+/// garantía: el código se derivó de la huella de esa sesión TLS concreta.
+pub async fn conectar_y_saludar(
+    host: &str,
+    port: u16,
+    local_identity: &InstanceIdentity,
+) -> Result<(Peer, tokio_rustls::client::TlsStream<tokio::net::TcpStream>), String> {
     let addrs = resolve_target_address(host, port).await?;
     let target_addr = *addrs
         .first()
@@ -104,12 +119,14 @@ pub async fn manual_connect_peer(
     // Texto remoto: normalizado, acotado y no ejecutable (FR-056).
     let clean_name = sanitize_display_name(&remote_hello.payload.display_name);
 
-    Peer::new(
+    let peer = Peer::new(
         remote_hello.payload.instance_id,
         clean_name,
         fingerprint,
         vec![target_addr.to_string()],
-    )
+    )?;
+
+    Ok((peer, stream))
 }
 
 #[cfg(test)]

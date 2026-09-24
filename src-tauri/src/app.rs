@@ -24,6 +24,8 @@ pub struct AppState {
     /// significa que el motor esté: `engine/ntttcp.exe` puede faltar, y entonces cada
     /// medición devuelve `MotorError::NoDisponible` en vez de un resultado inventado.
     pub orquestador: Arc<Orquestador>,
+    /// Emparejamientos esperando la decisión del usuario, con su canal TLS abierto.
+    pub pairings: Arc<crate::ipc::pairing::PairingStore>,
 }
 
 use crate::platform::window::{MonitorBounds, WindowGeometry, normalize_or_fallback_geometry};
@@ -157,6 +159,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         session_service,
         delete_tokens,
         orquestador,
+        pairings: Arc::new(crate::ipc::pairing::PairingStore::new()),
     })
 }
 
