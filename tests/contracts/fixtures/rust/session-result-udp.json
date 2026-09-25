@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "sessionId": "00000000-0000-4000-8000-000000005e55",
+  "startedAt": "2026-09-25T10:00:00.000Z",
+  "finishedAt": "2026-09-25T10:00:30.000Z",
+  "status": "completed",
+  "initiator": {
+    "instanceId": "00000000-0000-4000-8000-00000000000a",
+    "displayName": "Equipo A",
+    "fingerprint": "000000000000000000000000000000000000000000000000000000000000000a",
+    "address": "192.168.1.10:7411"
+  },
+  "responder": {
+    "instanceId": "00000000-0000-4000-8000-00000000000b",
+    "displayName": "Equipo B",
+    "fingerprint": "000000000000000000000000000000000000000000000000000000000000000b",
+    "address": "192.168.1.10:7411"
+  },
+  "plan": {
+    "protocol": "udp",
+    "direction": "forward",
+    "streams": 1,
+    "warmupSeconds": 1,
+    "measureSeconds": 10,
+    "cooldownSeconds": 1,
+    "port": 5001
+  },
+  "capacity": {
+    "refBps": null,
+    "refSource": "unknown",
+    "capABps": null,
+    "capBBps": null
+  },
+  "directions": [
+    {
+      "direction": "forward",
+      "status": "completed",
+      "sender": {
+        "role": "sender",
+        "totalBytes": "1187500000",
+        "realtimeSeconds": 10.0,
+        "throughputBps": "950000000",
+        "cpuPercent": 12.5,
+        "buffersCount": 1000,
+        "errorsCount": 0,
+        "packetsSent": 10000,
+        "packetsRetransmitted": 12
+      },
+      "receiver": {
+        "role": "receiver",
+        "totalBytes": "1185000000",
+        "realtimeSeconds": 10.0,
+        "throughputBps": "948000000",
+        "cpuPercent": 12.5,
+        "buffersCount": 1000,
+        "errorsCount": 0,
+        "packetsReceived": 9990
+      },
+      "officialBps": "948000000",
+      "retransmission": {
+        "level": "elevated",
+        "ratio": 0.001,
+        "packetsSent": 10000,
+        "packetsRetransmitted": 10
+      },
+      "cpuSender": 12.5,
+      "cpuReceiver": 12.5,
+      "samplesCount": 0,
+      "gapsCount": 0
+    },
+    {
+      "direction": "reverse",
+      "status": "completed",
+      "sender": {
+        "role": "sender",
+        "totalBytes": "1187500000",
+        "realtimeSeconds": 10.0,
+        "throughputBps": "950000000",
+        "cpuPercent": 12.5,
+        "buffersCount": 1000,
+        "errorsCount": 0,
+        "packetsSent": 10000,
+        "packetsRetransmitted": 3
+      },
+      "receiver": {
+        "role": "receiver",
+        "totalBytes": "1185000000",
+        "realtimeSeconds": 10.0,
+        "throughputBps": "948000000",
+        "cpuPercent": 12.5,
+        "buffersCount": 1000,
+        "errorsCount": 0,
+        "packetsReceived": 9850
+      },
+      "officialBps": "948000000",
+      "retransmission": {
+        "level": "high",
+        "ratio": 0.015,
+        "packetsSent": 10000,
+        "packetsRetransmitted": 150
+      },
+      "cpuSender": 12.5,
+      "cpuReceiver": 12.5,
+      "samplesCount": 0,
+      "gapsCount": 0
+    }
+  ],
+  "asymmetry": {
+    "ratio": 0.0,
+    "isAsymmetric": false
+  },
+  "verdict": {
+    "rulesVersion": "1.0.0",
+    "level": "problem",
+    "titleKey": "verdict.problem_title",
+    "performanceLevel": null,
+    "stabilityLevel": "notEvaluable",
+    "asymmetryLevel": "ok",
+    "retransmissionLevel": "high",
+    "cpuLevel": "low",
+    "facts": [
+      {
+        "ruleId": "FACT_SPEED",
+        "messageKey": "facts.speed_measured",
+        "safeParams": {
+          "speedBps": "948000000"
+        },
+        "evidenceRefs": [
+          "officialBps"
+        ]
+      }
+    ],
+    "observations": [
+      {
+        "ruleId": "OBS_RETRANS_HIGH",
+        "messageKey": "observations.retransmissions_high"
+      }
+    ],
+    "possibleCauses": [
+      {
+        "ruleId": "CAUSE_HIGH_PACKET_LOSS",
+        "messageKey": "causes.high_packet_loss"
+      }
+    ],
+    "actions": [
+      {
+        "ruleId": "ACT_CHECK_DUPLEX",
+        "messageKey": "actions.check_duplex_and_mtu"
+      }
+    ]
+  },
+  "resultSource": "initiator",
+  "versions": {
+    "appVersion": "0.1.0",
+    "protocolVersion": 1,
+    "engineVersion": "5.40",
+    "schemaVersion": 1,
+    "thresholdsHash": "b65f73615249f16c22fa3d63685f792b7f94661eed4f7e0eea454d1dba8923c0"
+  }
+}

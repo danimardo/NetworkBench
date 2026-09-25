@@ -1,13 +1,13 @@
-//! Consentimiento local para solicitudes de sesión entrantes (T177, FR-016).
+//! Consentimiento local para solicitudes entrantes (T177 FR-016; T182 FR-012).
 //!
-//! Hasta esta tarea, un equipo `Trusted` sin autoaceptación se rechazaba sin más: no
-//! existía forma de preguntarle a la persona. Este módulo guarda la solicitud —con lo
-//! que la interfaz necesita mostrar— mientras se espera su decisión, sin bloquear otras
-//! solicitudes de otros equipos ni el resto de la aplicación mientras tanto.
+//! Hasta estas tareas, un equipo `Trusted` sin autoaceptación se rechazaba sin más y un
+//! `PAIR_REQUEST` entrante se descartaba sin responder: no existía forma de preguntarle a
+//! la persona. Este módulo guarda lo pendiente —con lo que la interfaz necesita mostrar—
+//! mientras se espera su decisión, sin bloquear otras solicitudes ni el resto de la
+//! aplicación mientras tanto.
 //!
-//! El emparejamiento entrante (`PAIR_REQUEST`, FR-012) no está aquí: sigue sin
-//! atenderse, es un flujo distinto con su propio código de verificación y queda como
-//! trabajo pendiente declarado (Fase 13).
+//! Las dos clases de solicitud (una prueba, un emparejamiento) comparten el mismo
+//! mecanismo, `Decisiones<T>`, y solo difieren en lo que se muestra.
 
 use crate::model::peer::Peer;
 use crate::model::plan::BenchmarkPlan;
@@ -31,17 +31,83 @@ pub struct SolicitudEntranteEvento {
     pub plan: BenchmarkPlan,
 }
 
-struct Pendiente {
-    solicitud: SolicitudEntranteEvento,
-    decidir: oneshot::Sender<bool>,
+/// Emparejamiento entrante esperando decisión (T182, FR-012). El código de seis dígitos
+/// no es un secreto: la persona lo compara con el que muestra el otro equipo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmparejamientoEntranteEvento {
+    pub pairing_id: Uuid,
+    pub verification_code: String,
+    pub peer: Peer,
 }
+
+/// Decisiones humanas pendientes de un tipo de solicitud. Cada entrada guarda lo que la
+/// interfaz muestra y el canal por el que la decisión vuelve a quien espera.
+pub struct Decisiones<T: Clone> {
+    activas: Mutex<HashMap<Uuid, (T, oneshot::Sender<bool>)>>,
+}
+
+impl<T: Clone> Default for Decisiones<T> {
+    fn default() -> Self {
+        Self {
+            activas: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+impl<T: Clone> Decisiones<T> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Registra `contenido` bajo `id` y devuelve el receptor de la decisión.
+    pub async fn registrar(&self, id: Uuid, contenido: T) -> oneshot::Receiver<bool> {
+        let (decidir, esperar) = oneshot::channel();
+        self.activas.lock().await.insert(id, (contenido, decidir));
+        esperar
+    }
+
+    /// Lo que sigue esperando decisión ahora mismo. Para una interfaz que recién se abre
+    /// y necesita ponerse al día sin haber visto el evento original.
+    pub async fn listar(&self) -> Vec<T> {
+        self.activas
+            .lock()
+            .await
+            .values()
+            .map(|(c, _)| c.clone())
+            .collect()
+    }
+
+    /// La persona decidió. `Err` si la solicitud ya no está (caducó, o ya se decidió):
+    /// una segunda respuesta a la misma solicitud no tiene efecto, no es un error del
+    /// usuario que deba mostrarse como tal.
+    pub async fn responder(&self, id: Uuid, aceptar: bool) -> Result<(), String> {
+        let (_, decidir) = self
+            .activas
+            .lock()
+            .await
+            .remove(&id)
+            .ok_or_else(|| "Esta solicitud ya no está esperando una decisión".to_string())?;
+        let _ = decidir.send(aceptar);
+        Ok(())
+    }
+
+    /// Retira la solicitud sin decidir nada: para cuando el plazo se agotó y hay que
+    /// dejar de ofrecerla en la interfaz.
+    pub async fn retirar(&self, id: Uuid) {
+        self.activas.lock().await.remove(&id);
+    }
+}
+
+/// Emparejamientos entrantes esperando decisión.
+pub type EmparejamientosEntrantes = Decisiones<EmparejamientoEntranteEvento>;
 
 /// Solicitudes de sesión esperando una decisión humana. Varias pueden coexistir —una por
 /// equipo que pregunte a la vez—, aunque solo una prueba puede terminar aceptándose:
 /// la reserva de la sesión única sigue ocurriendo después, en `SessionService`.
 #[derive(Default)]
 pub struct SolicitudesEntrantes {
-    activas: Mutex<HashMap<Uuid, Pendiente>>,
+    dentro: Decisiones<SolicitudEntranteEvento>,
 }
 
 impl SolicitudesEntrantes {
@@ -61,46 +127,23 @@ impl SolicitudesEntrantes {
             peer,
             plan,
         };
-        let (decidir, esperar) = oneshot::channel();
-        self.activas.lock().await.insert(
-            evento.request_id,
-            Pendiente {
-                solicitud: evento.clone(),
-                decidir,
-            },
-        );
+        let esperar = self
+            .dentro
+            .registrar(evento.request_id, evento.clone())
+            .await;
         (evento, esperar)
     }
 
-    /// Lo que sigue esperando decisión ahora mismo. Para una interfaz que recién se abre
-    /// y necesita ponerse al día sin haber visto el evento original.
     pub async fn listar(&self) -> Vec<SolicitudEntranteEvento> {
-        self.activas
-            .lock()
-            .await
-            .values()
-            .map(|p| p.solicitud.clone())
-            .collect()
+        self.dentro.listar().await
     }
 
-    /// La persona decidió. `Err` si la solicitud ya no está (caducó, o ya se decidió):
-    /// una segunda respuesta a la misma solicitud no tiene efecto, no es un error del
-    /// usuario que deba mostrarse como tal.
     pub async fn responder(&self, id: Uuid, aceptar: bool) -> Result<(), String> {
-        let pendiente = self
-            .activas
-            .lock()
-            .await
-            .remove(&id)
-            .ok_or_else(|| "Esta solicitud ya no está esperando una decisión".to_string())?;
-        let _ = pendiente.decidir.send(aceptar);
-        Ok(())
+        self.dentro.responder(id, aceptar).await
     }
 
-    /// Retira la solicitud sin decidir nada: para cuando el plazo se agotó y hay que
-    /// dejar de ofrecerla en la interfaz.
     pub async fn retirar(&self, id: Uuid) {
-        self.activas.lock().await.remove(&id);
+        self.dentro.retirar(id).await
     }
 }
 

@@ -1,0 +1,16 @@
+{
+  "sessionId": "00000000-0000-4000-8000-000000005e55",
+  "direction": "forward",
+  "samples": [
+    {
+      "tMs": 1000,
+      "direction": "forward",
+      "bps": 900000002,
+      "cpuPercent": 12.5,
+      "gap": false
+    }
+  ],
+  "latestBps": 900000002,
+  "latestCpuPercent": 12.5,
+  "hasGaps": false
+}

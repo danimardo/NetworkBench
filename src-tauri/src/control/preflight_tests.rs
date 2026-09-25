@@ -56,14 +56,32 @@ fn test_preflight_nic_localhost() {
     assert_eq!(check.check_type, PreflightCheckType::NetworkInterface);
 }
 
+/// Una base con `cuantos` puertos consecutivos libres, **fuera del rango efímero** de
+/// Windows (49152–65535). Otras pruebas en paralelo abren listeners efímeros y Windows
+/// los reparte casi en secuencia, así que los vecinos de un puerto efímero suelen estar
+/// ocupados en ese instante; ninguna otra prueba usa este rango.
+fn base_libre(cuantos: u16) -> u16 {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos() as u16;
+    let mut base = 20_000 + nanos % 9_000;
+    loop {
+        let sockets: Vec<_> = (0..cuantos)
+            .map(|i| TcpListener::bind(("0.0.0.0", base + i)))
+            .collect();
+        if sockets.iter().all(|s| s.is_ok()) {
+            return base;
+        }
+        base += cuantos + 1;
+    }
+}
+
 #[test]
 fn test_preflight_ports_available() {
-    // Escoger un puerto libre dinámico
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-    drop(listener);
+    let base = base_libre(3);
 
-    let check = PreflightEvaluator::check_ports(Some(port), port + 10, 2);
+    let check = PreflightEvaluator::check_ports(Some(base), base + 1, 2);
     assert_eq!(check.status, PreflightStatus::Passed);
     assert_eq!(check.check_type, PreflightCheckType::Ports);
 }
@@ -88,10 +106,7 @@ fn test_preflight_ports_sin_control_port_no_lo_comprueba() {
     // arbitrario: con las pruebas corriendo en paralelo, un puerto elegido a ciegas
     // (p. ej. `+1000`) puede coincidir con el que otra prueba tiene abierto en ese
     // instante, y la prueba falla de forma intermitente sin que el código cambie.
-    let base = {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        listener.local_addr().unwrap().port()
-    };
+    let base = base_libre(1);
 
     let check = PreflightEvaluator::check_ports(None, base, 1);
     assert_eq!(check.status, PreflightStatus::Passed);

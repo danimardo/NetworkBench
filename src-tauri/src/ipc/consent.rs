@@ -38,3 +38,34 @@ pub async fn session_incoming_respond(
         ))),
     }
 }
+
+// --- Emparejamiento entrante (T182, FR-012) ---
+
+#[tauri::command]
+pub async fn peers_pairing_incoming_list(
+    state: State<'_, AppState>,
+) -> Result<IpcResult<Vec<crate::control::consent::EmparejamientoEntranteEvento>>, String> {
+    Ok(IpcResult::ok(
+        state.emparejamientos_entrantes.listar().await,
+    ))
+}
+
+#[tauri::command]
+pub async fn peers_pairing_incoming_respond(
+    pairing_id: Uuid,
+    accepted: bool,
+    state: State<'_, AppState>,
+) -> Result<IpcResult<()>, String> {
+    match state
+        .emparejamientos_entrantes
+        .responder(pairing_id, accepted)
+        .await
+    {
+        Ok(()) => Ok(IpcResult::ok(())),
+        Err(e) => Ok(IpcResult::err(AppError::new(
+            ErrorCode::InternalError,
+            ErrorSeverity::Warning,
+            e,
+        ))),
+    }
+}

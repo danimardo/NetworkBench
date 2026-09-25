@@ -45,6 +45,8 @@ pub struct ContextoSesion {
     /// `muestreo.emisor`: puede haber consentimiento sin muestreo en vivo configurado.
     /// `None` en las pruebas que no necesitan verificar el aviso.
     pub emisor_eventos: Option<Arc<dyn crate::ipc::events::EmisorDeEventos>>,
+    /// Emparejamientos entrantes esperando decisión humana (T182, FR-012).
+    pub emparejamientos: Arc<crate::control::consent::EmparejamientosEntrantes>,
 }
 
 /// Convierte las fronteras de pata en transiciones de estado y en muestreo en vivo.
@@ -368,6 +370,7 @@ impl SessionService {
             vec![format!("{local}:0")],
         )?;
 
+        let prueba_interrupcion = prueba.interrupcion.clone();
         let mut resultado = ensamblar_resultado(
             &ctx.orquestador,
             session_id,
@@ -391,6 +394,15 @@ impl SessionService {
                 .map_err(|_| "La base de datos está bloqueada".to_string())?;
             guardar_resultado_de_sesion(&mut conn, peer, &resultado)
                 .map_err(|e| format!("No se pudo guardar el resultado: {e}"))?;
+        }
+
+        // Cortada tras completar una pata (FR-024): el resultado incompleto ya está
+        // guardado. No se intenta el intercambio por un canal que se sabe perdido, y la
+        // sesión termina como fallida con el motivo de la pérdida (NB-CONN-005).
+        if let Some(motivo) = &prueba_interrupcion {
+            return Err(format!(
+                "Canal perdido a mitad de la prueba (NB-CONN-005): {motivo}"
+            ));
         }
 
         // Un `SESSION_ACK` ausente o tardío no deshace lo que este equipo ya guardó: solo
@@ -578,6 +590,7 @@ impl SessionService {
         // cifras oficiales que el iniciador. Es la vista que se persiste si el
         // `SESSION_RESULT` canónico no llega o no coincide (contrato, punto 5); si llega y
         // coincide, se persiste esa en su lugar (T176).
+        let prueba_interrupcion = prueba.interrupcion.clone();
         let local_result = ensamblar_resultado(
             &ctx.orquestador,
             session_id,
@@ -589,16 +602,22 @@ impl SessionService {
             prueba.direcciones,
         );
 
-        let resultado = match recibir_resultado_o_conservar_local(
-            &mut stream,
-            session_id,
-            &local_result,
-            crate::control::session_flow::ESPERA_RECONCILIACION,
-        )
-        .await
-        {
-            ResultadoReconciliado::Recibido(canonico) => *canonico,
-            ResultadoReconciliado::Local => local_result,
+        // Cortada tras completar una pata: no hay canal por el que esperar el resultado
+        // canónico. Se conserva la vista local, marcada `local` (degradada), sin esperar.
+        let resultado = if prueba_interrupcion.is_some() {
+            local_result
+        } else {
+            match recibir_resultado_o_conservar_local(
+                &mut stream,
+                session_id,
+                &local_result,
+                crate::control::session_flow::ESPERA_RECONCILIACION,
+            )
+            .await
+            {
+                ResultadoReconciliado::Recibido(canonico) => *canonico,
+                ResultadoReconciliado::Local => local_result,
+            }
         };
 
         {
@@ -609,6 +628,12 @@ impl SessionService {
                 .map_err(|_| "La base de datos está bloqueada".to_string())?;
             guardar_resultado_de_sesion(&mut conn, peer, &resultado)
                 .map_err(|e| format!("No se pudo guardar el resultado: {e}"))?;
+        }
+
+        if let Some(motivo) = prueba_interrupcion {
+            return Err(format!(
+                "Canal perdido a mitad de la prueba (NB-CONN-005): {motivo}"
+            ));
         }
 
         self.transicion(SessionState::Completed, session_id).await?;
@@ -649,7 +674,7 @@ async fn pedir_consentimiento(
 
 /// Una dirección IPv4 que llega por un socket doble pila aparece como `::ffff:a.b.c.d`.
 /// NTTTCP no la entiende sin `-6`, así que se devuelve a su forma IPv4.
-fn normalizar_ip(ip: IpAddr) -> IpAddr {
+pub(crate) fn normalizar_ip(ip: IpAddr) -> IpAddr {
     match ip {
         IpAddr::V6(v6) => v6
             .to_ipv4_mapped()

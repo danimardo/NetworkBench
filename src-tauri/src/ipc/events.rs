@@ -14,12 +14,13 @@
 //! así el código que agrupa y despacha muestras se prueba sin un `AppHandle` real.
 
 use super::response::IpcResult;
-use crate::control::consent::SolicitudEntranteEvento;
+use crate::control::consent::{EmparejamientoEntranteEvento, SolicitudEntranteEvento};
 use crate::sampling::aggregate::SampleBatch;
 use tauri::{AppHandle, Emitter};
 
 pub const EVENTO_MUESTRAS: &str = "session://sample-batch";
 pub const EVENTO_SOLICITUD_ENTRANTE: &str = "session://incoming-request";
+pub const EVENTO_EMPAREJAMIENTO_ENTRANTE: &str = "peers://incoming-pairing";
 
 /// Sale de la sesión de medida hacia el frontend. No decide cuándo hay un lote listo
 /// —eso es `SampleBatcher`— solo lo entrega.
@@ -35,6 +36,14 @@ pub trait EmisorDeEventos: Send + Sync {
     ) -> Result<(), String> {
         Ok(())
     }
+
+    /// Avisa de un emparejamiento entrante que espera decisión humana (T182, FR-012).
+    fn emitir_emparejamiento_entrante(
+        &self,
+        _emparejamiento: &EmparejamientoEntranteEvento,
+    ) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 impl EmisorDeEventos for AppHandle {
@@ -46,6 +55,14 @@ impl EmisorDeEventos for AppHandle {
     fn emitir_solicitud_entrante(&self, solicitud: &SolicitudEntranteEvento) -> Result<(), String> {
         self.emit(EVENTO_SOLICITUD_ENTRANTE, solicitud)
             .map_err(|e| format!("No se pudo emitir {EVENTO_SOLICITUD_ENTRANTE}: {e}"))
+    }
+
+    fn emitir_emparejamiento_entrante(
+        &self,
+        emparejamiento: &EmparejamientoEntranteEvento,
+    ) -> Result<(), String> {
+        self.emit(EVENTO_EMPAREJAMIENTO_ENTRANTE, emparejamiento)
+            .map_err(|e| format!("No se pudo emitir {EVENTO_EMPAREJAMIENTO_ENTRANTE}: {e}"))
     }
 }
 

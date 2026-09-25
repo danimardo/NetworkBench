@@ -12,7 +12,6 @@ use tokio_rustls::TlsConnector;
 use uuid::Uuid;
 
 pub const CONTROL_PORT_DEFAULT: u16 = 7411;
-pub const MDNS_SERVICE_TYPE: &str = "_netbench._tcp.local.";
 
 /// Nombre presentado en el SNI. No identifica a nadie ni se valida: en este protocolo
 /// la identidad la da la huella del certificado, no el nombre de host (FR-011).

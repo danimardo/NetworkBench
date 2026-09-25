@@ -5,6 +5,7 @@ pub mod domain;
 pub mod engine_port;
 pub mod orquestador;
 pub mod pairing_flow;
+pub mod pairing_incoming;
 pub mod plan;
 pub mod ports;
 pub mod preflight;

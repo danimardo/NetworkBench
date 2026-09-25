@@ -1,0 +1,11 @@
+{
+  "protocol": "udp",
+  "direction": "forward",
+  "streams": 1,
+  "warmupSeconds": 1,
+  "measureSeconds": 10,
+  "cooldownSeconds": 1,
+  "port": 5201,
+  "udpTargetRateBps": "100000000",
+  "udpPacketSizeBytes": 1472
+}

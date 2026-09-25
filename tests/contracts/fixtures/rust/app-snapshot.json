@@ -1,0 +1,11 @@
+{
+  "revision": 3,
+  "appVersion": "0.1.0",
+  "locale": "es",
+  "theme": "dark",
+  "instanceId": "00000000-0000-4000-8000-00000000000a",
+  "instanceName": "Equipo A",
+  "isSessionActive": true,
+  "activeSessionId": "00000000-0000-4000-8000-000000005e55",
+  "peersCount": 2
+}

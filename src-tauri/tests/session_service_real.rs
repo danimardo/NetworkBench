@@ -37,6 +37,7 @@ use uuid::Uuid;
 struct Recoge(
     Mutex<Vec<SampleBatch>>,
     Mutex<Vec<networkbench_lib::control::consent::SolicitudEntranteEvento>>,
+    Mutex<Vec<networkbench_lib::control::consent::EmparejamientoEntranteEvento>>,
 );
 
 impl EmisorDeEventos for Recoge {
@@ -50,6 +51,14 @@ impl EmisorDeEventos for Recoge {
         solicitud: &networkbench_lib::control::consent::SolicitudEntranteEvento,
     ) -> Result<(), String> {
         self.1.lock().unwrap().push(solicitud.clone());
+        Ok(())
+    }
+
+    fn emitir_emparejamiento_entrante(
+        &self,
+        emparejamiento: &networkbench_lib::control::consent::EmparejamientoEntranteEvento,
+    ) -> Result<(), String> {
+        self.2.lock().unwrap().push(emparejamiento.clone());
         Ok(())
     }
 }
@@ -93,6 +102,9 @@ async fn nodo(nombre: &str, motor_real: bool) -> Nodo {
         muestreo,
         consentimiento: Arc::new(networkbench_lib::control::consent::SolicitudesEntrantes::new()),
         emisor_eventos: Some(muestras.clone()),
+        emparejamientos: Arc::new(
+            networkbench_lib::control::consent::EmparejamientosEntrantes::new(),
+        ),
     };
     let servicio = Arc::new(SessionService::new());
 
@@ -548,4 +560,289 @@ async fn t144_cancelar_a_mitad_no_deja_procesos_huerfanos() {
         }
     }
     assert!(!quedan, "tras cancelar no debe quedar ningún ntttcp.exe");
+}
+
+// --- T182: emparejamiento entrante (FR-012), sobre TLS real y sin motor ---
+
+/// Espera a que aparezca un emparejamiento pendiente en `nodo` y lo decide.
+async fn decidir_primer_emparejamiento(nodo: &Nodo, aceptar: bool) {
+    let inicio = std::time::Instant::now();
+    loop {
+        if let Some(e) = nodo.ctx.emparejamientos.listar().await.into_iter().next() {
+            nodo.ctx
+                .emparejamientos
+                .responder(e.pairing_id, aceptar)
+                .await
+                .expect("el emparejamiento debía seguir pendiente");
+            return;
+        }
+        if inicio.elapsed() > Duration::from_secs(5) {
+            panic!("no apareció ningún emparejamiento pendiente");
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
+fn peer_guardado(en: &Nodo, otro: &Nodo) -> Option<Peer> {
+    let db = en.ctx.database.connection().lock().unwrap();
+    networkbench_lib::history::get_peer_by_fingerprint(&db, &otro.identity.fingerprint).unwrap()
+}
+
+/// Lo que haría `peers_pairing_start` en A hacia B, hasta tener el código.
+async fn emparejar_desde(
+    a: &Nodo,
+    b: &Nodo,
+) -> (
+    networkbench_lib::control::pairing_flow::EmparejamientoEnCurso,
+    tokio_rustls::client::TlsStream<tokio::net::TcpStream>,
+) {
+    let (peer_b, stream) =
+        networkbench_lib::discovery::conectar_y_saludar("127.0.0.1", b.puerto_control, &a.identity)
+            .await
+            .expect("conectar");
+    let emp = networkbench_lib::control::pairing_flow::EmparejamientoEnCurso::iniciar(
+        &a.identity.fingerprint,
+        &peer_b.fingerprint,
+    )
+    .unwrap();
+    (emp, stream)
+}
+
+/// Decide en segundo plano la primera solicitud que aparezca en `b`.
+fn decidir_en_segundo_plano(
+    b: &Nodo,
+    aceptar: bool,
+) -> tokio::task::JoinHandle<networkbench_lib::control::consent::EmparejamientoEntranteEvento> {
+    let almacen = b.ctx.emparejamientos.clone();
+    tokio::spawn(async move {
+        let inicio = std::time::Instant::now();
+        loop {
+            if let Some(e) = almacen.listar().await.into_iter().next() {
+                almacen.responder(e.pairing_id, aceptar).await.unwrap();
+                return e;
+            }
+            assert!(inicio.elapsed() < Duration::from_secs(5));
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+}
+
+#[tokio::test]
+async fn t182_un_emparejamiento_entrante_aceptado_guarda_confianza_sin_autoaceptacion() {
+    let a = nodo("A", false).await;
+    let b = nodo("B", false).await;
+    assert!(peer_guardado(&b, &a).is_none(), "B no conoce a A todavía");
+
+    let (emp, mut stream) = emparejar_desde(&a, &b).await;
+    let decision = decidir_en_segundo_plano(&b, true);
+
+    let aceptado =
+        networkbench_lib::control::pairing_flow::solicitar_emparejamiento(&mut stream, &emp, true)
+            .await
+            .expect("solicitar");
+    assert!(aceptado, "B dijo que sí");
+
+    // Lo que B enseñó a su persona es el mismo código que ve la de A: es lo único que
+    // hace que la comparación humana valga algo.
+    let visto_en_b = decision.await.unwrap();
+    assert_eq!(visto_en_b.verification_code, emp.codigo);
+    assert_eq!(visto_en_b.pairing_id, emp.id);
+    assert_eq!(
+        b.muestras.2.lock().unwrap().len(),
+        1,
+        "se avisó a la interfaz"
+    );
+
+    let guardado = peer_guardado(&b, &a).expect("B debe haber guardado a A");
+    assert_eq!(guardado.trust_state, TrustState::Trusted);
+    assert!(
+        !guardado.auto_accept,
+        "la autoaceptación no se concede al emparejar"
+    );
+    assert_eq!(guardado.instance_id, a.identity.instance_id);
+    // Las direcciones no se persisten (el historial las carga vacías); la que se calculó
+    // para mostrar viajó en el evento hacia la interfaz.
+    assert!(visto_en_b.peer.addresses[0].ends_with(":7411"));
+}
+
+#[tokio::test]
+async fn t182_un_emparejamiento_entrante_rechazado_no_guarda_nada() {
+    let a = nodo("A", false).await;
+    let b = nodo("B", false).await;
+
+    let (emp, mut stream) = emparejar_desde(&a, &b).await;
+    let decision = decidir_en_segundo_plano(&b, false);
+
+    let aceptado =
+        networkbench_lib::control::pairing_flow::solicitar_emparejamiento(&mut stream, &emp, true)
+            .await
+            .expect("solicitar");
+    decision.await.unwrap();
+    assert!(!aceptado);
+    assert!(peer_guardado(&b, &a).is_none(), "un no no deja confianza");
+}
+
+/// Un código que no cuadra no llega a la persona: se contesta `verificationFailed` sin
+/// preguntar y sin registrar nada pendiente.
+#[tokio::test]
+async fn t182_un_codigo_incorrecto_se_rechaza_sin_preguntar() {
+    use networkbench_lib::control::transport::{recv_envelope, send_envelope};
+    use networkbench_lib::model::protocol::{
+        PairRequestPayload, PairResultPayload, ProtocolEnvelope, ProtocolMessageType,
+    };
+
+    let a = nodo("A", false).await;
+    let b = nodo("B", false).await;
+    let (emp, mut stream) = emparejar_desde(&a, &b).await;
+
+    let codigo_malo = if emp.codigo == "000000" {
+        "111111"
+    } else {
+        "000000"
+    };
+    send_envelope(
+        &mut stream,
+        &ProtocolEnvelope {
+            msg_type: ProtocolMessageType::PairRequest,
+            id: emp.id,
+            session_id: None,
+            ts: "2026-09-25T00:00:00.000Z".to_string(),
+            in_reply_to: None,
+            payload: PairRequestPayload {
+                pairing_code: codigo_malo.to_string(),
+            },
+        },
+    )
+    .await
+    .unwrap();
+
+    let respuesta: ProtocolEnvelope<PairResultPayload> =
+        tokio::time::timeout(Duration::from_secs(5), recv_envelope(&mut stream))
+            .await
+            .expect("B debe contestar sin esperar a nadie")
+            .unwrap();
+    assert!(!respuesta.payload.accepted);
+    assert_eq!(
+        respuesta.payload.reason.as_deref(),
+        Some("verificationFailed")
+    );
+    assert!(b.ctx.emparejamientos.listar().await.is_empty());
+    assert!(
+        b.muestras.2.lock().unwrap().is_empty(),
+        "no se avisó a la interfaz"
+    );
+    assert!(peer_guardado(&b, &a).is_none());
+}
+
+/// Un segundo emparejamiento del mismo equipo mientras el primero espera no acumula
+/// preguntas: se rechaza al instante.
+#[tokio::test]
+async fn t182_un_segundo_emparejamiento_del_mismo_equipo_se_rechaza_mientras_hay_uno_pendiente() {
+    let a = nodo("A", false).await;
+    let b = nodo("B", false).await;
+
+    let (emp1, mut s1) = emparejar_desde(&a, &b).await;
+    let primera = tokio::spawn(async move {
+        networkbench_lib::control::pairing_flow::solicitar_emparejamiento(&mut s1, &emp1, true)
+            .await
+    });
+    let inicio = std::time::Instant::now();
+    while b.ctx.emparejamientos.listar().await.is_empty() {
+        assert!(inicio.elapsed() < Duration::from_secs(5));
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    let (emp2, mut s2) = emparejar_desde(&a, &b).await;
+    let segunda = tokio::time::timeout(
+        Duration::from_secs(5),
+        networkbench_lib::control::pairing_flow::solicitar_emparejamiento(&mut s2, &emp2, true),
+    )
+    .await
+    .expect("el segundo debe rechazarse sin esperar")
+    .expect("solicitar");
+    assert!(!segunda);
+    assert_eq!(
+        b.ctx.emparejamientos.listar().await.len(),
+        1,
+        "sigue solo la primera"
+    );
+
+    decidir_primer_emparejamiento(&b, true).await;
+    assert!(primera.await.unwrap().unwrap());
+}
+
+/// T171 (FR-024, US3/AC3, `Historias.md` §8.5/§19.3): el canal se pierde a mitad de la
+/// segunda pata, con NTTTCP real. La primera, ya completa, se conserva; la sesión se guarda
+/// como **incompleta**, la segunda no aparece como continua, y no queda ningún proceso.
+///
+/// La pérdida se provoca cancelando en B mientras B emite la vuelta: con el motor en
+/// marcha no hay punto cooperativo, así que B aborta su tarea y A solo ve caer el canal,
+/// sin ningún `CANCEL` (A no ha cancelado nada: para A es una pérdida, no una cancelación).
+#[tokio::test]
+#[ignore = "lanza NTTTCP real y corta el canal a mitad; ejecutar con --ignored"]
+async fn t171_una_perdida_de_canal_en_la_segunda_pata_guarda_la_sesion_incompleta() {
+    let a = nodo("A", true).await;
+    let b = nodo("B", true).await;
+    conocer(&b, &a, TrustState::TrustedAutoAccept);
+    let peer_b = conocer(&a, &b, TrustState::Trusted);
+
+    let session_id = a
+        .servicio
+        .iniciar_sesion_real(a.ctx.clone(), peer_b, plan_corto(5570))
+        .await
+        .expect("iniciar");
+
+    // B es receptor en la ida y emisor en la vuelta: `RunningSend` en B es la segunda pata.
+    let inicio = std::time::Instant::now();
+    while b.servicio.current_state().await != SessionState::RunningSend {
+        assert!(
+            inicio.elapsed() < Duration::from_secs(60),
+            "B no llegó a la segunda pata"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    tokio::time::sleep(Duration::from_millis(1_500)).await;
+    let b_id = b.servicio.active_session_id().await.expect("sesión en B");
+    b.servicio.cancel(b_id).await.expect("cancelar en B");
+
+    let estado_a = esperar_estado_terminal(&a.servicio, Duration::from_secs(90)).await;
+    assert_eq!(
+        estado_a,
+        SessionState::Failed,
+        "para A es una pérdida de canal (NB-CONN-005), no una cancelación ni un éxito"
+    );
+
+    let en_a = {
+        let db = a.ctx.database.connection().lock().unwrap();
+        get_session_by_id(&db, &session_id)
+            .unwrap()
+            .expect("A debe haber guardado lo completado")
+    };
+    assert_eq!(en_a.status, "incomplete");
+    assert!(en_a.is_partial);
+    assert!(en_a.forward_bps.is_some(), "la primera pata se conserva");
+    assert!(
+        en_a.reverse_bps.is_none(),
+        "la pata cortada no aparece como continua ni con velocidad"
+    );
+
+    assert_eq!(b.servicio.current_state().await, SessionState::Cancelled);
+    assert_eq!(sesiones_guardadas(&b), 0, "B canceló: no guarda nada");
+
+    let mut quedan = true;
+    for _ in 0..40 {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let salida = std::process::Command::new("tasklist")
+            .args(["/FI", "IMAGENAME eq ntttcp.exe", "/NH"])
+            .output()
+            .unwrap();
+        if !String::from_utf8_lossy(&salida.stdout).contains("ntttcp.exe") {
+            quedan = false;
+            break;
+        }
+    }
+    assert!(
+        !quedan,
+        "tras perder el canal no debe quedar ningún ntttcp.exe"
+    );
 }

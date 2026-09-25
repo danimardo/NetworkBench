@@ -1,0 +1,46 @@
+[
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000100",
+    "displayName": "Equipo 0",
+    "fingerprint": "0000000000000000000000000000000000000000000000000000000000000100",
+    "addresses": [
+      "192.168.1.20:7411"
+    ],
+    "trustState": "unknown",
+    "autoAccept": false,
+    "lastSeen": "2026-09-25T10:00:00.000Z"
+  },
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000101",
+    "displayName": "Equipo 1",
+    "fingerprint": "0000000000000000000000000000000000000000000000000000000000000101",
+    "addresses": [
+      "192.168.1.20:7411"
+    ],
+    "trustState": "known",
+    "autoAccept": false,
+    "lastSeen": "2026-09-25T10:00:00.000Z"
+  },
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000102",
+    "displayName": "Equipo 2",
+    "fingerprint": "0000000000000000000000000000000000000000000000000000000000000102",
+    "addresses": [
+      "192.168.1.20:7411"
+    ],
+    "trustState": "trusted",
+    "autoAccept": false,
+    "lastSeen": "2026-09-25T10:00:00.000Z"
+  },
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000103",
+    "displayName": "Equipo 3",
+    "fingerprint": "0000000000000000000000000000000000000000000000000000000000000103",
+    "addresses": [
+      "192.168.1.20:7411"
+    ],
+    "trustState": "trustedAutoAccept",
+    "autoAccept": true,
+    "lastSeen": "2026-09-25T10:00:00.000Z"
+  }
+]

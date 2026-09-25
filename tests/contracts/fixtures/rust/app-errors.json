@@ -1,0 +1,37 @@
+[
+  {
+    "code": "NB-PORT-001",
+    "severity": "error",
+    "messageKey": "errors.NB-PORT-001",
+    "actions": [
+      "change_port"
+    ]
+  },
+  {
+    "code": "NB-FW-004",
+    "severity": "warning",
+    "messageKey": "errors.NB-FW-004",
+    "actions": [
+      "retry_as_admin",
+      "show_firewall_instructions"
+    ]
+  },
+  {
+    "code": "NB-PERM-001",
+    "severity": "error",
+    "messageKey": "errors.NB-PERM-001",
+    "actions": [
+      "retry_as_admin",
+      "show_details"
+    ]
+  },
+  {
+    "code": "NB-INTERNAL-001",
+    "severity": "error",
+    "messageKey": "errors.NB-INTERNAL-001",
+    "actions": [
+      "copy_diagnostics",
+      "retry"
+    ]
+  }
+]

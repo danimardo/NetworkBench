@@ -7,10 +7,13 @@
 //! Hasta esta tarea, el bucle del servidor registraba el saludo y soltaba la conexión: un
 //! equipo podía conectar y saludar, pero ninguna solicitud tenía a nadie que la atendiera.
 
+use crate::control::pairing_incoming::atender_emparejamiento_entrante;
 use crate::control::server::SaludoEntrante;
 use crate::control::service::{ContextoSesion, SessionService};
 use crate::control::transport::recv_envelope;
-use crate::model::protocol::{ProtocolEnvelope, ProtocolMessageType, RequestPayload};
+use crate::model::protocol::{
+    PairRequestPayload, ProtocolEnvelope, ProtocolMessageType, RequestPayload,
+};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -21,9 +24,9 @@ const PLAZO_PRIMER_MENSAJE: Duration = Duration::from_secs(15);
 pub async fn despachar(servicio: Arc<SessionService>, ctx: ContextoSesion, saludo: SaludoEntrante) {
     let SaludoEntrante {
         fingerprint,
+        hello,
         remote_addr,
         mut stream,
-        ..
     } = saludo;
 
     let primero: ProtocolEnvelope<serde_json::Value> =
@@ -63,12 +66,32 @@ pub async fn despachar(servicio: Arc<SessionService>, ctx: ContextoSesion, salud
                 .await;
         }
         ProtocolMessageType::PairRequest => {
-            // Sin interfaz para mostrar el código y recoger la decisión de la persona,
-            // no se puede atender: aceptar sin ella vaciaría de sentido la verificación
-            // humana (FR-012). Queda registrado para que no parezca un fallo de red.
-            tracing::warn!(
-                "Emparejamiento entrante de {remote_addr} sin diálogo de decisión todavía"
-            );
+            // Aceptar sin que una persona compare los códigos vaciaría de sentido la
+            // verificación (FR-012): el flujo entrante espera su decisión (T182).
+            let payload: PairRequestPayload = match serde_json::from_value(primero.payload) {
+                Ok(p) => p,
+                Err(e) => {
+                    tracing::warn!("PAIR_REQUEST de {remote_addr} con forma no válida: {e}");
+                    return;
+                }
+            };
+            let tipado = ProtocolEnvelope {
+                msg_type: primero.msg_type,
+                id: primero.id,
+                session_id: primero.session_id,
+                ts: primero.ts,
+                in_reply_to: primero.in_reply_to,
+                payload,
+            };
+            atender_emparejamiento_entrante(
+                &ctx,
+                &hello,
+                &fingerprint,
+                remote_addr,
+                &mut stream,
+                tipado,
+            )
+            .await;
         }
         otro => {
             tracing::warn!("Primer mensaje inesperado de {remote_addr}: {otro:?}");

@@ -42,9 +42,9 @@ equipos, elevación o una máquina que este entorno no tiene).
 | ID | Módulos reales | Tareas | Evidencia | Estado |
 |---|---|---|---|---|
 | **FR-009** | `control/server.rs` (escucha), `control/service.rs` | T143 | `VALIDACION.md` §1.8: servidor real, TLS mutuo, HELLO | `VERIFICADO` |
-| **FR-010** | `discovery/mdns.rs` (conexión manual), `discovery/mod.rs` | T037, T151 | `conectar_y_saludar` probado sobre TLS real; **mDNS sin implementar** | `PARCIAL` — solo conexión manual; `mdns-sd` es dependencia sin uso (T151 abierta) |
+| **FR-010** | `discovery/anuncio.rs` (T151), `discovery/mdns.rs` (conexión manual), `ipc/peers.rs::peers_discovered_list` | T037, T151 | `cargo test discovery::anuncio`; `tests/mdns_real.rs` (`--ignored`, multicast real entre dos instancias de una máquina); `conectar_y_saludar` sobre TLS real. Sin pantalla que muestre los equipos descubiertos; sin prueba entre equipos distintos (V-08) | `PARCIAL` |
 | **FR-011** | `control/tls.rs` (huella del certificado, no del `instanceId` declarado) | T141, T142 | `test_un_instance_id_falsificado_no_cambia_la_huella` | `VERIFICADO` |
-| **FR-012** | `pairing/mod.rs`, `control/pairing_flow.rs` | T030, T143, T153 | `test_ambos_extremos_derivan_el_mismo_codigo`, prueba de extremo a extremo sobre TLS real | `VERIFICADO` |
+| **FR-012** | `pairing/mod.rs`, `control/pairing_flow.rs`, `control/pairing_incoming.rs` (T182) | T030, T143, T153, T182 | `test_ambos_extremos_derivan_el_mismo_codigo`; `session_service_real t182` (TLS real): el lado que recibe verifica antes de preguntar, muestra el mismo código y solo con un sí guarda `Trusted` sin autoaceptación. Sin pantalla que lo use (T181) | `PARCIAL` |
 | **FR-013** | `control/pairing_flow.rs::atender_emparejamiento` | T030, T143 | `test_una_huella_distinta_invalida_el_emparejamiento` | `VERIFICADO` |
 | **FR-014** | `model/peer.rs::TrustState` (Unknown/Known/Trusted + `auto_accept`) | T029, T038 | `cargo test --test peer_contract` | `VERIFICADO` |
 | **FR-015** | `ipc/pairing.rs` (`auto_accept` forzado a `false` al aceptar) | T038, T143 | Código explícito en `peers_pairing_confirm`; sin prueba de UI que lo exija activar con aviso | `PARCIAL` |
@@ -61,7 +61,7 @@ equipos, elevación o una máquina que este entorno no tiene).
 | **FR-021** | `control/plan.rs::BenchmarkPlan::validate` | T039, T093 | `cargo test control::advanced_plan_tests` | `VERIFICADO` |
 | **FR-022** | `control/domain.rs::can_transition_to` | T031, T065 | `cargo test --test protocol_abuse` | `VERIFICADO` |
 | **FR-023** | `engine/ntttcp/job_object.rs`, `control/cleanup.rs`, `control/session_flow.rs` (T175) | T042, T066, T071, T175 | `cargo test --test process_cleanup`; `session_service_real` (`--ignored`) cancela a mitad de medición sin dejar `ntttcp.exe`, y cancela antes de arrancarlo con `CANCEL`/`CANCEL_ACK` real | `VERIFICADO` |
-| **FR-024** | — | — | **No implementado.** No hay lógica de reconexión con mismo `sessionId` en `control/`; solo se detectan huecos en muestras ya recibidas (`sampling/aggregate.rs`), no una recuperación de canal caído | `NO PRESENTE` |
+| **FR-024** | `control/session_flow.rs::conservar_lo_completado`, `control/service.rs`, `sampling/` | T171 | `session_flow::perdida_de_canal`; `session_service_real t171` (`--ignored`, NTTTCP real): tras perder el canal en la segunda pata se conserva la primera, la cortada no aparece como continua y la sesión se guarda `incomplete`. La reconexión con el mismo `sessionId` («MAY») y el latido de §8.5 **no existen** | `PARCIAL` |
 | **FR-025** | `control/protocol.rs::ResultadoSincronizacion`, `control/session_flow.rs` (T176) | T044, T152, T176 | `cargo test control::protocol control::session_flow::reconciliacion_de_resultado`; `session_service_real` (`--ignored`): B adopta el `resultSource: "initiator"` de A tras validar `SESSION_RESULT` real | `VERIFICADO` |
 | **FR-026** | `sampling/vivo.rs`, `control/service.rs::lanzar_aplicador` | T043, T058, T174 | `cargo test sampling::vivo`, `session_service_real` (`--ignored`, NTTTCP real): muestreo real por interfaz, salvo en bucle local (VALIDACION §1.17); arnés de `performance.ps1` sigue midiendo procesos existentes (T159) | `PARCIAL` |
 | **FR-027** | `control/orquestador.rs::resultado_de_direccion` | T044, T144 | `test_la_velocidad_oficial_es_la_del_receptor` | `VERIFICADO` |
@@ -112,9 +112,9 @@ equipos, elevación o una máquina que este entorno no tiene).
 | ID | Módulos reales | Tareas | Evidencia | Estado |
 |---|---|---|---|---|
 | **FR-054** | `control/tls.rs`, `control/server.rs` | T141 | `VALIDACION.md` §1.8: TLS mutuo real, `client_auth_mandatory` | `VERIFICADO` |
-| **FR-055** | `model/protocol.rs`, `src/lib/contracts/*.ts` | T016, T029 | `cargo test --test protocol_abuse`, fixtures Zod/Serde | `VERIFICADO` |
+| **FR-055** | `model/protocol.rs`, `src/lib/contracts/*.ts` | T016, T029, T160 | `cargo test --test protocol_abuse`; `cargo test --test contract_fixtures` + `tests/contracts/rust-fixtures.test.ts` (el JSON que Rust emite, parseado con Zod) | `VERIFICADO` |
 | **FR-056** | `netinfo/resolve.rs::sanitize_display_name` | T037 | `test_conexion_manual_toma_la_huella_del_certificado` (nombre saneado) | `VERIFICADO` |
-| **FR-057** | `firewall/helper_client.rs`, `firewall/inspect.rs` | T073, T074 | `cargo test firewall::helper_client`, inspección no elevada | `VERIFICADO` |
+| **FR-057** | `firewall/helper_client.rs`, `firewall/validation.rs`, `helper/main.rs`, `firewall/inspect.rs` | T073, T074, T154 | `cargo test firewall::validation`; `cargo test --test firewall_helper` (binario real, `--validate-only`): lista blanca estricta y única, petición por argumentos sin fichero temporal. **La elevación real con `ShellExecuteExW` no se ha ejecutado** (abre un UAC) | `PARCIAL` |
 | **FR-058** | `logging/mod.rs` (redacción), `export/redact.rs` | T020, T106 | `scripts/security/scan-security.mjs` (0 secretos), `redact_tests` | `VERIFICADO` |
 | **FR-059** | `logging/mod.rs` | T020, T021b | `cargo test --test logging` (rotación 10/50 MB) | `VERIFICADO` |
 | **FR-060** | `control/domain.rs`, `model/protocol.rs::MAX_FRAME_SIZE_BYTES` | T060 | `cargo test --test protocol_abuse` (tramas sobredimensionadas) | `VERIFICADO` |

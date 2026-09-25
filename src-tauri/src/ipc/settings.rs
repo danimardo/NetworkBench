@@ -47,7 +47,12 @@ pub async fn settings_update(
     });
 
     match res {
-        Ok(saved) => Ok(IpcResult::ok(saved)),
+        Ok(saved) => {
+            // El ajuste se aplica al instante (`Historias.md` §7.1): apagarlo retira el
+            // anuncio y deja de navegar; encenderlo publica y vuelve a navegar.
+            state.aplicar_descubrimiento(saved.mdns_enabled);
+            Ok(IpcResult::ok(saved))
+        }
         Err(e) => Ok(IpcResult::err(e)),
     }
 }

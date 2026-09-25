@@ -797,6 +797,221 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
   en el resultado; visualización) · `NO VERIFICABLE` aquí (comportamiento con pérdida
   real de red)
 
+### 1.25 Emparejamiento entrante (T182, FR-012)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, 2026-09-25. Sin motor:
+  dos nodos completos (identidad, base de datos, servidor, despachador) sobre TLS real.
+- **Comandos**: `cargo test --test session_service_real t182 -- --test-threads=1` (4 en
+  verde) · `cargo test --lib control::pairing_flow` (7 en verde, sin regresión tras
+  partir la función) · `cargo test` completo · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos · `check-ipc-commands.mjs` y
+  `pnpm verify` en verde.
+- **El problema real**: antes, el equipo que recibía un `PAIR_REQUEST` lo registraba y lo
+  descartaba sin contestar. Quien pedía emparejarse esperaba hasta su propio plazo. Dos
+  equipos reales **no podían emparejarse nunca**, y sin emparejar no hay sesión de
+  confianza posible. Todo lo verificado en las tandas anteriores partía de peers ya
+  registrados a mano en la base de datos.
+- **Qué se rehízo**: la función existente `atender_emparejamiento` decidía con un
+  closure síncrono, incompatible con esperar a una persona. Se partió en
+  `preparar_respuesta` (construye el emparejamiento con el `id` del iniciador y verifica)
+  y `contestar_emparejamiento` (envía `PAIR_RESULT`); la función original usa las dos y sus
+  7 pruebas siguen pasando. El almacén de decisiones pendientes se generalizó
+  (`Decisiones<T>`) y lo comparten T177 (sesión) y T182 (emparejamiento).
+- **Garantías de seguridad, y cómo se comprueban**:
+  - Un código incorrecto **no llega a la persona** y no dispara aviso a la interfaz:
+    `t182_un_codigo_incorrecto_se_rechaza_sin_preguntar` envía un código falso a mano y
+    comprueba `verificationFailed`, almacén vacío y ningún evento emitido.
+  - El código que ve la persona de B es **el mismo** que ve la de A
+    (`verification_code == emp.codigo`): es lo único que hace valer la comparación humana.
+  - Aceptar guarda `Trusted` con `auto_accept: false`; rechazar no guarda nada.
+  - La confianza se guarda **antes** de contestar `accepted:true`.
+  - Un segundo intento del mismo equipo con uno pendiente se rechaza al instante.
+- **Un error mío en la prueba, no en el código**: afirmé que la dirección guardada
+  terminaba en `:7411`; el historial no persiste las direcciones de los peers (las carga
+  vacías), así que falló por leer el sitio equivocado. La aserción pasó al evento hacia la
+  interfaz, que sí las lleva.
+- **No cubierto**: la pantalla de Svelte (T181); el vencimiento de 55 s sin decisión (no
+  se prueba esperando 55 s reales, y hacer el plazo inyectable no lo pedía la tarea); el
+  puerto de la dirección mostrada es el de control por defecto, **INFERIDO** porque el
+  `HELLO` no lo declara; el límite «5 solicitudes por minuto» del contrato; dos equipos
+  físicos (T180).
+- **Estado**: `VERIFICADO` (flujo entrante completo sobre TLS real, garantías de
+  seguridad anteriores) · `NO PRESENTE` (pantalla; vencimiento de 55 s probado) ·
+  `NO VERIFICABLE` aquí (dos equipos físicos)
+
+### 1.26 Elevación del helper de firewall y su lista blanca (T154, FR-057)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, 2026-09-25.
+- **Comandos**: `cargo test --lib firewall` (12 en verde) ·
+  `cargo test --test firewall_helper` (5 en verde, **ejecutan el binario real del helper**)
+  · `cargo test` completo (259 en verde, 10 ignoradas) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos · `pnpm verify` en verde.
+- **Qué había, leído antes de tocar nada**: la orden de elevación se construía con
+  `powershell -Command "Start-Process -FilePath '<ruta>' ..."` interpolando rutas entre
+  comillas simples; la petición viajaba en `%TEMP%\nb_fw_req_<pid>.json` (nombre
+  predecible, directorio escribible por cualquier proceso del usuario) y el proceso
+  elevado la leía después; si el helper no aparecía junto al ejecutable, se devolvía su
+  nombre suelto y `runas` lo habría resuelto por el `PATH`.
+- **Tres agujeros de la lista blanca que la tarea no mencionaba**, encontrados al leerla
+  con intención de romperla, no de confirmarla:
+  1. El programa se aceptaba si su nombre **terminaba** en `ntttcp.exe` o
+     `networkbench.exe`: `C:\cualquier\sitio\ntttcp.exe` pasaba.
+  2. El rango de puertos solo se comprobaba si contenía **exactamente un** guion:
+     `1024-1030,2000-65000` (tres partes al dividir) se saltaba el límite de 64.
+  3. `protocol` y `profiles` no se comprobaban en absoluto.
+  Y la lista blanca estaba **escrita dos veces** (cliente y helper), sin nada que
+  impidiera que divergieran. Ahora es un solo fichero, `firewall/validation.rs`,
+  compilado en los dos con `#[path]`.
+- **Por qué la validación del helper es la que cuenta**: el helper corre con privilegios y
+  puede lanzarlo cualquier proceso, no solo la aplicación; la validación del cliente solo
+  evita pedir una elevación que se sabe rechazada. Por eso las pruebas del binario real
+  le pasan la línea directamente, sin pasar por el cliente.
+- **Cómo se probó sin abrir un UAC**: el helper acepta `--validate-only` como primer
+  argumento y hace todo salvo aplicar (análisis de la línea, lista blanca, código de
+  salida); no toca el firewall ni necesita privilegios. La prueba copia el helper real a
+  una carpeta con espacios en el nombre, con un `ntttcp.exe` al lado, y lo lanza con
+  `raw_arg` con exactamente la cadena que se entregaría a `ShellExecuteEx`: así el
+  entrecomillado lo analiza el analizador de línea de órdenes real de Windows, no un
+  reimplementado en la prueba.
+- **NO VERIFICABLE aquí, y nadie lo ha ejecutado**: `lanzar_elevado`, la llamada real a
+  `ShellExecuteExW` con `runas`, la espera del proceso y la lectura de su código de
+  salida, y el mapeo de «UAC rechazado» (`ERROR_CANCELLED`) a `FirewallUacRejected`. Abre
+  un diálogo de UAC en el escritorio del usuario; una prueba automática no puede ni debe
+  aceptarlo. Es código `unsafe` escrito contra la documentación de la API y compilado,
+  sin más evidencia que esa. **Queda abierta la tarea hasta que una persona acepte un UAC
+  una vez y compruebe que una regla se crea.**
+- **Desviaciones de `Historias.md` §14.2, declaradas**: el texto habla de «fichero JSON» y de
+  `INetFwPolicy2` (COM, «no `netsh`»). La petición viaja ahora por argumentos —un canal que
+  nadie puede sustituir, que es lo que pide la tarea— y el helper sigue aplicando con
+  `netsh`, con argumentos separados (nunca una cadena de shell) y ya validados. Pasar a COM
+  es otra tarea.
+- **Se añaden features de `windows`** (`Win32_UI_Shell`, `Win32_UI_WindowsAndMessaging`), sin
+  cambio en `Cargo.lock`.
+- **Dos pruebas inestables del preflight de sesión, encontradas de paso y corregidas**: la
+  batería completa falló una vez en `un_puerto_de_datos_ocupado_se_rechaza_...` y en
+  `un_cancel_del_par_...`, sin reproducirse por separado. Causa: `bind(0)` en Windows da
+  puertos efímeros de 49152 a 65535 y `BenchmarkPlan::validate` exige ≤ 65000; ~3 % de las
+  ejecuciones recibían un plan inválido y se rechazaban por `invalidPlan`. Una tercera
+  (`test_preflight_ports_available`, `port + 10`) fallaba ~1 de cada 8 porque los vecinos de
+  un puerto efímero suelen estar ocupados por otras pruebas en paralelo. Ahora usan
+  puertos ≤ 65000 y una ventana fuera del rango efímero. La biblioteca se ejecutó 12 veces
+  seguidas sin un fallo.
+- **Estado**: `VERIFICADO` (lista blanca; helper real rechazando peticiones hostiles;
+  entrecomillado a través del analizador de Windows) · `NO VERIFICABLE` aquí (elevación
+  real con UAC)
+
+### 1.27 Pérdida de canal a mitad de la segunda pata (T171, FR-024)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, NTTTCP 5.40 x64, Rust 1.98.1,
+  2026-09-25.
+- **Comandos**: `cargo test --lib control::session_flow::perdida_de_canal` (2 en verde) ·
+  `cargo test --test session_service_real t171 -- --ignored` (1 en verde, NTTTCP real,
+  ~12 s) · `cargo test` completo (261 en verde) ·
+  `cargo test --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (9 en verde) · `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos ·
+  `pnpm verify` en verde.
+- **La prueba de aceptación encontró un fallo, no una confirmación**: la tarea pedía una
+  prueba de un comportamiento que se daba por supuesto. Al escribirla, el comportamiento
+  real era el contrario del que exige `Historias.md` §8.5/§19.3: si el canal caía en la
+  segunda pata, el error se propagaba con `?`, la primera pata —ya completa— se descartaba y
+  la sesión terminaba `Failed` **sin guardar nada**.
+- **El arreglo**: `PruebaBidireccional` gana `interrupcion: Option<String>`. Ante una pérdida
+  de canal o de motor tras completar una pata, se conserva lo completado, la otra queda
+  `incomplete` (sin velocidad oficial, sin motores) y la sesión se guarda como
+  incompleta (`is_partial`), pero termina `Failed` con `NB-CONN-005`. Una cancelación se
+  distingue por la señal compartida de T175: cancelar sigue descartando la sesión. No se
+  intenta el intercambio de resultado por un canal perdido (el respondedor conserva su
+  vista `local`, degradada y declarada), lo que además evita esperar 10 s a un
+  `SESSION_RESULT` que no puede llegar.
+- **Un segundo defecto, del mismo escenario**: `tokio::join!` en la mitad receptora
+  esperaba a los **dos** futuros. Si el emisor moría, el fallo de los mensajes no soltaba
+  el motor receptor, que seguía esperando hasta su propio plazo. `try_join!` lo suelta al
+  primer error y el `Drop` del proceso lo mata.
+- **Cómo se provoca la pérdida en la prueba real**: cancelando en B mientras B emite la
+  vuelta. Con el motor en marcha no hay punto cooperativo (T175), así que B espera 500 ms y
+  aborta su tarea: A solo ve caer el canal, sin ningún `CANCEL`. Para A es una pérdida.
+  Comprobado: A `Failed`; su historial tiene `incomplete`, `is_partial`, `forward_bps` y
+  **no** `reverse_bps`; B `Cancelled` y sin guardar nada; ningún `ntttcp.exe` restante.
+- **No cubierto, y conviene decirlo**: FR-024 dice «MAY recuperarse»; no hay reconexión con el
+  mismo `sessionId` ni latido cada 1 s con «Reconectando…» (`Historias.md` §8.5), así que
+  «los huecos MUST marcarse» solo se cumple en lo que sí existe (huecos explícitos en las
+  muestras, T174) y no hay un camino de pérdida temporal *recuperada* que ejercitar; la
+  pérdida en la **primera** pata sigue sin guardar nada (no hay una dirección completa que
+  conservar); dos equipos físicos (T180).
+- **Estado**: `VERIFICADO` (una pata a medias nunca se reanuda como continua; lo completado
+  se conserva; cancelación ≠ pérdida) · `NO PRESENTE` (reconexión y latido)
+
+### 1.28 Anuncio y descubrimiento mDNS (T151, FR-010)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, `mdns-sd` 0.21.4 (la
+  instalada, no la 0.21.3 de la línea base), 2026-09-25.
+- **Comandos**: `cargo test --lib discovery::anuncio` (7 en verde) ·
+  `cargo test --test mdns_real -- --ignored --nocapture` (1 en verde, multicast real,
+  2,3 s) · `cargo test` completo (268 en verde, 12 ignoradas) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos · `check-ipc-commands.mjs` y
+  `pnpm verify` en verde.
+- **Antes**: `mdns-sd` estaba declarada y sin uso; `discovery/` solo conectaba a mano por
+  IP. Dos equipos en la misma red no se veían.
+- **Un defecto de especificación encontrado de paso**: la constante decía
+  `_netbench._tcp.local.` y `Historias.md` §7.1 dice `_networkbench._tcp.local.`. Con la
+  primera, la aplicación habría sido invisible para cualquier otra implementación de la
+  especificación. Corregida, con una prueba que fija el valor.
+- **Modelo de confianza**: mDNS figura entre los actores no confiables del plan de
+  seguridad. Cualquiera en la red puede anunciar cualquier nombre, identificador o huella
+  —incluida la de un equipo de confianza—. Por eso `EquipoDescubierto` son **pistas para
+  mostrar**: la huella se llama `fingerprint_declarada`, no lleva estado de confianza, y
+  nada se guarda ni se autentica con ello. La identidad real es la del certificado TLS al
+  conectar. Consecuencia que conviene tener presente para la pantalla (T181-bis): mostrar
+  «De confianza ★» a partir de la huella anunciada sería falsable por un tercero; el
+  handshake lo desmentiría al conectar, pero la estrella ya habría engañado.
+- **Todo lo que llega se valida antes de existir como dato** (`equipo_desde_anuncio`, pura):
+  UUID válido, huella exactamente 64 hex, registros TXT acotados a 64 y sin caracteres de
+  control, nombre saneado, versión con caracteres seguros (`<script>` → `?`), `link`
+  acotado a 1 000 000, puerto ≥ 1024, y solo direcciones alcanzables (sin especificar,
+  multidifusión, bucle local ni IPv6 de enlace local, que sin ámbito no se pueden usar).
+  Un anuncio incompleto o con un campo inválido se rechaza **entero**, no se acepta a
+  medias.
+- **Una expectativa mía equivocada, corregida en la prueba**: supuse que un nombre en
+  blanco se rechazaría; `sanitize_display_name` devuelve el nombre de reserva
+  «Equipo-Remoto» (el mismo comportamiento de la conexión manual). La prueba ahora fija ese
+  comportamiento, y desaparece la comprobación de vacío que nunca podía dispararse.
+- **Verificación real**: `dos_instancias_se_descubren_por_mdns_y_desaparecen_al_cerrarse`
+  arranca dos `Descubrimiento` con multicast real en esta máquina. Comprobado: cada una ve
+  a la otra con nombre, huella declarada y puerto de control correctos; ninguna se ve a sí
+  misma; y al soltar una, desaparece de la lista de la otra (el `Drop` retira el anuncio).
+- **NO VERIFICABLE aquí**: comportamiento entre equipos distintos; con varios adaptadores,
+  VPN o perfil de firewall Público (V-08); la caducidad de «30 s después del último
+  anuncio», delegada en el caché de `mdns-sd` y sin medir.
+- **No hecho**: la pantalla «Equipos disponibles» (el frontend no llama a
+  `peers_discovered_list`); el aviso de perfil público tras 5 s sin equipos; `busy` se
+  anuncia siempre `0` y `link` siempre `0`; el puerto anunciado es el de control por
+  defecto y no uno configurable; el cableado a `AppState`/`settings_update` no tiene
+  prueba propia (un `AppState` real toca `%LOCALAPPDATA%`).
+- **Estado**: `VERIFICADO` (análisis estricto de anuncios; descubrimiento y desaparición con
+  multicast real entre dos instancias de una misma máquina) · `NO PRESENTE` (pantalla;
+  `busy`/`link` reales) · `NO VERIFICABLE` aquí (entre equipos distintos; V-08)
+
+### 1.29 Checks de contratos y de APIs legacy (T160, T011)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, 2026-09-25.
+- **Comandos**: `cargo test --test contract_fixtures` (7 en verde) ·
+  `pnpm exec vitest run tests/contracts/rust-fixtures.test.ts` (8 en verde) ·
+  `node scripts/architecture/check-legacy.mjs` · `pnpm verify` completo en verde
+  (103 tests Vitest; incluye ya ambos checks).
+- **Contratos**: Rust genera 8 documentos con su código real y los compara con
+  `tests/contracts/fixtures/rust/`; Vitest parsea esos mismos ficheros con los esquemas Zod.
+  Los dos lados quedan atados al mismo fichero: un cambio de nombre o de formato en Rust
+  rompe `cargo test`, y uno que el esquema TS no acepte rompe Vitest. Resultado inicial:
+  **sin desajuste real**. Los tres primeros fallos fueron míos (UUID sin bits de versión 4).
+  Comprobado que el check discrimina: detectó exactamente eso.
+- **APIs legacy**: prohíbe `export let`, `$:`, `createEventDispatcher`, `<slot>`, SvelteKit,
+  `process.env` e `import.meta.env` fuera de `lib/config`. Probado con violaciones
+  temporales (detecta las 4 ensayadas, ignora un comentario). **Hallazgo real**:
+  `lib/logging` leía `import.meta.env` con un cast sin validar; `lib/config` estaba escrito
+  y sin uso. Corregido, conservando la precedencia del nivel de log.
+- **Límites**: solo patrón textual, no demuestra ausencia por otras vías; no cubre `any`,
+  `!` ni dobles casts; la forma del JSON no implica que su significado sea correcto; los
+  fixtures no cubren todos los comandos y eventos IPC.
+- **Nota operativa**: `pnpm verify` ahora ejecuta también `cargo test` de este binario
+  (~1 min de compilación en frío).
+- **Estado**: `VERIFICADO` (forma del JSON Rust↔TS para los 8 documentos; APIs prohibidas
+  por patrón) · `NO PRESENTE` (fixtures del resto de eventos y comandos)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)

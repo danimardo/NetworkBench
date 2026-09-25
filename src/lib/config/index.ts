@@ -4,7 +4,7 @@ const envSchema = z.object({
   MODE: z.string().default("development"),
   DEV: z.boolean().default(false),
   PROD: z.boolean().default(true),
-  VITE_LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error"]).optional().default("info"),
+  VITE_LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error"]).optional(),
 });
 
 function loadConfig() {

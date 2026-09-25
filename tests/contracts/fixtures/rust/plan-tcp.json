@@ -1,0 +1,9 @@
+{
+  "protocol": "tcp",
+  "direction": "forward",
+  "streams": 1,
+  "warmupSeconds": 1,
+  "measureSeconds": 10,
+  "cooldownSeconds": 1,
+  "port": 5001
+}

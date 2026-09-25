@@ -30,9 +30,38 @@ pub struct AppState {
     pub pairings: Arc<crate::ipc::pairing::PairingStore>,
     /// Solicitudes de sesión entrante esperando consentimiento humano (T177, FR-016).
     pub solicitudes_entrantes: Arc<crate::control::consent::SolicitudesEntrantes>,
+    /// Emparejamientos entrantes esperando decisión humana (T182, FR-012).
+    pub emparejamientos_entrantes: Arc<crate::control::consent::EmparejamientosEntrantes>,
+    /// Anuncio y descubrimiento mDNS (T151). `None` si el ajuste está apagado o si mDNS no
+    /// pudo abrirse: sin descubrimiento se sigue pudiendo conectar a mano (FR-010).
+    pub descubrimiento: std::sync::Mutex<Option<crate::discovery::Descubrimiento>>,
 }
 
 impl AppState {
+    /// Enciende o apaga el anuncio y la navegación mDNS según el ajuste «Descubrimiento
+    /// automático» (`Historias.md` §7.1: apagado, la instancia ni publica ni navega).
+    /// Idempotente. Apagarlo suelta `Descubrimiento`, cuyo `Drop` retira el anuncio.
+    pub fn aplicar_descubrimiento(&self, activo: bool) {
+        let Ok(mut guardado) = self.descubrimiento.lock() else {
+            return;
+        };
+        match (activo, guardado.is_some()) {
+            (true, false) => {
+                match crate::discovery::Descubrimiento::iniciar(
+                    &self.identity,
+                    crate::discovery::CONTROL_PORT_DEFAULT,
+                    env!("CARGO_PKG_VERSION"),
+                    crate::control::server::VERSION_PROTOCOLO,
+                ) {
+                    Ok(d) => *guardado = Some(d),
+                    Err(e) => tracing::warn!("Descubrimiento mDNS no disponible: {e}"),
+                }
+            }
+            (false, true) => *guardado = None,
+            _ => {}
+        }
+    }
+
     /// Lo que una sesión necesita del resto de la aplicación. `emisor` es por donde salen
     /// las muestras en vivo hacia la interfaz; sin él, la sesión no las produce.
     pub fn contexto_de_sesion(&self, emisor: Option<Arc<dyn EmisorDeEventos>>) -> ContextoSesion {
@@ -46,6 +75,7 @@ impl AppState {
             }),
             consentimiento: Arc::clone(&self.solicitudes_entrantes),
             emisor_eventos: emisor,
+            emparejamientos: Arc::clone(&self.emparejamientos_entrantes),
         }
     }
 }
@@ -183,14 +213,18 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         orquestador,
         pairings: Arc::new(crate::ipc::pairing::PairingStore::new()),
         solicitudes_entrantes: Arc::new(crate::control::consent::SolicitudesEntrantes::new()),
+        emparejamientos_entrantes: Arc::new(
+            crate::control::consent::EmparejamientosEntrantes::new(),
+        ),
+        descubrimiento: std::sync::Mutex::new(None),
     })
 }
 
 /// Arranca el servidor del canal de control y devuelve el puerto real.
 ///
 /// Cada conexión completa el TLS mutuo y el saludo, y se entrega a
-/// `control::despachador`, que atiende solicitudes de prueba. El emparejamiento entrante
-/// sigue sin atenderse: necesita un diálogo de decisión que aún no existe.
+/// `control::despachador`, que atiende solicitudes de prueba y emparejamientos entrantes,
+/// ambos a la espera de una decisión humana.
 ///
 /// Un fallo de una conexión no detiene el bucle: se registra y se sigue aceptando.
 pub async fn start_control_server(

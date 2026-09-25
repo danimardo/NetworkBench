@@ -10,3 +10,4 @@ specs/
 *.md
 pnpm-lock.yaml
 coverage/
+tests/contracts/fixtures/rust/

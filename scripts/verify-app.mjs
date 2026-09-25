@@ -45,6 +45,14 @@ run("node scripts/architecture/check-locales.mjs", "Paridad de claves locales (e
 run("node scripts/architecture/check-ipc-commands.mjs", "Comandos IPC frontend/backend");
 run("node scripts/architecture/check-imports.mjs", "Límites e imports de arquitectura");
 run("node scripts/architecture/check-logger.mjs", "Uso de logger único sin console.*");
+run(
+  "node scripts/architecture/check-legacy.mjs",
+  "APIs legacy de Svelte y entorno fuera de lib/config",
+);
+run(
+  "cargo test --manifest-path src-tauri/Cargo.toml --test contract_fixtures",
+  "Contratos: el JSON de Rust coincide con los fixtures que valida Zod",
+);
 
 console.log("\n========================================================");
 console.log("✓ Verificación canónica completada con éxito.");

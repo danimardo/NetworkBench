@@ -39,6 +39,8 @@ pub fn run() {
                     tracing::error!("El canal de control no pudo arrancar: {e}");
                 }
             });
+            // Con el ajuste encendido (por defecto), la instancia se anuncia y busca a las demás.
+            app_state.aplicar_descubrimiento(app_state.settings.get().mdns_enabled);
             tauri::Manager::manage(app, app_state);
             Ok(())
         })
@@ -48,6 +50,7 @@ pub fn run() {
             app::window_save_geometry,
             app::window_restore_and_show,
             ipc::peers::peers_list,
+            ipc::peers::peers_discovered_list,
             ipc::peers::peers_manual_connect,
             ipc::peers::peers_set_trust,
             ipc::pairing::peers_pairing_start,
@@ -57,6 +60,8 @@ pub fn run() {
             ipc::session::session_get_state,
             ipc::consent::session_incoming_list,
             ipc::consent::session_incoming_respond,
+            ipc::consent::peers_pairing_incoming_list,
+            ipc::consent::peers_pairing_incoming_respond,
             ipc::diagnostics::diagnostics_get_report,
             ipc::firewall::firewall_inspect,
             ipc::firewall::firewall_apply,

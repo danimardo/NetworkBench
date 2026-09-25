@@ -570,12 +570,16 @@ where
         IoResult::Ok(())
     };
 
-    let (resultado_motor, resultado_mensajes) = tokio::join!(
-        orquestador.ejecutar_mitad_local(&plan, NtttcpRole::Receiver, Some(interfaz_local)),
-        intercambio_de_mensajes,
-    );
-    resultado_mensajes?;
-    let local = resultado_motor.map_err(motor_error_a_io)?;
+    // `try_join!` y no `join!`: si el canal cae mientras el motor receptor espera a un
+    // emisor que ya no va a llegar, el fallo de los mensajes debe soltar el motor de
+    // inmediato (su `Drop` mata el proceso), no esperar a que NTTTCP agote su propio plazo.
+    let motor = async {
+        orquestador
+            .ejecutar_mitad_local(&plan, NtttcpRole::Receiver, Some(interfaz_local))
+            .await
+            .map_err(motor_error_a_io)
+    };
+    let (local, ()) = tokio::try_join!(motor, intercambio_de_mensajes)?;
 
     let remoto: ProtocolEnvelope<EngineDonePayload> = recv_envelope(stream).await?;
     if remoto.msg_type != ProtocolMessageType::EngineDone {
@@ -613,6 +617,36 @@ pub struct PruebaBidireccional {
     pub plan: BenchmarkPlan,
     /// `[ida, vuelta]`, en el orden en que se ejecutaron.
     pub direcciones: Vec<DirectionResult>,
+    /// Por qué se cortó la prueba tras completar alguna dirección, si se cortó. Con esto
+    /// puesto, `direcciones` conserva lo completado y marca la que quedó a medias como
+    /// `incomplete`: una dirección parcial **nunca** se da por continua (FR-024,
+    /// `Historias.md` §8.5).
+    pub interrupcion: Option<String>,
+}
+
+/// Qué hacer con el resultado de la segunda pata cuando la primera ya está completa.
+///
+/// - Terminó bien: sigue todo igual.
+/// - Falló por una **cancelación** (de este equipo o del par): el error se propaga, la
+///   sesión es una sesión cancelada y no se guarda nada, como hasta ahora.
+/// - Falló por **pérdida del canal** o del motor: no se propaga. Se conserva la primera
+///   pata, la segunda se marca `incomplete` sin velocidad oficial ni muestras, y se
+///   devuelve el motivo. Es lo que exige `Historias.md` §8.5/§19.3: «las direcciones
+///   completadas se conservan y la sesión se guarda como incompleta; nunca se reanuda
+///   una dirección a medias».
+fn conservar_lo_completado(
+    segunda: IoResult<DirectionResult>,
+    sentido: Direccion,
+    cancelacion: &SenalCancelacion,
+) -> IoResult<(DirectionResult, Option<String>)> {
+    match segunda {
+        Ok(r) => Ok((r, None)),
+        Err(e) if *cancelacion.borrow() => Err(e),
+        Err(e) => Ok((
+            DirectionResult::new_incomplete(sentido.como_str()),
+            Some(e.to_string()),
+        )),
+    }
 }
 
 fn aceptar_si_es_valido(plan: &BenchmarkPlan) -> Result<(), MotivoRechazo> {
@@ -694,12 +728,14 @@ where
     )
     .await;
     en_pata(EventoPata::Termina(Direccion::Reverse));
-    let vuelta = vuelta?.resultado;
+    let (vuelta, interrupcion) =
+        conservar_lo_completado(vuelta.map(|a| a.resultado), Direccion::Reverse, cancelacion)?;
 
     Ok(PruebaBidireccional {
         session_id,
         plan: plan_ida,
         direcciones: vec![ida, vuelta],
+        interrupcion,
     })
 }
 
@@ -742,6 +778,7 @@ where
             session_id: atendida.session_id,
             plan: atendida.plan,
             direcciones: vec![atendida.resultado],
+            interrupcion: None,
         });
     }
 
@@ -760,12 +797,13 @@ where
     )
     .await;
     en_pata(EventoPata::Termina(Direccion::Reverse));
-    let vuelta = vuelta?;
+    let (vuelta, interrupcion) = conservar_lo_completado(vuelta, Direccion::Reverse, cancelacion)?;
 
     Ok(PruebaBidireccional {
         session_id: atendida.session_id,
         plan: atendida.plan,
         direcciones: vec![atendida.resultado, vuelta],
+        interrupcion,
     })
 }
 
@@ -1013,7 +1051,7 @@ mod preflight_en_el_dialogo {
         // `check_ports` sondea siempre `0.0.0.0` (`ports.rs::is_port_available_for_protocol`):
         // hay que ocuparlo igual, o el sondeo vería el puerto libre y la prueba se
         // quedaría esperando un PREPARE que nunca llegaría.
-        let ocupado = std::net::TcpListener::bind("0.0.0.0:0").unwrap();
+        let ocupado = listener_en_puerto_de_plan("0.0.0.0:0");
         let puerto = ocupado.local_addr().unwrap().port();
 
         let (mut lado_iniciador, mut lado_receptor) = duplex(8192);
@@ -1062,9 +1100,23 @@ mod preflight_en_el_dialogo {
         drop(ocupado);
     }
 
+    /// Un listener en un puerto que un plan acepte. Windows reparte los efímeros entre
+    /// 49152 y 65535 y `BenchmarkPlan::validate` exige ≤ 65000: sin este filtro, ~3 % de
+    /// las ejecuciones recibían un plan inválido y la prueba fallaba por otro motivo.
+    fn listener_en_puerto_de_plan(direccion: &str) -> std::net::TcpListener {
+        loop {
+            let l = std::net::TcpListener::bind(direccion).unwrap();
+            if l.local_addr().unwrap().port() <= 65000 {
+                return l;
+            }
+        }
+    }
+
     fn puerto_libre_ahora_mismo() -> u16 {
-        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        l.local_addr().unwrap().port()
+        listener_en_puerto_de_plan("127.0.0.1:0")
+            .local_addr()
+            .unwrap()
+            .port()
     }
 
     /// T175 (FR-007, FR-023): cancelar mientras se espera el `RESPONSE` —nada del motor
@@ -1343,5 +1395,116 @@ mod reconciliacion_de_resultado {
 
         tarea_iniciador.await.unwrap();
         assert!(matches!(reconciliado, ResultadoReconciliado::Local));
+    }
+}
+
+#[cfg(test)]
+mod perdida_de_canal {
+    use super::*;
+    use crate::control::engine_port::MotorDeLaboratorio;
+    use tokio::io::duplex;
+
+    fn orquestador_con(rol: NtttcpRole, bps: u64) -> Orquestador {
+        Orquestador::new(std::sync::Arc::new(MotorDeLaboratorio::con_respuestas(
+            vec![Ok(MotorDeLaboratorio::resultado(rol, bps, 5.0))],
+        )))
+    }
+
+    fn puerto_de_plan() -> u16 {
+        loop {
+            let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let p = l.local_addr().unwrap().port();
+            if p <= 65000 {
+                return p;
+            }
+        }
+    }
+
+    /// T171 (FR-024, US3/AC3): el canal cae justo cuando empieza la segunda pata. La
+    /// primera, ya completa, se conserva; la segunda queda `incomplete`, sin velocidad
+    /// oficial: una dirección a medias no se da nunca por continua.
+    #[tokio::test]
+    async fn una_perdida_de_canal_en_la_segunda_pata_conserva_la_primera() {
+        let (mut lado_a, mut lado_b) = duplex(65536);
+        let plan = BenchmarkPlan::new_standard_tcp(puerto_de_plan());
+        let orq_a = orquestador_con(NtttcpRole::Sender, 900_000_000);
+        let orq_b = orquestador_con(NtttcpRole::Receiver, 899_000_000);
+        let (tx_a, _rx_a) = tokio::sync::watch::channel(false);
+        let (tx_b, _rx_b) = tokio::sync::watch::channel(false);
+
+        // B atiende la primera pata y desaparece: el canal cae antes de proponer la vuelta.
+        let b = tokio::spawn(async move {
+            let r = atender_direccion(&mut lado_b, &orq_b, "127.0.0.1", |_| Ok(()), &tx_b).await;
+            drop(lado_b);
+            r.map(|a| a.resultado.status)
+        });
+
+        let prueba = ejecutar_prueba_estandar_como_iniciador(
+            &mut lado_a,
+            &orq_a,
+            Uuid::new_v4(),
+            &plan,
+            "127.0.0.1",
+            "127.0.0.1",
+            |_| {},
+            &tx_a,
+        )
+        .await
+        .expect("perder el canal tras una pata completa no es un error de la prueba");
+        assert_eq!(b.await.unwrap().unwrap(), "completed");
+
+        assert_eq!(prueba.direcciones.len(), 2);
+        let (ida, vuelta) = (&prueba.direcciones[0], &prueba.direcciones[1]);
+        assert_eq!(ida.status, "completed");
+        assert_eq!(ida.official_bps.as_deref(), Some("899000000"));
+        assert_eq!(vuelta.status, "incomplete");
+        assert!(
+            vuelta.official_bps.is_none(),
+            "una pata a medias no tiene velocidad"
+        );
+        assert!(vuelta.sender.is_none() && vuelta.receiver.is_none());
+        assert!(
+            prueba.interrupcion.is_some(),
+            "debe quedar dicho por qué se cortó"
+        );
+
+        // Y el resultado ensamblado es una sesión incompleta que conserva la primera pata.
+        let sesion = ensamblar_resultado(
+            &orq_a,
+            prueba.session_id,
+            "2026-09-25T00:00:00.000Z",
+            "2026-09-25T00:00:10.000Z",
+            &prueba.plan,
+            Peer::new(Uuid::new_v4(), "A".into(), "a".repeat(64), vec![]).unwrap(),
+            Peer::new(Uuid::new_v4(), "B".into(), "b".repeat(64), vec![]).unwrap(),
+            prueba.direcciones,
+        );
+        assert_eq!(sesion.status, "incomplete");
+        assert!(!sesion.is_fully_completed());
+        assert!(
+            sesion.asymmetry.is_none(),
+            "sin las dos direcciones completas no hay asimetría que juzgar"
+        );
+    }
+
+    /// Una cancelación no es una pérdida: sigue siendo un error que descarta la sesión.
+    #[test]
+    fn una_cancelacion_no_se_confunde_con_una_perdida_de_canal() {
+        let (senal, _rx) = tokio::sync::watch::channel(false);
+        let fallo = || Err(Error::other("canal cerrado"));
+
+        let (d, motivo) =
+            conservar_lo_completado(fallo(), Direccion::Reverse, &senal).expect("pérdida");
+        assert_eq!(d.status, "incomplete");
+        assert_eq!(motivo.as_deref(), Some("canal cerrado"));
+
+        senal.send(true).unwrap();
+        assert!(conservar_lo_completado(fallo(), Direccion::Reverse, &senal).is_err());
+
+        // Y si la pata terminó bien, todo sigue igual, cancelada o no.
+        let ok = DirectionResult::new_incomplete("reverse");
+        let (d, motivo) = conservar_lo_completado(Ok(ok), Direccion::Reverse, &senal).expect("ok");
+        assert_eq!(d.direction, "reverse");
+        assert!(motivo.is_none());
     }
 }

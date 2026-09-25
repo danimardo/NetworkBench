@@ -7,6 +7,22 @@ use crate::model::peer::{Peer, TrustState};
 use tauri::State;
 use uuid::Uuid;
 
+/// Equipos que se ven ahora mismo por mDNS. **Pistas, no identidades** (FR-011): nombre,
+/// dirección y huella son lo que cada equipo *dice* de sí; la identidad real se demuestra
+/// en el handshake TLS al conectar. No incluye ningún estado de confianza.
+#[tauri::command]
+pub async fn peers_discovered_list(
+    state: State<'_, AppState>,
+) -> Result<IpcResult<Vec<crate::discovery::EquipoDescubierto>>, String> {
+    let equipos = state
+        .descubrimiento
+        .lock()
+        .ok()
+        .and_then(|d| d.as_ref().map(|d| d.equipos()))
+        .unwrap_or_default();
+    Ok(IpcResult::ok(equipos))
+}
+
 #[tauri::command]
 pub async fn peers_list(state: State<'_, AppState>) -> Result<IpcResult<Vec<Peer>>, String> {
     let db_lock = state.database.connection().lock().unwrap();

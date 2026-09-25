@@ -1,4 +1,5 @@
 import log from "loglevel";
+import { clientConfig } from "../config";
 
 export type LogLevelName = "trace" | "debug" | "info" | "warn" | "error";
 
@@ -13,8 +14,8 @@ export interface LogEventParams {
 }
 
 // Precedencia constitucional: Configuración explícita temporal > VITE_LOG_LEVEL > default ("warn")
-const initialLevel =
-  (import.meta.env.VITE_LOG_LEVEL as LogLevelName) || (import.meta.env.DEV ? "debug" : "warn");
+const initialLevel: LogLevelName =
+  clientConfig.VITE_LOG_LEVEL ?? (clientConfig.DEV ? "debug" : "warn");
 
 // Configurar loglevel sin persistencia en localStorage/cookies para respetar precedencia
 log.setLevel(initialLevel, false);

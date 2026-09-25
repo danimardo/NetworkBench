@@ -159,31 +159,63 @@ where
                 )
             })??;
 
+    let (emparejamiento, verificacion) =
+        preparar_respuesta(&solicitud, huella_local, huella_remota)?;
+
+    let aceptado = match &verificacion {
+        Ok(()) => decidir(&emparejamiento.codigo),
+        Err(_) => false,
+    };
+
+    contestar_emparejamiento(stream, solicitud.id, &verificacion, aceptado).await?;
+
+    verificacion?;
+    Ok((aceptado, emparejamiento))
+}
+
+/// Primera fase del lado que responde, separada de la decisión para poder esperar a una
+/// persona entre las dos (T182): construye el emparejamiento con el identificador que fijó
+/// quien inició —sin reutilizarlo, los códigos no cuadran— y verifica el código recibido.
+///
+/// Devuelve el emparejamiento (con el código a enseñar) y el resultado de la
+/// verificación. Un código o una huella que no encajan no son un error de esta función:
+/// se devuelven para que quien llama conteste con `verificationFailed` sin preguntar a
+/// nadie.
+pub fn preparar_respuesta(
+    solicitud: &ProtocolEnvelope<PairRequestPayload>,
+    huella_local: &str,
+    huella_remota: &str,
+) -> Result<(EmparejamientoEnCurso, Result<()>)> {
     if solicitud.msg_type != ProtocolMessageType::PairRequest {
         return Err(Error::new(
             ErrorKind::InvalidData,
             format!("Se esperaba PAIR_REQUEST y llegó {:?}", solicitud.msg_type),
         ));
     }
-
-    // El identificador lo fija quien inicia; sin reutilizarlo, los códigos no cuadran.
     let emparejamiento = EmparejamientoEnCurso::con_id(solicitud.id, huella_local, huella_remota)?;
-
     let verificacion = emparejamiento.verificar(&solicitud.payload.pairing_code, huella_remota);
-    let aceptado = match &verificacion {
-        Ok(()) => decidir(&emparejamiento.codigo),
-        Err(_) => false,
-    };
+    Ok((emparejamiento, verificacion))
+}
 
+/// Última fase del lado que responde: envía `PAIR_RESULT` con la decisión ya tomada.
+pub async fn contestar_emparejamiento<S>(
+    stream: &mut S,
+    id_solicitud: Uuid,
+    verificacion: &Result<()>,
+    aceptado: bool,
+) -> Result<()>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
     let respuesta = ProtocolEnvelope {
         msg_type: ProtocolMessageType::PairResult,
         id: Uuid::new_v4(),
         session_id: None,
         ts: ahora_rfc3339(),
-        in_reply_to: Some(solicitud.id),
+        in_reply_to: Some(id_solicitud),
         payload: PairResultPayload {
             accepted: aceptado,
-            reason: match &verificacion {
+            reason: match verificacion {
                 Ok(()) if aceptado => None,
                 Ok(()) => Some("rejectedByUser".to_string()),
                 // Motivo genérico a propósito: distinguir «código incorrecto» de
@@ -193,10 +225,7 @@ where
             },
         },
     };
-    send_envelope(stream, &respuesta).await?;
-
-    verificacion?;
-    Ok((aceptado, emparejamiento))
+    send_envelope(stream, &respuesta).await
 }
 
 #[cfg(test)]
