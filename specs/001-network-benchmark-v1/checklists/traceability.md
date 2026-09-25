@@ -34,7 +34,7 @@ equipos, elevación o una máquina que este entorno no tiene).
 | **FR-004** | `tasks.md` (fases 3–9, US1–US7) | T029–T129 | Todas las historias de usuario tienen implementación con pruebas propias | `VERIFICADO` (con las lagunas declaradas en este documento) |
 | **FR-005** | `features/results/ResultScreen.svelte`, `BasicResult.svelte` | T053, T061 | `ResultScreen.test.ts`, `BasicResult.test.ts` | `VERIFICADO` |
 | **FR-006** | `src/lib/i18n/`, `locales/es.json`, `locales/en.json` | T010, T022, T062, T131 | `check-locales.mjs`: 369 claves sincronizadas | `VERIFICADO` — SC-009 exige además formatos/plurales, sin comprobar (T169) |
-| **FR-007** | `control/domain.rs` (Cancelling desde cualquier estado activo) | T031, T066 | `cargo test control::domain_tests`, `process_cleanup` | `VERIFICADO` |
+| **FR-007** | `control/domain.rs`, `control/session_flow.rs` (T175) | T031, T066, T175 | `cargo test control::domain_tests`, `process_cleanup`, `control::session_flow::preflight_en_el_dialogo`; `CANCEL`/`CANCEL_ACK` real solo antes de que arranque el motor | `VERIFICADO` |
 | **FR-008** | `locales/*.json`, `features/settings/AboutScreen.svelte` | T049, T119, T124d | Inspección de textos: NTTTCP solo en detalles técnicos y Acerca de | `VERIFICADO` |
 
 ### Equipos, identidad y consentimiento
@@ -48,22 +48,22 @@ equipos, elevación o una máquina que este entorno no tiene).
 | **FR-013** | `control/pairing_flow.rs::atender_emparejamiento` | T030, T143 | `test_una_huella_distinta_invalida_el_emparejamiento` | `VERIFICADO` |
 | **FR-014** | `model/peer.rs::TrustState` (Unknown/Known/Trusted + `auto_accept`) | T029, T038 | `cargo test --test peer_contract` | `VERIFICADO` |
 | **FR-015** | `ipc/pairing.rs` (`auto_accept` forzado a `false` al aceptar) | T038, T143 | Código explícito en `peers_pairing_confirm`; sin prueba de UI que lo exija activar con aviso | `PARCIAL` |
-| **FR-016** | `features/session/SessionScreen.svelte` | T034, T048 | `SessionScreen.test.ts` — consentimiento sobre fixtures, no sobre el flujo real de sesión (T144 abierta) | `PARCIAL` |
+| **FR-016** | `control/consent.rs`, `ipc/consent.rs` (T177); `features/session/SessionScreen.svelte` (sin conectar, T181) | T034, T048, T177 | `cargo test control::consent`; `session_service_real` (`--ignored`): aceptar de verdad completa la sesión con NTTTCP real. Backend cableado y probado; sin pantalla que lo use todavía (T181) | `PARCIAL` |
 
 ### Sesión y medición
 
 | ID | Módulos reales | Tareas | Evidencia | Estado |
 |---|---|---|---|---|
 | **FR-017** | `control/domain.rs::SessionStateMachine` | T031 | `cargo test control::domain_tests` (sesión única, rechazo explícito) | `VERIFICADO` |
-| **FR-018** | `control/orquestador.rs`, `engine/ntttcp/` | T041, T042, T144 | Medición real en bucle local (`engine_real.rs`); **el diálogo bidireccional entre dos peers reales no está cableado** | `PARCIAL` |
-| **FR-019** | `control/preflight.rs` | T064, T070 | `cargo test control::preflight` (motor, NIC, ruta, versión, disco) | `VERIFICADO` |
-| **FR-020** | `control/preflight.rs`, `firewall/inspect.rs` | T067, T070, T072 | `firewall_harness.ps1`, `cargo test control::preflight` | `VERIFICADO` |
+| **FR-018** | `control/orquestador.rs`, `engine/ntttcp/` | T041, T042, T144 | Medición real en bucle local (`engine_real.rs`); `session_service_real.rs` (`--ignored`): sesión TCP en ambos sentidos entre dos servicios completos con NTTTCP real, en bucle local (VALIDACION §1.16). Sin UDP/simultáneo en el diálogo (T178) ni entre dos equipos (T180) | `PARCIAL` |
+| **FR-019** | `control/preflight.rs`, `control/session_flow.rs` (T173) | T064, T070, T173 | `cargo test control::preflight control::session_flow::preflight_en_el_dialogo`; solo el NIC del iniciador se invoca desde la sesión real, motor/disco/versión siguen sin invocarse ahí | `VERIFICADO` |
+| **FR-020** | `control/preflight.rs`, `control/session_flow.rs` (T173) | T067, T070, T072, T173 | `firewall_harness.ps1`, `cargo test control::preflight control::session_flow::preflight_en_el_dialogo`: puertos de datos del receptor comprobados antes de aceptar, con NTTTCP real de por medio | `VERIFICADO` |
 | **FR-021** | `control/plan.rs::BenchmarkPlan::validate` | T039, T093 | `cargo test control::advanced_plan_tests` | `VERIFICADO` |
 | **FR-022** | `control/domain.rs::can_transition_to` | T031, T065 | `cargo test --test protocol_abuse` | `VERIFICADO` |
-| **FR-023** | `engine/ntttcp/job_object.rs`, `control/cleanup.rs` | T042, T066, T071 | `cargo test --test process_cleanup` | `VERIFICADO` |
+| **FR-023** | `engine/ntttcp/job_object.rs`, `control/cleanup.rs`, `control/session_flow.rs` (T175) | T042, T066, T071, T175 | `cargo test --test process_cleanup`; `session_service_real` (`--ignored`) cancela a mitad de medición sin dejar `ntttcp.exe`, y cancela antes de arrancarlo con `CANCEL`/`CANCEL_ACK` real | `VERIFICADO` |
 | **FR-024** | — | — | **No implementado.** No hay lógica de reconexión con mismo `sessionId` en `control/`; solo se detectan huecos en muestras ya recibidas (`sampling/aggregate.rs`), no una recuperación de canal caído | `NO PRESENTE` |
-| **FR-025** | `control/protocol.rs::ResultadoSincronizacion` | T044, T152 | `cargo test control::protocol` — declara `Degradado` cuando el arranque excede tolerancia | `VERIFICADO` para la negociación de inicio; la reconciliación de resultado completo depende de FR-018 |
-| **FR-026** | `scripts/test/performance.ps1` | T043, T058 | Arnés mide procesos existentes, no la aplicación en ejecución real (T159 abierta) | `PARCIAL` |
+| **FR-025** | `control/protocol.rs::ResultadoSincronizacion`, `control/session_flow.rs` (T176) | T044, T152, T176 | `cargo test control::protocol control::session_flow::reconciliacion_de_resultado`; `session_service_real` (`--ignored`): B adopta el `resultSource: "initiator"` de A tras validar `SESSION_RESULT` real | `VERIFICADO` |
+| **FR-026** | `sampling/vivo.rs`, `control/service.rs::lanzar_aplicador` | T043, T058, T174 | `cargo test sampling::vivo`, `session_service_real` (`--ignored`, NTTTCP real): muestreo real por interfaz, salvo en bucle local (VALIDACION §1.17); arnés de `performance.ps1` sigue midiendo procesos existentes (T159) | `PARCIAL` |
 | **FR-027** | `control/orquestador.rs::resultado_de_direccion` | T044, T144 | `test_la_velocidad_oficial_es_la_del_receptor` | `VERIFICADO` |
 | **FR-028** | `diagnostic/rules.rs::SessionVerdict` (facts/observations/causes/actions) | T051, T057 | `cargo test diagnostic::` | `VERIFICADO` |
 | **FR-029** | `diagnostic/rules.rs` | T051, T057 | `cargo test diagnostic::rules_tests` | `VERIFICADO` |
@@ -91,7 +91,7 @@ equipos, elevación o una máquina que este entorno no tiene).
 | | · manifiesto `latest.json` estable | T125, T126 | `test_updater_rejects_mutable_latest_urls` | `VERIFICADO` |
 | | · accesibilidad completa H2 | T133 | `e2e/accessibility/` son stubs | `NO PRESENTE` |
 | **FR-043** | `platform/window.rs` | T121 | `cargo test --test window_geometry` (regla 100×100, fallback) | `VERIFICADO` — multi-monitor real sin probar (`window_harness.ps1` no abre ventana, T159) |
-| **FR-044** | `sampling/aggregate.rs` (batching ≤4 Hz) | T043, T058 | `cargo test sampling::aggregate` | `VERIFICADO` — medición de cancelación bajo degradación real sin probar |
+| **FR-044** | `sampling/aggregate.rs` (batching ≤4 Hz), `sampling/vivo.rs` (T174) | T043, T058, T174 | `cargo test sampling::aggregate sampling::vivo` | `VERIFICADO` — medición de cancelación bajo degradación real sin probar |
 
 ### Historial, exportación y ajustes
 
@@ -139,8 +139,8 @@ equipos, elevación o una máquina que este entorno no tiene).
 |---|---|---|---|
 | **SC-001** | Dos usuarios completan conexión, verificación, aceptación y prueba estándar sin ayuda | Emparejamiento verificado extremo a extremo (T143); la prueba estándar completa entre dos peers reales no se ha ejecutado (T144 parcial) | `PARCIAL` |
 | **SC-002** | Resultado en ≤ 75 s tras aceptación | Sin medición end-to-end real que lo cronometre; el plan estándar (~55 s) y el resto son cifras de diseño, no cronometradas (T165 pendiente de unificar la cuenta) | `NO PRESENTE` |
-| **SC-003** | 100 % de sesiones completadas con mismo ID/plan/cifras en ambos extremos | El ensamblado (`orquestador.rs`) lo garantiza en proceso; sin sesión real entre dos equipos que lo confirme | `PARCIAL` |
-| **SC-004** | Cancelación ≤ 2 s, libera recursos, estado terminal explícito | `cargo test --test process_cleanup` (limpieza), sin medir el tiempo real de un ACK remoto entre dos equipos | `PARCIAL` |
+| **SC-003** | 100 % de sesiones completadas con mismo ID/plan/cifras en ambos extremos | Dos servicios completos en bucle local persisten el mismo `session_id` y las mismas cifras oficiales en ambos extremos (§1.16); sin dos equipos reales (T180) | `PARCIAL` |
+| **SC-004** | Cancelación ≤ 2 s, libera recursos, estado terminal explícito | `cargo test --test process_cleanup` (limpieza); la cancelación local vuelve en < 2 s con motor en marcha (§1.16) y en ~0,45 s con `CANCEL`/`CANCEL_ACK` real antes de arrancarlo (§1.19); sin `CANCEL` cooperativo con el motor ya corriendo (declarado, no resuelto) | `VERIFICADO` |
 | **SC-005** | 100 % de resultados insuficientes muestran «no evaluable» | `test_sin_receptor_no_hay_velocidad_oficial`, `diagnostic::capacity` (sin `refBps` no hay veredicto) | `VERIFICADO` |
 | **SC-006** | 100 % de errores visibles con explicación, acción y código | `errors/mod.rs` catálogo completo, `ErrorResolution.test.ts` | `VERIFICADO` |
 | **SC-007** | Ningún recorrido ordinario menciona el motor fuera de detalles/licencias | Inspección de `locales/*.json` y pantallas: NTTTCP solo en `AboutScreen.svelte` y detalles técnicos | `VERIFICADO` |

@@ -153,8 +153,18 @@ impl PreflightEvaluator {
     }
 
     /// 3. Comprobación de disponibilidad de puertos (FR-020, §10.3, §28)
-    pub fn check_ports(control_port: u16, data_base_port: u16, streams: u32) -> PreflightCheck {
-        if !crate::control::ports::is_port_available(control_port) {
+    ///
+    /// `control_port` es `None` cuando quien pregunta ya está escuchando en él —una
+    /// sesión en curso, por ejemplo—: comprobar si está libre un puerto que uno mismo
+    /// tiene abierto siempre fallaría, y no sería una comprobación real de nada.
+    pub fn check_ports(
+        control_port: Option<u16>,
+        data_base_port: u16,
+        streams: u32,
+    ) -> PreflightCheck {
+        if let Some(control_port) = control_port
+            && !crate::control::ports::is_port_available(control_port)
+        {
             return PreflightCheck::failed(
                 PreflightCheckType::Ports,
                 "preflight.ports",

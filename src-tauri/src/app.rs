@@ -1,13 +1,15 @@
 use crate::control::engine_port::MotorNtttcp;
 use crate::control::orquestador::Orquestador;
 use crate::control::server::ControlServer;
-use crate::control::service::SessionService;
+use crate::control::service::{ContextoSesion, SessionService};
 use crate::engine::ntttcp::engine_sha256;
 use crate::history::database::Database;
 use crate::identity::InstanceIdentity;
+use crate::ipc::events::EmisorDeEventos;
 use crate::ipc::response::{IpcResult, OneTimeTokenStore};
 use crate::ipc::snapshot::{AppSnapshot, SnapshotManager};
 use crate::logging::{LogLevel, init_logger};
+use crate::sampling::vivo::{ContadoresWindows, Muestreo};
 use crate::settings::SettingsStore;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,6 +28,26 @@ pub struct AppState {
     pub orquestador: Arc<Orquestador>,
     /// Emparejamientos esperando la decisión del usuario, con su canal TLS abierto.
     pub pairings: Arc<crate::ipc::pairing::PairingStore>,
+    /// Solicitudes de sesión entrante esperando consentimiento humano (T177, FR-016).
+    pub solicitudes_entrantes: Arc<crate::control::consent::SolicitudesEntrantes>,
+}
+
+impl AppState {
+    /// Lo que una sesión necesita del resto de la aplicación. `emisor` es por donde salen
+    /// las muestras en vivo hacia la interfaz; sin él, la sesión no las produce.
+    pub fn contexto_de_sesion(&self, emisor: Option<Arc<dyn EmisorDeEventos>>) -> ContextoSesion {
+        ContextoSesion {
+            orquestador: Arc::clone(&self.orquestador),
+            identity: Arc::clone(&self.identity),
+            database: Arc::clone(&self.database),
+            muestreo: emisor.clone().map(|emisor| Muestreo {
+                emisor,
+                contadores: Arc::new(ContadoresWindows),
+            }),
+            consentimiento: Arc::clone(&self.solicitudes_entrantes),
+            emisor_eventos: emisor,
+        }
+    }
 }
 
 use crate::platform::window::{MonitorBounds, WindowGeometry, normalize_or_fallback_geometry};
@@ -160,21 +182,23 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         delete_tokens,
         orquestador,
         pairings: Arc::new(crate::ipc::pairing::PairingStore::new()),
+        solicitudes_entrantes: Arc::new(crate::control::consent::SolicitudesEntrantes::new()),
     })
 }
 
 /// Arranca el servidor del canal de control y devuelve el puerto real.
 ///
-/// Alcance deliberado: este bucle completa el handshake TLS mutuo y el saludo, y ahí
-/// termina. **No** atiende emparejamiento, solicitudes ni sesiones; eso es T144 y T153.
-/// Se conecta ahora porque sin un extremo que escuche ninguna de esas piezas puede
-/// siquiera probarse entre dos instancias.
+/// Cada conexión completa el TLS mutuo y el saludo, y se entrega a
+/// `control::despachador`, que atiende solicitudes de prueba. El emparejamiento entrante
+/// sigue sin atenderse: necesita un diálogo de decisión que aún no existe.
 ///
 /// Un fallo de una conexión no detiene el bucle: se registra y se sigue aceptando.
 pub async fn start_control_server(
-    identity: Arc<InstanceIdentity>,
+    ctx: crate::control::service::ContextoSesion,
+    servicio: Arc<SessionService>,
     puerto: u16,
 ) -> Result<u16, Box<dyn std::error::Error>> {
+    let identity = Arc::clone(&ctx.identity);
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 
     // `::` acepta también IPv4 mapeada, de modo que un solo socket cubre ambas
@@ -197,6 +221,9 @@ pub async fn start_control_server(
     let real = servidor.local_addr()?.port();
     tracing::info!("Canal de control escuchando en el puerto {real}");
 
+    // Conexiones entrantes simultáneas acotadas a 8 (contrato del protocolo, §Límites).
+    let cupo = Arc::new(tokio::sync::Semaphore::new(8));
+
     tauri::async_runtime::spawn(async move {
         loop {
             match servidor.accept_one().await {
@@ -208,6 +235,17 @@ pub async fn start_control_server(
                         saludo.remote_addr,
                         &saludo.fingerprint[..8]
                     );
+
+                    let Ok(permiso) = Arc::clone(&cupo).try_acquire_owned() else {
+                        tracing::warn!("Demasiadas conexiones simultáneas; se descarta una");
+                        continue;
+                    };
+                    let servicio = Arc::clone(&servicio);
+                    let ctx = ctx.clone();
+                    tauri::async_runtime::spawn(async move {
+                        crate::control::despachador::despachar(servicio, ctx, saludo).await;
+                        drop(permiso);
+                    });
                 }
                 Err(e) => {
                     tracing::warn!("Conexión entrante descartada: {e}");

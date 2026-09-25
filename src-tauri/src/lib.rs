@@ -22,17 +22,26 @@ pub mod updater;
 pub fn run() {
     let app_state = app::init().expect("fallo al inicializar el estado central de la aplicación");
 
-    // El canal de control se levanta antes que la ventana: una instancia debe poder
-    // recibir un saludo aunque su usuario no haya abierto nada todavía (FR-009).
-    let identity = std::sync::Arc::clone(&app_state.identity);
-    tauri::async_runtime::spawn(async move {
-        if let Err(e) = app::start_control_server(identity, discovery::CONTROL_PORT_DEFAULT).await {
-            tracing::error!("El canal de control no pudo arrancar: {e}");
-        }
-    });
-
     tauri::Builder::default()
-        .manage(app_state)
+        .setup(move |app| {
+            // El canal de control se levanta durante el arranque, antes de que el usuario
+            // abra nada: una instancia debe poder recibir un saludo aunque nadie haya
+            // tocado la ventana (FR-009). Se hace aquí y no antes del `Builder` porque las
+            // muestras en vivo de las sesiones entrantes necesitan el `AppHandle`.
+            let ctx = app_state.contexto_de_sesion(Some(std::sync::Arc::new(
+                tauri::Manager::app_handle(app).clone(),
+            )));
+            let servicio = std::sync::Arc::clone(&app_state.session_service);
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) =
+                    app::start_control_server(ctx, servicio, discovery::CONTROL_PORT_DEFAULT).await
+                {
+                    tracing::error!("El canal de control no pudo arrancar: {e}");
+                }
+            });
+            tauri::Manager::manage(app, app_state);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             app::app_get_snapshot,
             app::window_get_geometry,
@@ -46,6 +55,8 @@ pub fn run() {
             ipc::session::session_start,
             ipc::session::session_cancel,
             ipc::session::session_get_state,
+            ipc::consent::session_incoming_list,
+            ipc::consent::session_incoming_respond,
             ipc::diagnostics::diagnostics_get_report,
             ipc::firewall::firewall_inspect,
             ipc::firewall::firewall_apply,

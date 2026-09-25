@@ -94,6 +94,12 @@ pub struct CancelPayload {
     pub code: Option<String>,
 }
 
+/// Observación terminal idempotente: quien recibe `CANCEL` confirma con esto, sin más
+/// contenido que confirmar (contrato de protocolo, «CANCEL_ACK»).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelAckPayload {}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HeartbeatPayload {
@@ -154,6 +160,16 @@ pub struct EngineDonePayload {
     pub cpu_percent: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub errors_count: Option<u32>,
+    // T184: sin esto, el extremo que no midió esta mitad localmente nunca sabe cuántos
+    // paquetes se enviaron/recibieron/retransmitieron, y ni la retransmisión TCP ni la
+    // pérdida UDP se pueden calcular para la dirección en la que este lado fue receptor
+    // de este mensaje. Mismo campo opcional nuevo, misma regla de compatibilidad.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_sent: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_received: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_retransmitted: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

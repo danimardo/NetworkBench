@@ -263,6 +263,51 @@ impl DiagnosticEngine {
         }
     }
 
+    /// Pérdida de paquetes UDP, con la fórmula y los umbrales de `diagnostic::udp`
+    /// (`Historias.md` §18: `1 − recibidos / enviados`; 0,1 % y 1 %). Esa función es la
+    /// única fuente de esa matemática: aquí solo se traduce su resultado al único hueco
+    /// que el contrato de `DirectionResult` ofrece (`retransmission`).
+    ///
+    /// **No es una retransmisión y por eso no reutiliza `evaluate_retransmissions`**: UDP
+    /// no retransmite. En `RetransmissionStats`, `ratio` es la pérdida y
+    /// `packets_retransmitted` guarda los paquetes perdidos. El resto del diagnóstico UDP
+    /// (`UdpDiagnosticResult`: tasa objetivo, claves de título, observaciones) no tiene
+    /// dónde viajar en el resultado y no se usa todavía.
+    pub fn evaluate_udp_loss(
+        &self,
+        sent: Option<u64>,
+        received: Option<u64>,
+    ) -> RetransmissionStats {
+        let (Some(enviados), Some(recibidos)) = (sent, received) else {
+            return RetransmissionStats {
+                level: RetransmissionLevel::NotAvailable,
+                ratio: None,
+                packets_sent: sent,
+                packets_retransmitted: None,
+            };
+        };
+
+        let d = super::udp::evaluate_udp_diagnostics(enviados, recibidos, 0, 0, None, None, None);
+        match d.loss_level {
+            super::udp::UdpLossLevel::NotEvaluable => RetransmissionStats {
+                level: RetransmissionLevel::NotAvailable,
+                ratio: None,
+                packets_sent: sent,
+                packets_retransmitted: None,
+            },
+            nivel => RetransmissionStats {
+                level: match nivel {
+                    super::udp::UdpLossLevel::Low => RetransmissionLevel::Normal,
+                    super::udp::UdpLossLevel::Moderate => RetransmissionLevel::Elevated,
+                    _ => RetransmissionLevel::High,
+                },
+                ratio: Some(d.loss_ratio),
+                packets_sent: Some(d.packets_sent),
+                packets_retransmitted: Some(d.packets_lost),
+            },
+        }
+    }
+
     /// Evalúa el uso de CPU.
     pub fn evaluate_cpu(&self, cpu_avg: Option<f64>) -> CpuLevel {
         match cpu_avg {

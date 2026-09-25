@@ -18,11 +18,11 @@
 
 use crate::control::engine_port::{MotorDeMedida, MotorError, PeticionMedida};
 use crate::diagnostic::{
-    AsymmetryStats, CapacityReference, DiagnosticEngine, SessionVerdict, StabilityStats,
-    VerdictInput,
+    AsymmetryStats, CapacityReference, DiagnosticEngine, RetransmissionLevel, RetransmissionStats,
+    SessionVerdict, StabilityStats, VerdictInput,
 };
 use crate::engine::ntttcp::parser::{NtttcpParsedResult, NtttcpRole};
-use crate::model::plan::BenchmarkPlan;
+use crate::model::plan::{BenchmarkPlan, BenchmarkProtocol};
 use crate::model::result::{
     DirectionResult, EngineResult, PeerSnapshot, ResultVersions, SessionResult,
 };
@@ -52,6 +52,9 @@ impl Direccion {
 /// declararse completada (FR-027, FR-034).
 pub struct MedidasDireccion {
     pub direccion: Direccion,
+    /// De él depende qué se calcula con los contadores de paquetes: retransmisión en
+    /// TCP, pérdida en UDP (T184). No son la misma métrica ni la misma fórmula.
+    pub protocolo: BenchmarkProtocol,
     pub emisor: Option<NtttcpParsedResult>,
     pub receptor: Option<NtttcpParsedResult>,
     pub muestras: SampleCollector,
@@ -126,6 +129,23 @@ impl Orquestador {
             Some(self.diagnostico.evaluate_stability(&bps, huecos))
         };
 
+        // Solo con la dirección completa: con un extremo ausente, los contadores del otro
+        // no bastan para afirmar nada (FR-030, un dato ausente se queda ausente).
+        let paquetes: Option<RetransmissionStats> = if completada {
+            Some(match medidas.protocolo {
+                BenchmarkProtocol::Tcp => self.diagnostico.evaluate_retransmissions(
+                    emisor.and_then(|e| e.packets_sent),
+                    emisor.and_then(|e| e.packets_retransmitted),
+                ),
+                BenchmarkProtocol::Udp => self.diagnostico.evaluate_udp_loss(
+                    emisor.and_then(|e| e.packets_sent),
+                    receptor.and_then(|r| r.packets_received),
+                ),
+            })
+        } else {
+            None
+        };
+
         DirectionResult {
             direction: medidas.direccion.como_str().to_string(),
             status: if completada {
@@ -140,7 +160,7 @@ impl Orquestador {
             official_bps: if completada { official_bps } else { None },
             utilization: None,
             stability: estabilidad,
-            retransmission: None,
+            retransmission: paquetes,
             cpu_sender: emisor.and_then(|r| r.cpu_percent),
             cpu_receiver: receptor.and_then(|r| r.cpu_percent),
             samples_count: bps.len(),
@@ -196,6 +216,20 @@ impl Orquestador {
             .flatten()
             .fold(None::<f64>, |acc, v| Some(acc.map_or(v, |a: f64| a.max(v))));
 
+        // El veredicto toma la peor de las direcciones (`Historias.md` §13.5: «retransmisiones
+        // (ELEVATED → warn, HIGH → problem)», del emisor de cada dirección). Sin este
+        // paso, el dato se calculaba por dirección y el veredicto lo ignoraba (T184).
+        let gravedad = |r: &&RetransmissionStats| match r.level {
+            RetransmissionLevel::High => 3,
+            RetransmissionLevel::Elevated => 2,
+            RetransmissionLevel::Normal => 1,
+            RetransmissionLevel::NotAvailable => 0,
+        };
+        let paquetes_peor = direcciones
+            .iter()
+            .filter_map(|d| d.retransmission.as_ref())
+            .max_by_key(gravedad);
+
         let capacidad_ref = capacidad.unwrap_or(CapacityReference {
             ref_bps: None,
             ref_source: crate::diagnostic::CapacitySource::Unknown,
@@ -211,7 +245,7 @@ impl Orquestador {
                 forward_stability: estab("forward"),
                 reverse_stability: estab("reverse"),
                 asymmetry: asimetria.as_ref(),
-                retransmissions: None,
+                retransmissions: paquetes_peor,
                 max_cpu_percent: cpu_max,
                 is_completed: completa,
             }));
@@ -270,6 +304,9 @@ fn a_engine_result(r: &NtttcpParsedResult, role: &str) -> EngineResult {
         cpu_percent: r.cpu_percent,
         buffers_count: Some(r.total_buffers),
         errors_count: r.errors_count,
+        packets_sent: r.packets_sent,
+        packets_received: r.packets_received,
+        packets_retransmitted: r.packets_retransmitted,
         raw: None,
     }
 }
@@ -299,6 +336,7 @@ mod tests {
     ) -> MedidasDireccion {
         MedidasDireccion {
             direccion,
+            protocolo: BenchmarkProtocol::Tcp,
             emisor,
             receptor,
             muestras: SampleCollector::new(),
@@ -450,6 +488,149 @@ mod tests {
             r.asymmetry.is_none(),
             "una dirección no permite juzgar asimetría"
         );
+    }
+
+    fn con_paquetes(
+        mut r: NtttcpParsedResult,
+        enviados: Option<u64>,
+        recibidos: Option<u64>,
+        retransmitidos: Option<u64>,
+    ) -> NtttcpParsedResult {
+        r.packets_sent = enviados;
+        r.packets_received = recibidos;
+        r.packets_retransmitted = retransmitidos;
+        r
+    }
+
+    fn medidas_de(
+        protocolo: BenchmarkProtocol,
+        emisor: NtttcpParsedResult,
+        receptor: NtttcpParsedResult,
+    ) -> MedidasDireccion {
+        MedidasDireccion {
+            protocolo,
+            ..medidas(Direccion::Forward, Some(emisor), Some(receptor))
+        }
+    }
+
+    /// T184: en TCP se calcula la retransmisión con los contadores del emisor.
+    #[test]
+    fn test_tcp_calcula_retransmision_con_los_contadores_del_emisor() {
+        let o = orquestador_con(vec![]);
+        let emisor = con_paquetes(
+            MotorDeLaboratorio::resultado(NtttcpRole::Sender, 940_000_000, 10.0),
+            Some(10_000),
+            None,
+            Some(150),
+        );
+        let receptor = MotorDeLaboratorio::resultado(NtttcpRole::Receiver, 938_000_000, 10.0);
+
+        let d = o.resultado_de_direccion(&medidas_de(BenchmarkProtocol::Tcp, emisor, receptor));
+        let r = d.retransmission.expect("dirección completa con contadores");
+        assert_eq!(r.level, RetransmissionLevel::High);
+        assert_eq!(r.packets_retransmitted, Some(150));
+    }
+
+    /// T184: en UDP se calcula la pérdida, con lo enviado por el emisor y lo recibido
+    /// por el receptor; los contadores de retransmisión no cuentan.
+    #[test]
+    fn test_udp_calcula_perdida_con_enviados_y_recibidos() {
+        let o = orquestador_con(vec![]);
+        let emisor = con_paquetes(
+            MotorDeLaboratorio::resultado(NtttcpRole::Sender, 100_000_000, 10.0),
+            Some(10_000),
+            None,
+            Some(9_999), // un valor absurdo a propósito: en UDP no debe usarse
+        );
+        let receptor = con_paquetes(
+            MotorDeLaboratorio::resultado(NtttcpRole::Receiver, 98_500_000, 10.0),
+            None,
+            Some(9_850),
+            None,
+        );
+
+        let d = o.resultado_de_direccion(&medidas_de(BenchmarkProtocol::Udp, emisor, receptor));
+        let r = d.retransmission.expect("dirección completa con contadores");
+        assert_eq!(r.level, RetransmissionLevel::High);
+        assert_eq!(
+            r.packets_retransmitted,
+            Some(150),
+            "perdidos = 10000 - 9850"
+        );
+        assert!((r.ratio.unwrap() - 0.015).abs() < 1e-9);
+    }
+
+    /// Sin contadores no se inventa nada, y con la dirección incompleta tampoco se
+    /// calcula (FR-030).
+    #[test]
+    fn test_sin_contadores_o_sin_direccion_completa_no_hay_estadistica_inventada() {
+        let o = orquestador_con(vec![]);
+
+        let sin_contadores = o.resultado_de_direccion(&medidas_de(
+            BenchmarkProtocol::Udp,
+            MotorDeLaboratorio::resultado(NtttcpRole::Sender, 1, 10.0),
+            MotorDeLaboratorio::resultado(NtttcpRole::Receiver, 1, 10.0),
+        ));
+        assert_eq!(
+            sin_contadores.retransmission.unwrap().level,
+            RetransmissionLevel::NotAvailable
+        );
+
+        let mut incompleta = medidas(Direccion::Forward, None, None);
+        incompleta.emisor = Some(con_paquetes(
+            MotorDeLaboratorio::resultado(NtttcpRole::Sender, 1, 10.0),
+            Some(100),
+            None,
+            Some(50),
+        ));
+        assert!(
+            o.resultado_de_direccion(&incompleta)
+                .retransmission
+                .is_none()
+        );
+    }
+
+    /// T184: el veredicto ya no ignora la retransmisión: una dirección con retransmisión
+    /// alta lo lleva a `problem`, aunque la otra vaya limpia.
+    #[test]
+    fn test_el_veredicto_toma_la_peor_retransmision_de_las_direcciones() {
+        let o = orquestador_con(vec![]);
+        let plan = BenchmarkPlan::new_standard_tcp(7412);
+        let limpia = o.resultado_de_direccion(&medidas_de(
+            BenchmarkProtocol::Tcp,
+            con_paquetes(
+                MotorDeLaboratorio::resultado(NtttcpRole::Sender, 940_000_000, 10.0),
+                Some(10_000),
+                None,
+                Some(0),
+            ),
+            MotorDeLaboratorio::resultado(NtttcpRole::Receiver, 940_000_000, 10.0),
+        ));
+        let mut mala = o.resultado_de_direccion(&medidas_de(
+            BenchmarkProtocol::Tcp,
+            con_paquetes(
+                MotorDeLaboratorio::resultado(NtttcpRole::Sender, 940_000_000, 10.0),
+                Some(10_000),
+                None,
+                Some(500),
+            ),
+            MotorDeLaboratorio::resultado(NtttcpRole::Receiver, 940_000_000, 10.0),
+        ));
+        mala.direction = "reverse".to_string();
+
+        let r = o.ensamblar(EntradaSesion {
+            session_id: Uuid::new_v4(),
+            started_at: "2026-09-25T10:00:00.000Z",
+            finished_at: "2026-09-25T10:00:30.000Z",
+            plan: &plan,
+            initiator: snapshot("A"),
+            responder: snapshot("B"),
+            direcciones: vec![limpia, mala],
+            capacidad: None,
+            engine_version: "5.40".into(),
+        });
+        let veredicto = r.verdict.expect("veredicto");
+        assert_eq!(veredicto.retransmission_level, RetransmissionLevel::High);
     }
 
     #[tokio::test]

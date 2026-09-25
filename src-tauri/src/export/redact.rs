@@ -156,6 +156,9 @@ pub fn redact_engine_result(engine: &EngineResult, redact_identifiers: bool) -> 
         cpu_percent: engine.cpu_percent,
         buffers_count: engine.buffers_count,
         errors_count: engine.errors_count,
+        packets_sent: engine.packets_sent,
+        packets_received: engine.packets_received,
+        packets_retransmitted: engine.packets_retransmitted,
         raw,
     }
 }

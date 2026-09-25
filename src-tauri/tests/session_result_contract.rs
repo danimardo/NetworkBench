@@ -41,6 +41,9 @@ fn test_session_result_serde_roundtrip_completed() {
         cpu_percent: Some(12.5),
         buffers_count: Some(36240),
         errors_count: 0,
+        packets_sent: None,
+        packets_received: None,
+        packets_retransmitted: None,
         raw: None,
     };
     let receiver = EngineResult {
@@ -51,6 +54,9 @@ fn test_session_result_serde_roundtrip_completed() {
         cpu_percent: Some(8.2),
         buffers_count: Some(36160),
         errors_count: 0,
+        packets_sent: None,
+        packets_received: None,
+        packets_retransmitted: None,
         raw: None,
     };
 

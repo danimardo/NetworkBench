@@ -217,3 +217,141 @@ pub fn get_session_by_id(conn: &Connection, session_id: &Uuid) -> Result<Option<
         Ok(None)
     }
 }
+
+/// Persiste el resultado de una sesión ya terminada, junto al peer con el que se midió.
+///
+/// Vive aquí porque `history` es el único propietario del esquema y del SQL (plan,
+/// §Fronteras): quien orquesta la sesión entrega un `SessionResult` y no construye filas.
+///
+/// El peer se registra antes que la sesión porque `sessions.peer_id` tiene clave foránea
+/// hacia `peers(id)`. `upsert_peer` no rebaja la confianza de un peer ya conocido.
+///
+/// Es idempotente por identificador de sesión (`insert_session_idempotent`): guardar dos
+/// veces el mismo resultado no duplica nada, que es lo que exige reintentar tras un fallo
+/// parcial sin corromper el historial (FR-045).
+pub fn guardar_resultado_de_sesion(
+    conn: &mut Connection,
+    peer: &crate::model::peer::Peer,
+    resultado: &crate::model::result::SessionResult,
+) -> Result<()> {
+    crate::history::peers::upsert_peer(conn, peer)?;
+
+    let oficial = |sentido: &str| {
+        resultado
+            .directions
+            .iter()
+            .find(|d| d.direction == sentido)
+            .and_then(|d| d.official_bps.clone())
+    };
+
+    let veredicto = resultado
+        .verdict
+        .as_ref()
+        .and_then(|v| serde_json::to_value(v.level).ok())
+        .and_then(|v| v.as_str().map(str::to_string));
+
+    let protocolo = match resultado.plan.protocol {
+        crate::model::plan::BenchmarkProtocol::Tcp => "tcp",
+        crate::model::plan::BenchmarkProtocol::Udp => "udp",
+    };
+
+    let registro = SessionRecord {
+        id: resultado.session_id,
+        created_at: resultado.started_at.clone(),
+        peer_id: Some(peer.instance_id),
+        status: resultado.status.clone(),
+        protocol: protocolo.to_string(),
+        streams: resultado.plan.streams,
+        duration_seconds: resultado.plan.measure_seconds,
+        forward_bps: oficial("forward"),
+        reverse_bps: oficial("reverse"),
+        // Una sesión que no llegó a completarse se guarda, pero marcada como parcial:
+        // nunca se presenta un parcial como éxito (FR-034).
+        is_partial: resultado.status != "completed",
+        diagnostic_verdict: veredicto,
+        client_interface: None,
+        server_interface: None,
+        result_json: serde_json::to_string(resultado).ok(),
+        plan_json: serde_json::to_string(&resultado.plan).ok(),
+        samples: Vec::new(),
+    };
+
+    insert_session_idempotent(conn, &registro)
+}
+
+#[cfg(test)]
+mod guardado_tests {
+    use super::*;
+    use crate::control::engine_port::MotorDeLaboratorio;
+    use crate::control::orquestador::Orquestador;
+    use crate::control::session_flow::ensamblar_resultado;
+    use crate::model::peer::Peer;
+    use crate::model::plan::BenchmarkPlan;
+    use std::sync::Arc;
+
+    fn peer() -> Peer {
+        Peer::new(
+            Uuid::new_v4(),
+            "Equipo".into(),
+            "a".repeat(64),
+            vec!["127.0.0.1:7411".into()],
+        )
+        .unwrap()
+    }
+
+    fn base_de_datos() -> Connection {
+        let ruta = std::env::temp_dir().join(format!("nb_guardado_{}.db", Uuid::new_v4()));
+        let db = crate::history::database::Database::open(ruta).expect("abrir");
+        // `Database` posee la conexión tras un Mutex; para la prueba se abre otra
+        // sobre el mismo fichero migrado.
+        Connection::open(db.path()).expect("abrir conexión")
+    }
+
+    fn resultado_de(peer: &Peer) -> crate::model::result::SessionResult {
+        let orq = Orquestador::new(Arc::new(MotorDeLaboratorio::con_respuestas(vec![])));
+        let plan = BenchmarkPlan::new_standard_tcp(7412);
+        ensamblar_resultado(
+            &orq,
+            Uuid::new_v4(),
+            "2026-09-25T10:00:00.000Z",
+            "2026-09-25T10:00:30.000Z",
+            &plan,
+            peer.clone(),
+            peer.clone(),
+            vec![],
+        )
+    }
+
+    #[test]
+    fn test_guarda_el_resultado_y_se_puede_recuperar() {
+        let mut conn = base_de_datos();
+        let p = peer();
+        let r = resultado_de(&p);
+
+        guardar_resultado_de_sesion(&mut conn, &p, &r).expect("guardar");
+
+        let leido = get_session_by_id(&conn, &r.session_id)
+            .expect("consulta")
+            .expect("debe existir");
+        assert_eq!(leido.id, r.session_id);
+        assert_eq!(leido.peer_id, Some(p.instance_id));
+        // Sin direcciones completadas, la sesión es parcial y así queda registrada.
+        assert!(leido.is_partial);
+        assert!(leido.result_json.is_some());
+    }
+
+    #[test]
+    fn test_guardar_dos_veces_no_duplica() {
+        let mut conn = base_de_datos();
+        let p = peer();
+        let r = resultado_de(&p);
+
+        guardar_resultado_de_sesion(&mut conn, &p, &r).unwrap();
+        guardar_resultado_de_sesion(&mut conn, &p, &r).unwrap();
+
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sessions", [], |f| f.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+    }
+}

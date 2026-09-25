@@ -93,6 +93,47 @@ fn test_retransmissions_boundaries() {
     assert_eq!(missing.level, RetransmissionLevel::NotAvailable);
 }
 
+/// T184: la pérdida UDP es `1 − recibidos / enviados`, con los mismos puntos de corte.
+#[test]
+fn test_udp_loss_boundaries_and_formula() {
+    let engine = DiagnosticEngine::new();
+
+    // 5 perdidos de 10 000 → 0,05 % → sin pérdidas apreciables.
+    let normal = engine.evaluate_udp_loss(Some(10_000), Some(9_995));
+    assert_eq!(normal.level, RetransmissionLevel::Normal);
+    assert_eq!(normal.packets_retransmitted, Some(5));
+
+    // Exactamente 0,1 % y exactamente 1 % → ligeras (los dos extremos del tramo).
+    let ligera_inferior = engine.evaluate_udp_loss(Some(10_000), Some(9_990));
+    assert_eq!(ligera_inferior.level, RetransmissionLevel::Elevated);
+    let ligera_superior = engine.evaluate_udp_loss(Some(10_000), Some(9_900));
+    assert_eq!(ligera_superior.level, RetransmissionLevel::Elevated);
+
+    // Más del 1 % → significativas.
+    let alta = engine.evaluate_udp_loss(Some(10_000), Some(9_850));
+    assert_eq!(alta.level, RetransmissionLevel::High);
+    let ratio = alta.ratio.unwrap();
+    assert!((ratio - 0.015).abs() < 1e-9, "ratio {ratio}");
+
+    // Sin ninguna pérdida es un cero real, no un dato ausente.
+    let sin_perdida = engine.evaluate_udp_loss(Some(10_000), Some(10_000));
+    assert_eq!(sin_perdida.level, RetransmissionLevel::Normal);
+    assert_eq!(sin_perdida.ratio, Some(0.0));
+
+    // Recibir más de lo enviado (contadores de instantes distintos) no da un ratio
+    // negativo ni un desbordamiento: se satura a cero perdidos.
+    let de_mas = engine.evaluate_udp_loss(Some(1_000), Some(1_003));
+    assert_eq!(de_mas.packets_retransmitted, Some(0));
+    assert_eq!(de_mas.ratio, Some(0.0));
+
+    // Sin uno de los dos contadores, o sin nada enviado, no se inventa un valor.
+    for (enviados, recibidos) in [(None, Some(5)), (Some(5), None), (Some(0), Some(0))] {
+        let r = engine.evaluate_udp_loss(enviados, recibidos);
+        assert_eq!(r.level, RetransmissionLevel::NotAvailable);
+        assert_eq!(r.ratio, None);
+    }
+}
+
 #[test]
 fn test_cpu_boundaries() {
     let engine = DiagnosticEngine::new();

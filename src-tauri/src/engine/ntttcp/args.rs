@@ -1,5 +1,6 @@
 use super::parser::NtttcpRole;
 use crate::model::plan::{BenchmarkPlan, BenchmarkProtocol};
+use std::net::IpAddr;
 use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,7 +11,8 @@ pub enum NtttcpArgError {
 }
 
 /// Allowlist de argumentos permitidos para Microsoft NTTTCP en Windows:
-/// Flags permitidos: -s, -r, -m, -l, -a, -t, -cd, -wu, -xml, -u (para UDP en H5)
+/// Flags permitidos: -s, -r, -m, -l, -a, -t, -cd, -wu, -xml, -u (para UDP en H5),
+/// -6 (IPv6, T179)
 pub fn build_ntttcp_args(
     role: NtttcpRole,
     plan: &BenchmarkPlan,
@@ -61,6 +63,17 @@ pub fn build_ntttcp_args(
     // 2b. Puerto base. Cada stream usa `puerto + i` (V-01).
     args.push("-p".to_string());
     args.push(plan.port.to_string());
+
+    // 2c. IPv6 (T179): comprobado con NTTTCP 5.40 real sobre `::1` el 2026-09-25, con
+    // `-6` y una dirección IPv6 en `-m` — sin él, una dirección IPv6 no se interpreta
+    // como tal. Una IPv4 mapeada (`::ffff:a.b.c.d`) no cuenta: `normalizar_ip`
+    // (`control/service.rs`) ya la reduce a IPv4 antes de llegar aquí, y esta
+    // comprobación lo repite por si a este constructor le llega sin pasar por ahí.
+    if let Ok(IpAddr::V6(v6)) = host.parse::<IpAddr>()
+        && v6.to_ipv4_mapped().is_none()
+    {
+        args.push("-6".to_string());
+    }
 
     // 3. Tamaño de buffer: por defecto 64KB (65536) para TCP, o datagrama UDP (1472 por defecto)
     let buffer_size = if plan.protocol == BenchmarkProtocol::Udp {

@@ -123,6 +123,37 @@ fn test_build_allowlisted_args_sender_and_injection_prevention() {
     );
 }
 
+/// T179: una dirección IPv6 real añade `-6`; verificado que NTTTCP 5.40 lo exige contra
+/// una ejecución real sobre `::1` (`VALIDACION.md`).
+#[test]
+fn test_una_direccion_ipv6_anade_el_flag_seis() {
+    let plan = BenchmarkPlan::new_standard_tcp(7412);
+    let output_path = Path::new("C:\\temp\\output.xml");
+
+    let args = build_ntttcp_args(NtttcpRole::Sender, &plan, Some("::1"), output_path)
+        .expect("construir args con destino IPv6");
+
+    assert!(args.contains(&"-6".to_string()));
+    assert!(args.contains(&"1,*,::1".to_string()));
+}
+
+/// Una IPv4 corriente, o una IPv4 mapeada sobre IPv6, no llevan `-6`: no son un destino
+/// IPv6 real, aunque la segunda tenga la forma de una dirección de esa familia.
+#[test]
+fn test_una_direccion_ipv4_o_mapeada_no_anade_el_flag_seis() {
+    let plan = BenchmarkPlan::new_standard_tcp(7412);
+    let output_path = Path::new("C:\\temp\\output.xml");
+
+    for host in ["192.168.1.50", "::ffff:192.168.1.50"] {
+        let args = build_ntttcp_args(NtttcpRole::Sender, &plan, Some(host), output_path)
+            .unwrap_or_else(|e| panic!("construir args para {host}: {e:?}"));
+        assert!(
+            !args.contains(&"-6".to_string()),
+            "{host} no debe llevar -6"
+        );
+    }
+}
+
 #[test]
 fn test_los_contadores_udp_son_los_del_motor() {
     // Antes `packets_sent` y `packets_received` se rellenaban con `total_buffers`

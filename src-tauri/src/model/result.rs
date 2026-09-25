@@ -26,6 +26,15 @@ pub struct EngineResult {
     pub cpu_percent: Option<f64>,
     pub buffers_count: Option<u64>,
     pub errors_count: u32,
+    // T184: ausentes hasta ahora aunque `Historias.md` §11.6 ya los preveía en esta
+    // forma exacta. Sin ellos no había con qué calcular retransmisión TCP ni pérdida UDP
+    // en el camino real, solo en pruebas aisladas del motor de diagnóstico.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_sent: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_received: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packets_retransmitted: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<String>,
 }
@@ -157,6 +166,9 @@ mod tests {
             cpu_percent: Some(5.0),
             buffers_count: Some(18000),
             errors_count: 0,
+            packets_sent: None,
+            packets_received: None,
+            packets_retransmitted: None,
             raw: None,
         };
         let receiver = EngineResult {
@@ -167,6 +179,9 @@ mod tests {
             cpu_percent: Some(4.0),
             buffers_count: Some(18000),
             errors_count: 0,
+            packets_sent: None,
+            packets_received: None,
+            packets_retransmitted: None,
             raw: None,
         };
 

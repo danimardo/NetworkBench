@@ -405,8 +405,397 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
   (que sigue solo transicionando estados). Nada de esto se ha probado entre dos equipos
   Windows distintos, solo en bucle local.
 - **Estado**: `VERIFICADO` (diálogo completo en bucle local, con motor real) ·
-  `NO PRESENTE` (cableado a IPC, bidireccional, cancelación, persistencia) ·
+  `NO VERIFICABLE` aquí (dos equipos reales). Lo que esta tanda dejaba sin cablear
+  (IPC, bidireccional, cancelación, persistencia) se cubre en §1.16.
+
+### 1.16 Sesión real entre dos servicios completos, cableada a IPC (T144, cierre parcial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25. Todo en bucle local: dos `SessionService` en el mismo proceso, cada uno con su
+  identidad, su base de datos SQLite temporal y su `ControlServer` en un puerto efímero.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  y `cargo test --manifest-path src-tauri/Cargo.toml` (rápidas), más `cargo fmt` y
+  `cargo clippy --all-targets -- -D warnings` sin avisos.
+- **Resultado con NTTTCP real**: `session_flow_real` **2 en verde, 16,73 s** (dirección
+  única y ambos sentidos en una misma sesión); `session_service_real` **2 en verde,
+  41,46 s** (sesión completa entre dos servicios y cancelación a mitad de medición).
+  Tras la ejecución, `tasklist` no encontró ningún `ntttcp.exe`.
+- **Resultado sin motor real** (rápidas, en verde): rechazo de un equipo sin autoaceptación,
+  rechazo de un equipo desconocido, rechazo de una identidad cambiada (la huella presentada
+  no coincide con la guardada, FR-013; no llega a medir) y rechazo por receptor ocupado
+  (FR-017: la sesión previa del receptor queda intacta y el iniciador termina `Failed`
+  sin persistir nada). Suma: 122 pruebas de biblioteca y el resto de suites, sin fallos.
+- **Qué recorre la prueba completa**: `session_start` → búsqueda del peer guardado por
+  huella (debe ser de confianza o autoaceptación) → conexión TLS mutua con comprobación de
+  identidad → `REQUEST`/`RESPONSE` → `PREPARE`/`READY` → negociación de `START` (G2) →
+  dirección de ida y dirección de vuelta con NTTTCP real → ensamblado del resultado →
+  **persistencia automática en la base de datos de los dos extremos** con el mismo
+  `session_id`. La segunda dirección solo se intenta si el receptor la acepta tras
+  revalidar el plan (FR-021).
+- **Cancelación**: cancelar aborta la tarea de sesión; al soltarse `NtttcpProcess` y su
+  `JobObject` (`KILL_ON_JOB_CLOSE`) el motor muere. La prueba exige que `cancel` vuelva en
+  menos de 2 s (aserción en `session_service_real.rs`) y comprueba a continuación que no
+  queda ningún `ntttcp.exe`. El otro extremo se entera porque el canal se cierra.
+- **Un fallo real que apareció al construirlo**: pasar un cierre asíncrono (`AsyncFnMut`)
+  para notificar el inicio de cada pata impedía demostrar que el futuro era `Send` al
+  lanzarlo con `tokio::spawn`. Se sustituyó por un `FnMut` síncrono que envía por un canal
+  a una tarea aplicadora, esperada antes de pasar a `Analyzing`.
+- **Lo que NO se hizo** (desglosado como T173–T180 en la Fase 13): preflight dentro del
+  recorrido de sesión; bucle de muestreo en vivo (NTTTCP solo entrega el XML final, así que
+  la interfaz no recibe muestras durante la medición); cancelación graciosa
+  `CANCEL`/`CANCEL_ACK` y cancelación iniciada por el par a mitad de diálogo; intercambio
+  `SESSION_RESULT`/`SESSION_ACK` (cada lado ensambla su propia vista); diálogo de
+  consentimiento y emparejamiento entrante (`PAIR_REQUEST` se registra y se descarta); UDP y
+  ejecución simultánea en el diálogo; IPv6 con el motor (no se emite `-6`); y cualquier
+  prueba entre dos equipos físicos.
+- **Estado**: `VERIFICADO` (sesión TCP bidireccional entre dos servicios completos con motor
+  real en bucle local, persistencia, cancelación, rechazos) · `NO PRESENTE` (lo listado
+  arriba) · `NO VERIFICABLE` aquí (dos equipos reales, firewall, latencia de red real)
+
+### 1.17 Muestreo en vivo durante la medición (T174, cierra el hueco de T150)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib sampling::vivo` (7 en verde) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib control::service::tests::t174` (3
+  en verde, con un `ProveedorDeContadores` falso) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (4 en verde, NTTTCP real) · `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos.
+- **Qué hace**: `sampling::vivo::MuestreadorActivo` lee cada 500 ms (`SAMPLE_INTERVAL_MS`)
+  los contadores de octetos de la interfaz que lleva el tráfico hacia el equipo remoto
+  (`GetIfEntry2`, resuelta con `GetBestInterface`), calcula bits por segundo entre dos
+  lecturas y los entrega a `SampleBatcher`, que ya agrupaba y limitaba a 4 Hz (T150). En el
+  emisor de una pata mira los octetos salientes; en el receptor, los entrantes.
+  `control::service::lanzar_aplicador` abre un muestreador al recibir `EventoPata::Inicia`
+  y lo detiene con `EventoPata::Termina`; si el canal se suelta sin `Termina` (cancelación),
+  el muestreo pendiente también se detiene, sin quedar huérfano.
+- **Un hallazgo real, no simulado**: la interfaz de bucle local de Windows no incrementa
+  sus contadores. Se comprobó moviendo unos 200 MB por un socket TCP local: `InOctets` y
+  `OutOctets` quedaron en 0 antes y después. Muestrear esa interfaz habría producido una
+  serie de ceros con apariencia de medición real. Se decidió declarar `Err` explícito
+  para el bucle local (`abrir` lo rechaza) en vez de fingir tráfico: la sesión sigue y
+  completa igual, solo se queda sin gráfica en directo. `t144_sesion_completa_entre_dos_servicios_con_motor_real`
+  comprueba justamente que en bucle local no sale ningún lote.
+- **Lo que SÍ se verificó con datos reales de sistema**: una prueba temporal (no
+  incorporada, borrada tras el experimento) leyó los contadores de un adaptador físico dos
+  veces con 3 s de por medio y confirmó que `InOctets`/`OutOctets` crecen con tráfico real
+  del sistema. La lógica de conversión a bps y de agrupación se prueba con un
+  `FuenteDeContadores`/`ProveedorDeContadores` de prueba, deterministas, no con el
+  adaptador real: correcto para no depender de tráfico ajeno en CI, pero significa que
+  **la lectura Windows real solo se demostró una vez, de forma manual, no en la suite**.
+- **No cubierto**: CPU (`cpu_percent` siempre `None`, no hay fuente); IPv6 (`abrir`
+  devuelve error explícito, T179); una sesión con tráfico real entre dos equipos físicos
+  que confirme que las muestras se emiten con datos que no sean cero (NO VERIFICABLE aquí,
+  bucle local no sirve); si el frontend efectivamente pinta esas muestras (fuera del
+  alcance de esta tarea, backend únicamente).
+- **Estado**: `VERIFICADO` (mecánica de muestreo, agrupación, arranque/parada por pata,
+  detección correcta del caso sin contadores) · `NO VERIFICABLE` aquí (contadores reales
+  con tráfico real de la prueba, solo posible entre dos equipos físicos)
+
+### 1.18 Preflight cableado en el recorrido de sesión (T173)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib control::session_flow::preflight_en_el_dialogo`
+  (2 en verde) · `cargo test --manifest-path src-tauri/Cargo.toml --lib control::preflight`
+  (pruebas existentes, incluida una nueva para `check_ports(None, ..)`) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (4 en verde, NTTTCP real) · `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos.
+- **Qué comprueba cada lado, y solo eso**: quien va a proponer una dirección
+  (`iniciar_direccion`) comprueba que tiene ruta local hacia el destino
+  (`PreflightEvaluator::check_nic`) antes de enviar el `REQUEST`; quien va a recibir una
+  dirección (`atender_direccion_desde`, usada por los dos extremos según de quién es el
+  turno) comprueba que el bloque de puertos de datos del plan está libre
+  (`PreflightEvaluator::check_ports`) antes de `aceptar`. Un fallo de puertos se responde
+  con `RESPONSE{accepted:false, reason:"portsUnavailable"}`, una categoría cerrada nueva
+  (`MotivoRechazo::PuertosOcupados`), nunca con texto libre.
+- **Un fallo real de la propia tarea, no del código de sesión**: `check_ports` exigía un
+  `control_port` y lo declaraba obligatoriamente ocupado — la propia tarea T173 ya lo
+  señalaba como bug. Se cambió su firma a `control_port: Option<u16>`; con `None` esa
+  comprobación se omite. Las dos pruebas existentes que pasaban un puerto de control real
+  siguen probando exactamente lo mismo (ahora con `Some(puerto)`); se añadió una tercera
+  para `None`.
+- **Un fallo real durante la construcción de la prueba (no del código de producción)**: la
+  primera versión de `un_puerto_de_datos_ocupado_se_rechaza_con_ports_unavailable` ocupó el
+  puerto con `TcpListener::bind("127.0.0.1:0")`, pero `is_port_available_for_protocol`
+  siempre sondea `0.0.0.0`; el sondeo veía el puerto libre, la pata se aceptaba y la
+  prueba se quedó esperando un `PREPARE` que nunca llegaría — colgada, no fallida. Se
+  detectó porque el proceso de pruebas no terminaba (varios minutos sin salida) y hubo que
+  matarlo a mano (`taskkill`) para poder corregirla. Corregida ocupando `0.0.0.0:0`, igual
+  que ya hacía `preflight_tests.rs`, la prueba pasa en 0,01 s.
+- **No cubierto, deliberadamente fuera de esta tarea**: el resto de `PreflightEvaluator`
+  (motor, disco, versión, firewall) no se invoca desde la sesión — la tarea solo pedía las
+  dos comprobaciones nombradas; una pantalla de diagnóstico previa a iniciar que muestre
+  estos resultados al usuario no existe; y `check_ports` sigue comprobando siempre TCP
+  (`ports.rs::check_port_range`), sin distinguir el protocolo del plan — limitación
+  preexistente, no introducida ni corregida aquí (UDP en el diálogo es T178).
+- **Estado**: `VERIFICADO` (las dos comprobaciones, su punto exacto de invocación, el
+  motivo de rechazo cerrado, y que no rompen el camino feliz con NTTTCP real)
+
+### 1.19 Cancelación graciosa antes de que arranque el motor (T175, alcance acotado)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib control::session_flow::preflight_en_el_dialogo`
+  (4 en verde) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (5 en verde, NTTTCP real, repetida 5 veces la nueva sin fallos) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos · `cargo test` completo (137 en verde,
+  repetido 3 veces sin fallos tras corregir una prueba inestable, ver más abajo).
+- **Qué cubre y qué no, con la frontera exacta**: los puntos donde un extremo espera al
+  otro sin tener nada en ejecución —`RESPONSE` (tras `REQUEST`), `READY` (tras `PREPARE`)
+  del lado que inicia una dirección, y `PREPARE` (tras aceptar) del lado que la
+  atiende— compiten contra una señal de cancelación (`tokio::sync::watch<bool>`,
+  `SenalCancelacion`). Ganar esa carrera hacia el lado local envía `CANCEL` y da hasta
+  300 ms a la `CANCEL_ACK`, mejor esfuerzo, sin bloquear más. Recibir un `CANCEL` del par
+  ahí mismo se confirma con `CANCEL_ACK` y marca la señal compartida, para que
+  `SessionService` distinga `Cancelled` de `Failed` al recoger el error. La ventana en la
+  que el motor ya corre (tras `START`/`STARTED`, durante la medición) **no** se tocó: no
+  hay forma cooperativa de interrumpir NTTTCP a mitad de transferencia, así que sigue el
+  mecanismo ya existente (abortar la tarea, `Drop` mata el proceso vía `JobObject`) y el
+  par sigue enterándose por el cierre del canal, no por un `CANCEL` explícito.
+- **`SessionService::cancel` reordenado, no solo más lento**: primero marca la señal,
+  después da hasta 500 ms a que la tarea termine por su cuenta (usando `abort_handle()`
+  para poder forzar el corte después de haber consumido el `JoinHandle` en el `timeout`),
+  y si no lo consigue, aborta como antes. En el caso mid-medición esto añade hasta 500 ms
+  de latencia frente a la versión anterior (abortaba sin esperar nada); se acepta porque
+  sigue muy por debajo del límite de 2 s de SC-004 y habilita el camino cortés en el caso
+  común de cancelar mientras se negocia, sin arriesgar el límite.
+- **Prueba real nueva**:
+  `t175_cancelar_antes_de_que_arranque_el_motor_es_cortes_en_los_dos_extremos` en
+  `session_service_real.rs`. Cancela sin ninguna espera deliberada justo tras
+  `iniciar_sesion_real`, para pillar el diálogo en pleno intercambio de mensajes; en las
+  5 repeticiones ejecutadas tardó 0,44–0,48 s y en todas los dos extremos terminaron en
+  `Cancelled`, sin persistir nada y sin ningún `ntttcp.exe`. Es una carrera de tiempos real
+  entre la llamada a `cancel()` y cuánto ha avanzado el diálogo, no un punto de control
+  determinista; se documenta así en vez de presentarla como una garantía absoluta de
+  temporización.
+- **Un hallazgo real, de una prueba de la tarea anterior, no de esta**: al ejecutar la
+  batería completa salió `test_preflight_ports_sin_control_port_no_lo_comprueba` (T173)
+  como fallo intermitente. Elegía su puerto de sondeo como `puerto_de_un_bind(0) + 1000`,
+  un desplazamiento a ciegas que, con las pruebas corriendo en paralelo, podía coincidir
+  con un puerto que otra prueba tenía abierto en ese instante. Corregida para usar
+  directamente el puerto de un `bind(0)` recién soltado, como ya hacían las pruebas
+  vecinas; repetida 3 veces en la batería completa sin volver a fallar.
+- **No cubierto, deliberadamente**: cancelación con el motor ya en marcha vista desde el
+  protocolo (sigue siendo un cierre de socket, no un `CANCEL`); duplicados de `CANCEL`
+  (el contrato exige idempotencia, no probada); cancelación durante la negociación de
+  `START`/`HEARTBEAT`; y, como siempre en esta feature, cualquier prueba entre dos equipos
+  físicos con latencia de red real en vez de bucle local.
+- **Estado**: `VERIFICADO` (cancelación cortés en la ventana previa al motor, en los dos
+  sentidos, con NTTTCP real y sin regresión del límite de 2 s) · `NO PRESENTE`
+  (cancelación cortés con el motor en marcha; duplicados de `CANCEL`) ·
   `NO VERIFICABLE` aquí (dos equipos reales)
+
+### 1.20 Intercambio SESSION_RESULT/SESSION_ACK y reconciliación (T176)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib control::session_flow::reconciliacion_de_resultado`
+  (3 en verde) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (5 en verde, NTTTCP real) · `cargo test` completo (140 en verde) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos.
+- **Qué hace, siguiendo `contracts/session-result.md`**: quien inicia construye el
+  resultado canónico tras ensamblarlo (punto 1 del contrato), lo persiste localmente con
+  `resultSource: "initiator"` y lo envía por `SESSION_RESULT`. Quien responde lo valida
+  (punto 2): mismo `sessionId`, mismo número de direcciones, y ninguna dirección que él
+  vio `completed` aparece como algo menos en la copia recibida. Si valida, la adopta
+  —reetiquetada `"initiator"`— y confirma con `SESSION_ACK{persisted:true}`; si no, o si
+  no llega en 10 s (el timeout genérico de `peer-protocol.md`, sin uno propio para este
+  mensaje), conserva su propia vista con `resultSource: "local"` y responde
+  `SESSION_ACK{persisted:false}` (punto 5, recuperación explícita, sin fingir igualdad).
+  Un `SESSION_ACK` ausente o tardío del lado del respondedor no deshace lo que el
+  iniciador ya persistió: solo se registra un aviso.
+- **Verificación real de punta a punta**: `t144_sesion_completa_entre_dos_servicios_con_motor_real`
+  se amplió para comprobar que, tras una sesión real con NTTTCP, los dos historiales
+  (`result_json`, campo `resultSource`) quedan en `"initiator"` — es decir, B recibió,
+  validó y adoptó de verdad la copia canónica de A, no se quedó con la suya por casualidad
+  de que ambas coincidieran.
+- **Lo que ya existía y no hubo que inventar**: `SessionAckPayload` y el campo
+  `result_source` de `SessionResult` ya estaban en el modelo (probablemente de un lote
+  anterior que dejó el contrato listo sin cablearlo); esta tarea fue conectar ambos al
+  diálogo real, no diseñarlos.
+- **No cubierto, fuera del alcance declarado de esta tarea**: duplicados de
+  `SESSION_RESULT` (el contrato exige idempotencia, no probada aquí); reconexión tras
+  perder la conexión durante la reconciliación; el campo `result_source` no tiene columna
+  propia en el esquema de `history` —viaja dentro de `result_json`— y `VALIDACION` no
+  afirma que la tenga; cualquier prueba entre dos equipos físicos.
+- **Estado**: `VERIFICADO` (construcción canónica, validación, adopción o conservación
+  local, ACK en los dos sentidos, con NTTTCP real) · `NO PRESENTE` (duplicados,
+  reconexión) · `NO VERIFICABLE` aquí (dos equipos reales)
+
+### 1.21 Consentimiento para solicitudes de sesión entrante (T177, mitad de FR-016)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib control::consent` (5 en verde) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_service_real` (5 en
+  verde, sin `--ignored`) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (4 en verde, NTTTCP real) · `node scripts/architecture/check-ipc-commands.mjs` (31
+  invocaciones del frontend siguen coincidiendo) · `cargo test` completo (145 en verde) ·
+  `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos.
+- **Qué cambia**: un equipo `Trusted` sin autoaceptación ya no se rechaza al instante.
+  `atender_sesion_entrante` registra la solicitud en `control::consent::SolicitudesEntrantes`
+  (varias pueden coexistir, una por equipo que pregunte a la vez), avisa por el nuevo
+  evento `session://incoming-request` si hay por dónde hacerlo, y espera hasta 60 s (el
+  plazo que `contracts/peer-protocol.md` fija para «Pairing or user acceptance») antes de
+  rechazar por su cuenta. Aceptar reutiliza exactamente el mismo camino que ya existía
+  para `TrustedAutoAccept`. Un equipo `Known` (emparejado pero sin la confianza que exige
+  medir) o directamente desconocido no llega a esta pregunta: seguir rechazándolo sin
+  preguntar es intencionado, no un descuido — el consentimiento de FR-016 no sustituye la
+  verificación de emparejamiento de FR-012.
+- **Verificación real de punta a punta**: `t177_un_equipo_de_confianza_sin_autoaceptacion_completa_si_se_acepta`
+  registra a los dos nodos como `Trusted` (sin autoaceptación en ninguno), espera a que
+  aparezca la solicitud en el almacén, la acepta por la misma vía que usaría la interfaz
+  (`SolicitudesEntrantes::responder`, no un atajo interno), y comprueba que la sesión
+  completa con NTTTCP real y que el evento que habría recibido la interfaz llevaba el
+  `requestId` y el equipo correctos.
+- **Deliberadamente no construido en esta pasada, y por qué**:
+  - **La pantalla de Svelte.** El evento y los dos comandos IPC
+    (`session_incoming_list`, `session_incoming_respond`) están escritos y probados desde
+    Rust, pero ningún componente los consume todavía. `check-ipc-commands.mjs` solo
+    verifica que las llamadas del frontend correspondan a comandos reales, no al revés,
+    así que su verde no dice nada sobre esto. Construir la pantalla sin poder abrirla en
+    un navegador o en la aplicación e interactuar con ella iría contra la instrucción de
+    no dar una UI por terminada sin probarla así; queda como T181.
+  - **`PAIR_REQUEST` entrante (FR-012).** `control/despachador.rs` sigue exactamente
+    igual que antes de esta tarea: registra el mensaje y lo descarta sin responder, así
+    que quien empareja se queda esperando hasta su propio timeout. Es un flujo distinto
+    del de sesión, con su propio código de verificación de seis dígitos; no se tocó, para
+    no mezclar dos piezas de tamaño comparable en una sola tanda. Queda como T182.
+- **Estado**: `VERIFICADO` (registro, evento, espera acotada, aceptación real con NTTTCP,
+  rechazo explícito y rechazo automático por no llegar a preguntar a quien no corresponde)
+  · `NO PRESENTE` (pantalla de Svelte, `PAIR_REQUEST` entrante)
+
+### 1.22 Soporte de IPv6 en el motor (T179)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, NTTTCP 5.40 x64, Rust 1.98.1,
+  2026-09-25.
+- **Primero, a mano, contra el binario real** (antes de tocar código): dos procesos
+  `ntttcp.exe` independientes, uno `-r` y otro `-s`, los dos con
+  `-m 1,*,::1 -p 55231 -l 65536 -a 8 -t 3 -6 -xml <ruta>`. Los dos terminaron con
+  `Network activity progressing...` y un XML con el mismo esquema que IPv4
+  (`<use_ipv6>True</use_ipv6>`, métricas de `<throughput>`/`<realtime>` idénticas en
+  forma). Confirma que `-6` es el flag correcto y que el parser existente no necesita
+  cambios para XML de IPv6.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --lib engine::ntttcp::ntttcp_tests::test_una_direccion`
+  (2 en verde) ·
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real t179 -- --ignored`
+  (1 en verde, NTTTCP real sobre `::1`, 5,27 s) · `cargo test` completo (147 en verde) ·
+  `cargo test --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (7 en verde) · `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos.
+- **Qué hace**: `build_ntttcp_args` interpreta el host que recibe como `IpAddr`; si es
+  `V6` y no es una IPv4 mapeada (`::ffff:a.b.c.d`), añade `-6`. La distinción con
+  `to_ipv4_mapped()` es deliberada: `normalizar_ip` (`control/service.rs`) ya reduce las
+  direcciones mapeadas a IPv4 antes de que lleguen aquí, pero el constructor de
+  argumentos no depende de que ese paso previo se haya ejecutado — repite la
+  comprobación por su cuenta.
+- **Verificación real de punta a punta**: `t179_dialogo_completo_sobre_ipv6_real`
+  reproduce exactamente `t144_dialogo_completo_produce_un_resultado_con_velocidad_oficial`
+  pero con `ControlServer` ligado a `::1`, `conectar_y_saludar("::1", ...)` y
+  `iniciar_direccion`/`atender_direccion` con `::1` como dirección. El diálogo entero —
+  REQUEST/RESPONSE, PREPARE/READY, negociación de inicio, y las dos mitades del motor
+  real— completa con la misma velocidad oficial en los dos extremos.
+- **No cubierto**: `control/service.rs::recorrido_como_iniciador` obtiene la dirección del
+  peer con `peer.addresses.first().parse::<SocketAddr>()`, que para IPv6 exige la
+  notación con corchetes (`"[::1]:puerto"`); no se ha comprobado que ese formato
+  sobreviva completo desde el emparejamiento (`ipc/pairing.rs`) y el guardado del peer
+  hasta llegar aquí — esta tarea prueba el diálogo de protocolo en sí, no esa cadena
+  completa. Tampoco hay prueba entre dos equipos físicos con IPv6 real (T180).
+- **Estado**: `VERIFICADO` (flag `-6`, motor real sobre `::1`, diálogo completo con
+  velocidad oficial reconciliada) · `NO VERIFICABLE` aquí (formato de dirección IPv6 de
+  extremo a extremo desde el emparejamiento; dos equipos físicos)
+
+### 1.23 UDP a través del diálogo real de sesión (T178, mitad de US5)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, NTTTCP 5.40 x64, Rust 1.98.1,
+  2026-09-25.
+- **Comandos**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real t178 -- --ignored`
+  (1 en verde, 5,27 s) ·
+  `cargo test --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (8 en verde) · `cargo test` completo (147 en verde) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos.
+- **El hallazgo principal de esta tarea es negativo, y por eso vale la pena decirlo así**:
+  antes de tocar nada, una revisión de `session_flow.rs` y `orquestador.rs` no encontró ni
+  una sola rama que distinga `BenchmarkProtocol::Tcp` de `Udp` — el protocolo entre peers,
+  la negociación de inicio (G2) y el ensamblado de `DirectionResult`/`SessionResult` son
+  agnósticos al transporte; solo `engine/ntttcp/args.rs` (el flag `-u` y el tamaño de
+  datagrama) y el parser XML conocen la diferencia. Eso quiere decir que un plan UDP ya
+  atravesaba el diálogo real de sesión sin ningún cambio de código: lo único que faltaba
+  era la evidencia de que de verdad funciona, no una implementación.
+- **Prueba real nueva**: `t178_dialogo_completo_con_udp_real`, calco exacto de
+  `t144_dialogo_completo_produce_un_resultado_con_velocidad_oficial` con
+  `plan.protocol = BenchmarkProtocol::Udp`. Diálogo completo REQUEST→ENGINE_DONE con
+  NTTTCP real, `completed` en los dos extremos, misma velocidad oficial reconciliada.
+- **Un hallazgo real distinto, no corregido aquí**: `NtttcpParsedResult` (el parser)
+  expone `packets_sent`/`packets_received`, pero `orquestador::a_engine_result` no los
+  copia a `EngineResult`, y `Orquestador::resultado_de_direccion` fija
+  `retransmission: None` de forma incondicional, sin mirar esos contadores. Es decir: la
+  pérdida de paquetes UDP —la métrica que más le importa a un plan UDP— no se calcula en
+  el camino real, con diálogo entre peers o sin él. No es una regresión de esta tarea: ya
+  estaba así; el diálogo simplemente no lo tocaba y por tanto no lo revelaba. Se declara
+  como T184.
+- **Lo que T178 pedía y sigue sin estar, sustancialmente distinto de lo anterior**: la
+  ejecución simultánea (`BenchmarkDirection::Both`, `SessionState::RunningBoth`). La
+  máquina de estados ya admite la transición y `control/ports.rs::PortAllocation` ya
+  calcula rangos de puertos sin solape para las dos direcciones, pero ningún camino de
+  `session_flow.rs` lo usa: todo el diálogo asume una pata a la vez, con un solo rol por
+  extremo. Convertir eso en negociar las dos direcciones con un único
+  `PREPARE`/`READY`/`START` y que cada extremo ejecute emisor y receptor en paralelo
+  consigo mismo es un camino de protocolo distinto, no una variación del secuencial. Se
+  declara como T183, sin empezar.
+- **Estado**: `VERIFICADO` (UDP a través del diálogo real, con NTTTCP real) · `NO
+  PRESENTE` (ejecución simultánea; pérdida de paquetes UDP en el resultado)
+
+### 1.24 Retransmisión TCP y pérdida UDP en el resultado real (T184)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, NTTTCP 5.40 x64, Rust 1.98.1,
+  2026-09-25.
+- **Comandos**: `cargo test --lib diagnostic` (21 en verde) ·
+  `cargo test --lib control::orquestador` (11 en verde) ·
+  `cargo test --test session_flow_real -- --ignored --test-threads=1` (4 en verde, NTTTCP
+  real) · `cargo test --test session_flow_real --test session_service_real -- --ignored --test-threads=1`
+  (8 en verde) · `cargo test` completo (152 en verde) · `cargo fmt` y
+  `clippy --all-targets -- -D warnings` sin avisos · `pnpm verify` completo.
+- **Origen**: hallazgo de T178 (§1.23). Al cerrarlo aparecieron dos cosas que la
+  descripción original no anticipaba.
+- **Los contadores se perdían en tres sitios, no en uno**: `engine_done_a_parsed` fijaba
+  `packets_*` a `None` (no cruzaban por el cable), `EngineResult` no tenía dónde
+  guardarlos, y `resultado_de_direccion` fijaba `retransmission: None`. Cerrar solo el
+  último habría dado una estadística que un extremo podía calcular y el otro no: quien no
+  midió una mitad nunca conocía sus contadores. La prueba real lo comprueba: los dos
+  extremos obtienen el mismo `RetransmissionStats` (TCP y UDP), y eso solo puede pasar
+  si los contadores viajan por `ENGINE_DONE`.
+- **Lo que ya existía, sin invocar**: `DiagnosticEngine::evaluate_retransmissions` (TCP) y
+  `diagnostic::udp::evaluate_udp_diagnostics` (UDP, `Historias.md` §18) estaban escritos y
+  probados en aislamiento y no los llamaba nadie — el mismo patrón que todo este
+  ejercicio. Mi primera versión de la pérdida UDP reescribió la fórmula sin haber
+  mirado `diagnostic/udp.rs` (solo había mirado `rules.rs`); al verlo, se rehízo para
+  delegar en esa función y dejar una sola fuente de la matemática y de los umbrales.
+- **El veredicto ignoraba la retransmisión**: `ensamblar` pasaba
+  `retransmissions: None` a `generate_verdict`, que ya tenía reglas para
+  `retransmissions_elevated`/`_high`. Ahora recibe la peor de las direcciones
+  (`Historias.md` §13.5). Comprobado con una sesión de una dirección limpia y otra con
+  retransmisión alta: `retransmission_level == High`.
+- **Decisión de modelado, declarada y no normativa**: `DirectionResult` solo tiene el hueco
+  `retransmission`. La pérdida UDP no es una retransmisión (UDP no retransmite), pero el
+  contrato no ofrece otro sitio y añadir un campo al esquema versionado no es una decisión
+  que me corresponda. Por eso la pérdida viaja en `RetransmissionStats` con `ratio` = pérdida
+  y `packetsRetransmitted` = paquetes perdidos. Los umbrales de `Historias.md` (0,1 % y 1 %)
+  coinciden numéricamente entre retransmisión TCP y pérdida UDP, así que los niveles
+  se corresponden. Si el propietario prefiere un campo propio, es un cambio de contrato.
+- **No cubierto**: `UdpDiagnosticResult` completo (tasa objetivo, claves de título,
+  observación de tasa objetivo por encima de la capacidad) sigue sin camino hacia el
+  resultado; el esquema TS `engineResultSchema` desconoce los tres campos de paquetes
+  (`z.object` los descarta, no rompe nada, pero la interfaz no puede mostrarlos); un par
+  con una versión anterior que no envíe los contadores deja la estadística del otro
+  extremo en `NotAvailable`, sin inventar datos; la comparación con la retransmisión real
+  en una red con pérdida (bucle local devuelve pérdida cero).
+- **Estado**: `VERIFICADO` (contadores por el cable, cálculo por protocolo, igualdad entre
+  los dos extremos con NTTTCP real, veredicto) · `NO PRESENTE` (diagnóstico UDP completo
+  en el resultado; visualización) · `NO VERIFICABLE` aquí (comportamiento con pérdida
+  real de red)
 
 ---
 

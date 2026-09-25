@@ -1,4 +1,6 @@
 pub mod cleanup;
+pub mod consent;
+pub mod despachador;
 pub mod domain;
 pub mod engine_port;
 pub mod orquestador;

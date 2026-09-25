@@ -14,21 +14,38 @@
 //! así el código que agrupa y despacha muestras se prueba sin un `AppHandle` real.
 
 use super::response::IpcResult;
+use crate::control::consent::SolicitudEntranteEvento;
 use crate::sampling::aggregate::SampleBatch;
 use tauri::{AppHandle, Emitter};
 
 pub const EVENTO_MUESTRAS: &str = "session://sample-batch";
+pub const EVENTO_SOLICITUD_ENTRANTE: &str = "session://incoming-request";
 
 /// Sale de la sesión de medida hacia el frontend. No decide cuándo hay un lote listo
 /// —eso es `SampleBatcher`— solo lo entrega.
 pub trait EmisorDeEventos: Send + Sync {
     fn emitir_muestras(&self, batch: &SampleBatch) -> Result<(), String>;
+
+    /// Avisa de una solicitud de sesión entrante que espera decisión humana (T177,
+    /// FR-016). Los dobles de prueba que no la necesitan heredan este no-op: no se
+    /// convierten en un contrato roto solo por no comprobar consentimiento.
+    fn emitir_solicitud_entrante(
+        &self,
+        _solicitud: &SolicitudEntranteEvento,
+    ) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 impl EmisorDeEventos for AppHandle {
     fn emitir_muestras(&self, batch: &SampleBatch) -> Result<(), String> {
         self.emit(EVENTO_MUESTRAS, batch)
             .map_err(|e| format!("No se pudo emitir {EVENTO_MUESTRAS}: {e}"))
+    }
+
+    fn emitir_solicitud_entrante(&self, solicitud: &SolicitudEntranteEvento) -> Result<(), String> {
+        self.emit(EVENTO_SOLICITUD_ENTRANTE, solicitud)
+            .map_err(|e| format!("No se pudo emitir {EVENTO_SOLICITUD_ENTRANTE}: {e}"))
     }
 }
 

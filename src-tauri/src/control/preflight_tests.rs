@@ -63,7 +63,7 @@ fn test_preflight_ports_available() {
     let port = listener.local_addr().unwrap().port();
     drop(listener);
 
-    let check = PreflightEvaluator::check_ports(port, port + 10, 2);
+    let check = PreflightEvaluator::check_ports(Some(port), port + 10, 2);
     assert_eq!(check.status, PreflightStatus::Passed);
     assert_eq!(check.check_type, PreflightCheckType::Ports);
 }
@@ -73,9 +73,28 @@ fn test_preflight_ports_control_in_use() {
     let listener = TcpListener::bind("0.0.0.0:0").unwrap();
     let occupied_port = listener.local_addr().unwrap().port();
 
-    let check = PreflightEvaluator::check_ports(occupied_port, 5100, 2);
+    let check = PreflightEvaluator::check_ports(Some(occupied_port), 5100, 2);
     assert_eq!(check.status, PreflightStatus::Failed);
     assert_eq!(check.error.unwrap().code, ErrorCode::PortControlInUse);
+}
+
+#[test]
+fn test_preflight_ports_sin_control_port_no_lo_comprueba() {
+    // Quien pregunta ya está escuchando en su propio puerto de control: pasarlo
+    // comprobaría que un puerto ocupado por uno mismo está ocupado, lo cual es un
+    // sinsentido, no una comprobación (T173).
+    //
+    // El puerto de datos se toma de un `bind(0)` recién soltado, no de un desplazamiento
+    // arbitrario: con las pruebas corriendo en paralelo, un puerto elegido a ciegas
+    // (p. ej. `+1000`) puede coincidir con el que otra prueba tiene abierto en ese
+    // instante, y la prueba falla de forma intermitente sin que el código cambie.
+    let base = {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.local_addr().unwrap().port()
+    };
+
+    let check = PreflightEvaluator::check_ports(None, base, 1);
+    assert_eq!(check.status, PreflightStatus::Passed);
 }
 
 #[test]
