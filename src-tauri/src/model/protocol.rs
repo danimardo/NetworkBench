@@ -134,13 +134,26 @@ pub struct StartedPayload {
     pub local_t_ms: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineDonePayload {
     pub direction: String,
     pub role: String,
     pub throughput_bps: String,
     pub total_bytes: String,
+    // Campos añadidos para que el extremo remoto pueda reconstruir un
+    // `NtttcpParsedResult` completo y ensamblar el resultado con los datos de ambos
+    // lados (FR-027, FR-033). Opcionales y con default: un peer con una versión de
+    // protocolo anterior que no los envíe sigue siendo compatible (regla de evolución
+    // del contrato: campo opcional nuevo sin cambio de versión).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_buffers: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub realtime_seconds: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpu_percent: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub errors_count: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

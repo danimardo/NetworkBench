@@ -376,6 +376,38 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
 - **Estado**: `VERIFICADO` (mecanismo de emisión, contrato en los dos lados) ·
   `NO PRESENTE` (invocación desde una sesión real)
 
+### 1.15 Diálogo completo de sesión, TCP secuencial, con NTTTCP real (T144, avance sustancial)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, NTTTCP 5.40 x64
+- **Comando**:
+  `cargo test --manifest-path src-tauri/Cargo.toml --test session_flow_real -- --ignored --test-threads=1`
+- **Resultado**: **1 prueba en verde, 5,28 s.** `control/session_flow.rs` conecta dos
+  `ControlServer` reales por TLS mutuo, intercambia HELLO, `REQUEST`/`RESPONSE` con
+  revalidación del plan en el receptor (FR-021), `PREPARE`/`READY`, mide el RTT real por
+  `HEARTBEAT`, negocia `START` (`control/protocol.rs`, T152) y ejecuta NTTTCP real en
+  los dos extremos — emisor en el iniciador, receptor en el respondedor, arrancado en
+  paralelo con el resto del protocolo para que esté escuchando antes de que el emisor
+  conecte. Ambos extremos terminan con `status: "completed"` y **la misma velocidad
+  oficial** (`officialBps`), que en las dos vistas procede del receptor (FR-025, FR-027).
+- **Un fallo real que solo apareció al ejecutar el diálogo completo**: la primera
+  versión pasaba `target_host: None` al motor receptor. `build_ntttcp_args` exige
+  dirección en los dos roles desde que se corrigió V-01 (T145); con `None`, el receptor
+  fallaba al instante y el emisor, sin nadie escuchando, se quedó esperando la conexión
+  dentro del timeout interno de NTTTCP (600 000 ms por defecto). El primer intento se
+  colgó y hubo que terminarlo a mano tras 245 s. Corregido pasando la interfaz de enlace
+  explícitamente; la prueba corregida tarda 5,28 s.
+- **Concurrencia deliberada**: en el respondedor, el motor receptor se ejecuta con
+  `tokio::join!` en paralelo con el intercambio de mensajes (heartbeat, `START`,
+  `STARTED`), no después. Ejecutarlo después habría dejado una ventana en la que el
+  emisor podría alcanzar su instante de inicio antes de que el receptor escuchara.
+- **Alcance de esta tanda**: una dirección, TCP, secuencial. No cubre: la dirección
+  inversa en la misma sesión, UDP, ejecución simultánea, cancelación a mitad de diálogo,
+  persistencia automática del resultado ni el cableado a `ipc::session::session_start`
+  (que sigue solo transicionando estados). Nada de esto se ha probado entre dos equipos
+  Windows distintos, solo en bucle local.
+- **Estado**: `VERIFICADO` (diálogo completo en bucle local, con motor real) ·
+  `NO PRESENTE` (cableado a IPC, bidireccional, cancelación, persistencia) ·
+  `NO VERIFICABLE` aquí (dos equipos reales)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)
