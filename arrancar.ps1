@@ -15,6 +15,31 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# 0. Asegurar entorno: Cargo en PATH y binarios requeridos por tauri.conf.json
+if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+  if (Test-Path "$env:USERPROFILE\.cargo\bin\cargo.exe") {
+    $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+  }
+}
+
+$triple = "x86_64-pc-windows-msvc"
+$motorDest = "src-tauri\binaries\ntttcp-$triple.exe"
+if (-not (Test-Path $motorDest)) {
+  New-Item -ItemType Directory -Path "src-tauri\binaries" -Force | Out-Null
+  if (Test-Path "engine\ntttcp.exe") {
+    Copy-Item "engine\ntttcp.exe" $motorDest -Force
+  }
+}
+
+$helperDest = "src-tauri\resources\networkbench-firewall-helper.exe"
+if (-not (Test-Path $helperDest)) {
+  New-Item -ItemType Directory -Path "src-tauri\resources" -Force | Out-Null
+  $helperDebug = "src-tauri\target\$triple\debug\networkbench-firewall-helper.exe"
+  if (Test-Path $helperDebug) {
+    Copy-Item $helperDebug $helperDest -Force
+  }
+}
+
 function Get-ProcessTree($rootId) {
   $all = @($rootId)
   $children = Get-CimInstance Win32_Process -Filter "ParentProcessId=$rootId" -ErrorAction SilentlyContinue

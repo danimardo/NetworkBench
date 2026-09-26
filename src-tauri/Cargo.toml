@@ -12,7 +12,7 @@ default-run = "NetworkBench"
 
 [lib]
 name = "networkbench_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["lib"]
 path = "src/lib.rs"
 
 [[bin]]
@@ -58,3 +58,13 @@ unicode-normalization = "0.1.25"
 
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }
+
+[profile.dev]
+debug = 1
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.dev.build-override]
+debug = false
+
