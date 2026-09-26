@@ -201,7 +201,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
 
     let identity = Arc::new(InstanceIdentity::get_or_create(
         &identity_dir,
-        "NetworkBench",
+        &crate::identity::nombre_del_equipo(),
     )?);
     let aviso_snapshot = Arc::new(tokio::sync::Notify::new());
     let session_service = Arc::new(SessionService::con_aviso(Arc::clone(&aviso_snapshot)));

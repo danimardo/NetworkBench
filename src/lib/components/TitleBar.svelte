@@ -187,6 +187,12 @@
     box-sizing: border-box;
     padding-left: var(--space-4);
 
+    /* `AppBackground` es `position: absolute` y un elemento posicionado se pinta por
+       encima de uno que no lo está: sin esto el fondo tapaba la barra entera (logo,
+       nombre y botones). Mismo nivel que el contenido bajo la barra. */
+    position: relative;
+    z-index: 10;
+
     background: var(--gradient-titlebar);
     /* §16.13: "sin línea de separación: no debe percibirse como una barra
        distinta". Antes había un border-bottom de 1px — eliminado. */
