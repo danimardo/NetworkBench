@@ -34,9 +34,12 @@ pub fn settings_get(state: tauri::State<AppState>) -> IpcResult<Preferences> {
 
 #[tauri::command]
 pub async fn settings_update(
+    app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     preferences: Preferences,
 ) -> Result<IpcResult<Preferences>, String> {
+    let puerto_anterior = state.puerto_de_control();
+    let ajuste_anterior = state.settings.get().custom_control_port;
     let session_state = state.session_service.current_state().await;
     // `Completed` y `Failed` son terminales: una sesión que ya acabó no bloquea los ajustes.
     let is_session_active = session_state.is_active();
@@ -47,6 +50,27 @@ pub async fn settings_update(
 
     match res {
         Ok(saved) => {
+            // Cambiar el puerto de control se aplica al instante (§23): se reabre el canal en
+            // el nuevo. Si no se puede (puerto ocupado), se deshace el cambio: nunca queda
+            // guardado un puerto en el que no se está escuchando.
+            let puerto_nuevo = saved
+                .custom_control_port
+                .unwrap_or(crate::discovery::CONTROL_PORT_DEFAULT);
+            if puerto_nuevo != puerto_anterior {
+                let emisor: std::sync::Arc<dyn crate::ipc::events::EmisorDeEventos> =
+                    std::sync::Arc::new(app);
+                if let Err(e) = state.reabrir_control(Some(emisor), puerto_nuevo).await {
+                    tracing::warn!("No se pudo reabrir el canal de control en {puerto_nuevo}: {e}");
+                    let _ = state
+                        .settings
+                        .update(|p| p.custom_control_port = ajuste_anterior);
+                    return Ok(IpcResult::err(crate::errors::AppError::from_code(
+                        crate::errors::ErrorCode::PortControlInUse,
+                    )));
+                }
+                // Se vuelve a anunciar por mDNS con el puerto nuevo.
+                state.reiniciar_descubrimiento();
+            }
             // El ajuste se aplica al instante (`Historias.md` §7.1): apagarlo retira el
             // anuncio y deja de navegar; encenderlo publica y vuelve a navegar.
             state.aplicar_descubrimiento(saved.mdns_enabled);

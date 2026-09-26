@@ -9,6 +9,16 @@ import {
   getAboutInfo,
 } from "../../lib/api/settings";
 import { checkUpdate } from "../../lib/api/updater";
+import { IpcError } from "../../lib/api/transport";
+import { t } from "../../lib/i18n";
+
+/** Texto para la persona: el mensaje traducido del error de la app, no `[CÓDIGO] clave`. */
+function describirError(e: unknown): string {
+  if (e instanceof IpcError) return t(e.appError.messageKey);
+  return e instanceof Error ? e.message : String(e);
+}
+
+const SUCCESS_MS = 3000;
 
 export class SettingsModel {
   prefs = $state<Preferences | null>(null);
@@ -16,12 +26,36 @@ export class SettingsModel {
   isSaving = $state(false);
   saveError = $state<string | null>(null);
   saveSuccess = $state(false);
+  /** Texto del aviso de éxito; sin él, el genérico «Ajustes guardados correctamente». */
+  successMessage = $state<string | null>(null);
 
   autostart = $state(false);
   dataInfo = $state<DataInfo | null>(null);
   aboutInfo = $state<AboutInfo | null>(null);
   updateStatus = $state<UpdateStatus | null>(null);
   isCheckingUpdate = $state(false);
+
+  private successTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Avisa de que algo salió bien con un texto propio (se cierra solo, como «guardado»). */
+  flashSuccess(mensaje: string | null = null) {
+    this.successMessage = mensaje;
+    this.saveSuccess = true;
+    if (this.successTimer) clearTimeout(this.successTimer);
+    this.successTimer = setTimeout(() => {
+      this.saveSuccess = false;
+    }, SUCCESS_MS);
+  }
+
+  /** Muestra un error como aviso flotante, traducido. */
+  reportError(e: unknown) {
+    this.saveError = describirError(e);
+  }
+
+  /** Cierra el aviso de error (el de éxito se cierra solo). */
+  dismissError() {
+    this.saveError = null;
+  }
 
   async load() {
     this.isLoading = true;
@@ -38,7 +72,7 @@ export class SettingsModel {
       this.dataInfo = data;
       this.aboutInfo = about;
     } catch (e: unknown) {
-      this.saveError = e instanceof Error ? e.message : String(e);
+      this.saveError = describirError(e);
     } finally {
       this.isLoading = false;
     }
@@ -58,13 +92,11 @@ export class SettingsModel {
     try {
       const saved = await updateSettings(candidate);
       this.prefs = saved;
-      this.saveSuccess = true;
-      setTimeout(() => {
-        this.saveSuccess = false;
-      }, 3000);
+      // Un guardado seguido de otro no debe cortar el aviso del segundo.
+      this.flashSuccess();
       return true;
     } catch (e: unknown) {
-      this.saveError = e instanceof Error ? e.message : String(e);
+      this.saveError = describirError(e);
       return false;
     } finally {
       this.isSaving = false;
@@ -80,7 +112,7 @@ export class SettingsModel {
         await this.update({ autostart: target });
       }
     } catch (e: unknown) {
-      this.saveError = e instanceof Error ? e.message : String(e);
+      this.saveError = describirError(e);
     }
   }
 
@@ -92,7 +124,7 @@ export class SettingsModel {
       }
       return true;
     } catch (e: unknown) {
-      this.saveError = e instanceof Error ? e.message : String(e);
+      this.saveError = describirError(e);
       return false;
     }
   }
@@ -103,7 +135,7 @@ export class SettingsModel {
       const status = await checkUpdate();
       this.updateStatus = status;
     } catch (e: unknown) {
-      this.saveError = e instanceof Error ? e.message : String(e);
+      this.saveError = describirError(e);
     } finally {
       this.isCheckingUpdate = false;
     }

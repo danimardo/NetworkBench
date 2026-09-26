@@ -232,7 +232,38 @@
     "languageDesc": "Interface language. Applies immediately.",
     "recommended": "Recommended",
     "reduceMotionDesc": "Turns off non-essential animations and transitions",
-    "developedBy": "Developed by Daniel Díez Mardomingo"
+    "developedBy": "Developed by Daniel Díez Mardomingo",
+    "fw": {
+      "refresh": "Check again",
+      "checking": "Checking the rules…",
+      "state": {
+        "present": "Present",
+        "missing": "Missing",
+        "modified": "Out of date",
+        "disabled": "Disabled"
+      },
+      "create": "Create the missing ones",
+      "remove": "Remove all",
+      "manual": "View manual instructions",
+      "allPresent": "All rules are in place and active.",
+      "needsUac": "Creating or removing rules asks for administrator permission (UAC) only for that operation: NetworkBench never runs as administrator. Out-of-date or disabled rules are recreated when you create.",
+      "waitingUac": "Waiting for Windows confirmation (UAC)…",
+      "created": "Firewall rules created successfully",
+      "nothingToCreate": "There are no rules to create",
+      "removed": "Firewall rules removed",
+      "noHelper": "The firewall helper was not found: rules cannot be created or removed from the app. Use the manual instructions.",
+      "missingProgram": "{program} was not found: this rule cannot be created.",
+      "removeTitle": "Remove the firewall rules?",
+      "removeWarning": "Other devices will not be able to connect to this one until you create them again. Windows will ask for administrator permission.",
+      "removeConfirm": "Remove",
+      "manualTitle": "Manual instructions",
+      "manualIntro": "Open PowerShell or Command Prompt as administrator and run these commands to create the rules:",
+      "manualRemoveIntro": "To remove them later:",
+      "loadError": "The firewall status could not be checked",
+      "portNoRule": "The control port is now {port}, but the firewall has no rule allowing it. Other devices will not be able to connect to this one.",
+      "portOutdated": "The control port is now {port}, but the firewall rule does not allow it (it is for another port or is disabled). Other devices will not be able to connect to this one.",
+      "recreate": "Recreate rule"
+    }
   },
   "plan": {
     "protocol": "Protocol",
@@ -494,7 +525,9 @@
     "errors": {
       "deletePreview": "The deletion preview could not be obtained",
       "deleteExecute": "Error while running the transactional deletion"
-    }
+    },
+    "filter_verdict": "Filter by verdict",
+    "filter_protocol": "Filter by protocol"
   },
   "advanced": {
     "title": "Advanced Options",

@@ -32,11 +32,17 @@ pub fn run() {
                 tauri::Manager::app_handle(app).clone(),
             )));
             let servicio = std::sync::Arc::clone(&app_state.session_service);
+            let control = std::sync::Arc::clone(&app_state.control);
+            let puerto = app_state.puerto_de_control();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) =
-                    app::start_control_server(ctx, servicio, discovery::CONTROL_PORT_DEFAULT).await
-                {
-                    tracing::error!("El canal de control no pudo arrancar: {e}");
+                // El error pasa a texto antes de esperar el candado: un `Box<dyn Error>` no es
+                // `Send` y no puede cruzar un `.await`.
+                let arrancado = app::start_control_server(ctx, servicio, puerto)
+                    .await
+                    .map_err(|e| e.to_string());
+                match arrancado {
+                    Ok(escucha) => *control.lock().await = Some(escucha),
+                    Err(e) => tracing::error!("El canal de control no pudo arrancar: {e}"),
                 }
             });
             // El snapshot que lee la interfaz se mantiene al día y se emite cuando cambia.
@@ -72,6 +78,9 @@ pub fn run() {
             ipc::diagnostics::diagnostics_get_report,
             ipc::firewall::firewall_inspect,
             ipc::firewall::firewall_apply,
+            ipc::firewall::firewall_rules_status,
+            ipc::firewall::firewall_rules_create,
+            ipc::firewall::firewall_rules_remove,
             ipc::history::history_list,
             ipc::history::history_get,
             ipc::history::history_delete_preview,

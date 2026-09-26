@@ -10,10 +10,11 @@
    * ventana está abierta y un peer de confianza con aceptación automática
    * activada empieza una prueba sin preguntar.
    *
-   * Se posiciona flotando sobre el contenido (no en el flujo del layout);
-   * quien lo usa decide cuándo montarlo/desmontarlo y durante cuánto
-   * tiempo — este componente no se autodestruye para que las pruebas
-   * (Playwright, capturas) puedan verlo sin depender de un timer.
+   * No se posiciona por sí mismo: se monta dentro de `ToastLayer`, que lo hace
+   * flotar sobre el contenido sin ocupar sitio en el flujo. Quien lo usa decide
+   * cuándo montarlo/desmontarlo y durante cuánto tiempo — este componente no se
+   * autodestruye para que las pruebas (Playwright, capturas) puedan verlo sin
+   * depender de un timer.
    */
   import Icon from "./Icon.svelte";
   import type { IconName } from "./icons";
@@ -39,7 +40,11 @@
   let resolvedIcon = $derived(icon ?? TONE_ICON[tone]);
 </script>
 
-<div class="nb-toast nb-tone-{tone}" role="status" aria-live="polite">
+<div
+  class="nb-toast nb-tone-{tone}"
+  role={tone === "danger" ? "alert" : "status"}
+  aria-live={tone === "danger" ? "assertive" : "polite"}
+>
   <span class="nb-toast-icon"><Icon name={resolvedIcon} size={16} /></span>
   <span class="nb-toast-text">{@render children()}</span>
   {#if onDismiss}
@@ -125,7 +130,7 @@
   @keyframes nb-toast-in {
     from {
       opacity: 0;
-      transform: translateY(-6px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;

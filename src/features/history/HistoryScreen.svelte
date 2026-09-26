@@ -8,6 +8,7 @@
   import HistoryTrend from "./HistoryTrend.svelte";
   import { HistoryModel } from "./model.svelte";
   import { t } from "../../lib/i18n";
+  import Select from "../../lib/components/Select.svelte";
   import type { HistoryItemSummary, RepeatPlanConfig } from "../../lib/contracts/history";
   import { ExportDialog } from "../export";
 
@@ -78,6 +79,19 @@
     return "neutral";
   }
 
+  const verdictOptions = $derived([
+    { value: "", label: t("history.filter_all_verdicts") },
+    { value: "ok", label: t("history.verdict.ok") },
+    { value: "warn", label: t("history.verdict.warn") },
+    { value: "problem", label: t("history.verdict.problem") },
+  ]);
+  // TCP y UDP son nombres de protocolo, no texto de interfaz.
+  const protocolOptions = $derived([
+    { value: "", label: t("history.filter_all_protocols") },
+    { value: "tcp", label: "TCP" },
+    { value: "udp", label: "UDP" },
+  ]);
+
   function getVerdictLabel(verdict: string | null | undefined): string {
     if (!verdict) return t("history.verdict.noData");
     if (verdict.includes("ok")) return t("history.verdict.ok");
@@ -129,36 +143,24 @@
         </div>
 
         <div class="select-filters">
-          <select
-            class="filter-select"
-            aria-label={t("history.filter_all_verdicts")}
+          <Select
+            options={verdictOptions}
             value={model.selectedVerdict ?? ""}
-            onchange={(e) => {
-              const val = (e.target as HTMLSelectElement).value;
+            label={t("history.filter_verdict")}
+            onchange={(val) => {
               model.selectedVerdict = val ? val : null;
               model.load();
             }}
-          >
-            <option value="">{t("history.filter_all_verdicts")}</option>
-            <option value="ok">{t("history.verdict.ok")}</option>
-            <option value="warn">{t("history.verdict.warn")}</option>
-            <option value="problem">{t("history.verdict.problem")}</option>
-          </select>
-
-          <select
-            class="filter-select"
-            aria-label={t("history.filter_all_protocols")}
+          />
+          <Select
+            options={protocolOptions}
             value={model.selectedProtocol ?? ""}
-            onchange={(e) => {
-              const val = (e.target as HTMLSelectElement).value;
+            label={t("history.filter_protocol")}
+            onchange={(val) => {
               model.selectedProtocol = val ? val : null;
               model.load();
             }}
-          >
-            <option value="">{t("history.filter_all_protocols")}</option>
-            <option value="tcp">TCP</option>
-            <option value="udp">UDP</option>
-          </select>
+          />
         </div>
       </div>
 
@@ -297,6 +299,8 @@
   .filters-bar {
     display: flex;
     flex-wrap: wrap;
+    /* Por abajo: los desplegables se alinean con el campo de búsqueda, no con su etiqueta. */
+    align-items: flex-end;
     gap: var(--nb-space-3, 0.75rem);
     margin-bottom: var(--nb-space-4, 1rem);
   }
@@ -309,15 +313,6 @@
   .select-filters {
     display: flex;
     gap: var(--nb-space-2, 0.5rem);
-  }
-
-  .filter-select {
-    padding: var(--nb-space-2, 0.5rem) var(--nb-space-3, 0.75rem);
-    background: var(--color-surface-sunken, rgba(0, 0, 0, 0.2));
-    border: 1px solid var(--color-border-subtle);
-    border-radius: var(--radius-sm, 6px);
-    color: var(--color-text-primary);
-    font-size: var(--nb-font-size-sm, 0.875rem);
   }
 
   .groups-container {

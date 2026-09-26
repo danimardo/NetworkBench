@@ -232,7 +232,38 @@
     "languageDesc": "Idioma de la interfaz. Se aplica al instante.",
     "recommended": "Recomendado",
     "reduceMotionDesc": "Desactiva animaciones y transiciones no esenciales",
-    "developedBy": "Desarrollada por Daniel Díez Mardomingo"
+    "developedBy": "Desarrollada por Daniel Díez Mardomingo",
+    "fw": {
+      "refresh": "Comprobar de nuevo",
+      "checking": "Comprobando las reglas…",
+      "state": {
+        "present": "Presente",
+        "missing": "Ausente",
+        "modified": "Desactualizada",
+        "disabled": "Deshabilitada"
+      },
+      "create": "Crear las que faltan",
+      "remove": "Eliminar todas",
+      "manual": "Ver instrucciones manuales",
+      "allPresent": "Todas las reglas están presentes y activas.",
+      "needsUac": "Crear o eliminar reglas pide permiso de administrador (UAC) solo para esa operación: NetworkBench no se ejecuta como administrador. Las desactualizadas o deshabilitadas se recrean al crear.",
+      "waitingUac": "Esperando la confirmación de Windows (UAC)…",
+      "created": "Reglas del cortafuegos creadas correctamente",
+      "nothingToCreate": "No hay reglas que crear",
+      "removed": "Reglas del cortafuegos eliminadas",
+      "noHelper": "No se encuentra el ayudante de firewall: desde la aplicación no se pueden crear ni eliminar reglas. Usa las instrucciones manuales.",
+      "missingProgram": "No se encuentra {program}: esta regla no se puede crear.",
+      "removeTitle": "¿Eliminar las reglas del cortafuegos?",
+      "removeWarning": "Otros equipos dejarán de poder conectar con este hasta que vuelvas a crearlas. Windows pedirá permiso de administrador.",
+      "removeConfirm": "Eliminar",
+      "manualTitle": "Instrucciones manuales",
+      "manualIntro": "Abre PowerShell o el Símbolo del sistema como administrador y ejecuta estos comandos para crear las reglas:",
+      "manualRemoveIntro": "Para eliminarlas más adelante:",
+      "loadError": "No se pudo comprobar el estado del cortafuegos",
+      "portNoRule": "El puerto de control ahora es {port}, pero el cortafuegos no tiene ninguna regla que lo permita. Otros equipos no podrán conectar con este.",
+      "portOutdated": "El puerto de control ahora es {port}, pero la regla del cortafuegos no lo permite (sigue siendo de otro puerto o está deshabilitada). Otros equipos no podrán conectar con este.",
+      "recreate": "Recrear regla"
+    }
   },
   "plan": {
     "protocol": "Protocolo",
@@ -494,7 +525,9 @@
     "errors": {
       "deletePreview": "No se pudo obtener la previsualización del borrado",
       "deleteExecute": "Error al ejecutar el borrado transaccional"
-    }
+    },
+    "filter_verdict": "Filtrar por veredicto",
+    "filter_protocol": "Filtrar por protocolo"
   },
   "advanced": {
     "title": "Opciones avanzadas",

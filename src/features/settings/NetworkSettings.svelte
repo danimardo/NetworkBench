@@ -1,6 +1,14 @@
 <script lang="ts">
   import Card from "../../lib/components/Card.svelte";
   import Switch from "../../lib/components/Switch.svelte";
+  import Button from "../../lib/components/Button.svelte";
+  import {
+    getFirewallRulesStatus,
+    createMissingFirewallRules,
+    NOMBRE_REGLA_CONTROL,
+    type FirewallRulesReport,
+    type RuleStatus,
+  } from "../../lib/api/firewall";
   import { t } from "../../lib/i18n";
   import type { SettingsModel } from "./model.svelte";
 
@@ -12,6 +20,39 @@
 
   let portInput = $state<string>("");
   let portError = $state<string | null>(null);
+  /** La regla de firewall del puerto no vale tras cambiarlo: se ofrece recrearla. */
+  let avisoRegla = $state<{ puerto: number; estado: RuleStatus } | null>(null);
+  let recreando = $state(false);
+
+  function revisarRegla(informe: FirewallRulesReport) {
+    const control = informe.reglas.find((r) => r.nombre === NOMBRE_REGLA_CONTROL);
+    avisoRegla =
+      control && control.estado !== "present"
+        ? { puerto: informe.puertoControl, estado: control.estado }
+        : null;
+  }
+
+  async function comprobarRegla() {
+    try {
+      revisarRegla(await getFirewallRulesStatus());
+    } catch {
+      // Sin poder leer el cortafuegos no se afirma nada: no hay aviso.
+      avisoRegla = null;
+    }
+  }
+
+  async function recrearRegla() {
+    recreando = true;
+    try {
+      const informe = await createMissingFirewallRules();
+      revisarRegla(informe);
+      model.flashSuccess(t("settings.fw.created"));
+    } catch (e) {
+      model.reportError(e);
+    } finally {
+      recreando = false;
+    }
+  }
 
   $effect(() => {
     if (model.prefs?.customControlPort) {
@@ -19,21 +60,33 @@
     }
   });
 
-  function handlePortBlur() {
+  async function handlePortBlur() {
     portError = null;
+    const anterior = model.prefs?.customControlPort ?? null;
     const trimmed = String(portInput ?? "").trim();
-    if (!trimmed) {
-      model.update({ customControlPort: null });
-      return;
+
+    let nuevo: number | null = null;
+    if (trimmed) {
+      const val = parseInt(trimmed, 10);
+      if (isNaN(val) || val < 1024 || val > 65000) {
+        portError = t("settings.portRangeError");
+        return;
+      }
+      nuevo = val;
     }
 
-    const val = parseInt(trimmed, 10);
-    if (isNaN(val) || val < 1024 || val > 65000) {
-      portError = t("settings.portRangeError");
+    // Salir del campo sin cambiar nada no es un cambio: no se guarda ni se avisa.
+    if (nuevo === anterior) return;
+
+    const guardado = await model.update({ customControlPort: nuevo });
+    if (!guardado) {
+      // Puerto ocupado u otro fallo: el backend conserva el anterior y el campo también.
+      portInput = anterior === null ? "" : String(anterior);
       return;
     }
-
-    model.update({ customControlPort: val });
+    // El puerto ya está aplicado (el backend reabre el canal); falta saber si el
+    // cortafuegos lo permite.
+    await comprobarRegla();
   }
 
   function handleMdnsToggle(value: boolean) {
@@ -72,6 +125,33 @@
       {/if}
     </div>
   </Card>
+
+  {#if avisoRegla}
+    <Card variant="default">
+      <div
+        class="p-5 flex items-center justify-between gap-4"
+        role="status"
+        data-testid="fw-port-notice"
+      >
+        <p class="text-sm text-[var(--color-warning)]">
+          {t(
+            avisoRegla.estado === "missing" ? "settings.fw.portNoRule" : "settings.fw.portOutdated",
+            {
+              port: avisoRegla.puerto,
+            },
+          )}
+        </p>
+        <Button
+          variant="primary"
+          onclick={recrearRegla}
+          disabled={recreando}
+          data-testid="fw-recreate"
+        >
+          {recreando ? t("settings.fw.waitingUac") : t("settings.fw.recreate")}
+        </Button>
+      </div>
+    </Card>
+  {/if}
 
   <!-- Descubrimiento de Red Local mDNS -->
   <Card variant="default">

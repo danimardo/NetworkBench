@@ -35,12 +35,46 @@ pub struct AppState {
     /// Anuncio y descubrimiento mDNS (T151). `None` si el ajuste está apagado o si mDNS no
     /// pudo abrirse: sin descubrimiento se sigue pudiendo conectar a mano (FR-010).
     pub descubrimiento: std::sync::Mutex<Option<crate::discovery::Descubrimiento>>,
+    /// El canal de control en escucha, para poder reabrirlo en otro puerto sin reiniciar
+    /// (`Historias.md` §23). `None` mientras arranca o si el puerto estaba ocupado.
+    pub control: Arc<tokio::sync::Mutex<Option<ControlEnEscucha>>>,
     /// Se dispara cuando cambia algo que refleja el snapshot de la interfaz (T150):
     /// estado de la sesión, equipos guardados o ajustes. Lo escucha `ProyectorDeSnapshot`.
     pub aviso_snapshot: Arc<tokio::sync::Notify>,
 }
 
 impl AppState {
+    /// El puerto de control en uso: el personalizado de Ajustes o el de fábrica.
+    pub fn puerto_de_control(&self) -> u16 {
+        self.settings
+            .get()
+            .custom_control_port
+            .unwrap_or(crate::discovery::CONTROL_PORT_DEFAULT)
+    }
+
+    /// Reabre el canal de control en `puerto` (§23: «se aplica al instante»). El nuevo se
+    /// abre **antes** de soltar el anterior: si el puerto está ocupado falla sin haber
+    /// cerrado nada y la instancia sigue atendiendo en el de siempre.
+    pub async fn reabrir_control(
+        &self,
+        emisor: Option<Arc<dyn EmisorDeEventos>>,
+        puerto: u16,
+    ) -> Result<(), String> {
+        let mut actual = self.control.lock().await;
+        if actual.as_ref().is_some_and(|c| c.puerto == puerto) {
+            return Ok(());
+        }
+        let nuevo = start_control_server(
+            self.contexto_de_sesion(emisor),
+            Arc::clone(&self.session_service),
+            puerto,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+        *actual = Some(nuevo); // suelta el anterior y lo detiene
+        Ok(())
+    }
+
     /// Enciende o apaga el anuncio y la navegación mDNS según el ajuste «Descubrimiento
     /// automático» (`Historias.md` §7.1: apagado, la instancia ni publica ni navega).
     /// Idempotente. Apagarlo suelta `Descubrimiento`, cuyo `Drop` retira el anuncio.
@@ -72,7 +106,7 @@ impl AppState {
     fn iniciar_descubrimiento(&self) -> Option<crate::discovery::Descubrimiento> {
         match crate::discovery::Descubrimiento::iniciar(
             &self.identity,
-            crate::discovery::CONTROL_PORT_DEFAULT,
+            self.puerto_de_control(),
             env!("CARGO_PKG_VERSION"),
             crate::control::server::VERSION_PROTOCOLO,
         ) {
@@ -271,6 +305,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
             crate::control::consent::EmparejamientosEntrantes::new(),
         ),
         descubrimiento: std::sync::Mutex::new(None),
+        control: Arc::new(tokio::sync::Mutex::new(None)),
         aviso_snapshot,
     })
 }
@@ -286,7 +321,7 @@ pub async fn start_control_server(
     ctx: crate::control::service::ContextoSesion,
     servicio: Arc<SessionService>,
     puerto: u16,
-) -> Result<u16, Box<dyn std::error::Error>> {
+) -> Result<ControlEnEscucha, Box<dyn std::error::Error>> {
     let identity = Arc::clone(&ctx.identity);
 
     // `bind_dual_stack` abre IPv6 `[::]` e IPv4 `0.0.0.0` como dos sockets reales: en
@@ -304,7 +339,7 @@ pub async fn start_control_server(
     // Conexiones entrantes simultáneas acotadas a 8 (contrato del protocolo, §Límites).
     let cupo = Arc::new(tokio::sync::Semaphore::new(8));
 
-    tauri::async_runtime::spawn(async move {
+    let tarea = tauri::async_runtime::spawn(async move {
         loop {
             match servidor.accept_one().await {
                 Ok(saludo) => {
@@ -334,7 +369,24 @@ pub async fn start_control_server(
         }
     });
 
-    Ok(real)
+    Ok(ControlEnEscucha {
+        puerto: real,
+        tarea,
+    })
+}
+
+/// El canal de control en marcha. Al soltarlo se detiene el bucle de aceptación y, con él,
+/// se cierran los sockets: así cambiar de puerto libera el anterior. Las sesiones ya abiertas
+/// siguen (van en sus propias tareas).
+pub struct ControlEnEscucha {
+    pub puerto: u16,
+    tarea: tauri::async_runtime::JoinHandle<()>,
+}
+
+impl Drop for ControlEnEscucha {
+    fn drop(&mut self) {
+        self.tarea.abort();
+    }
 }
 
 pub fn dirs_or_fallback() -> PathBuf {

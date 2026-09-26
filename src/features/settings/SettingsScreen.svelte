@@ -10,6 +10,8 @@
   import DataSettings from "./DataSettings.svelte";
   import DiagnosticSettings from "./DiagnosticSettings.svelte";
   import AboutScreen from "./AboutScreen.svelte";
+  import Toast from "../../lib/components/Toast.svelte";
+  import ToastLayer from "../../lib/components/ToastLayer.svelte";
 
   const model = new SettingsModel();
 
@@ -74,24 +76,6 @@
     </p>
   </div>
 
-  {#if model.saveSuccess}
-    <div
-      class="rounded-md bg-[var(--color-success-soft)] p-3 text-xs text-[var(--color-success)]"
-      role="status"
-    >
-      {t("settings.saveSuccess")}
-    </div>
-  {/if}
-
-  {#if model.saveError}
-    <div
-      class="rounded-md bg-[var(--color-danger-soft)] p-3 text-xs text-[var(--color-danger)]"
-      role="alert"
-    >
-      {model.saveError}
-    </div>
-  {/if}
-
   <!-- Navegación por pestañas -->
   <div
     class="border-b border-[var(--border-default)]"
@@ -134,7 +118,7 @@
     {:else if activeTab === "lifecycle"}
       <LifecycleSettings {model} />
     {:else if activeTab === "firewall"}
-      <FirewallSettings />
+      <FirewallSettings {model} />
     {:else if activeTab === "data"}
       <DataSettings {model} />
     {:else if activeTab === "diagnostics"}
@@ -144,3 +128,14 @@
     {/if}
   </div>
 </div>
+
+<!-- Flotan sobre el contenido: no desplazan ningún control. El éxito se cierra solo;
+     el error se queda hasta que se cierra. -->
+<ToastLayer>
+  {#if model.saveSuccess}
+    <Toast tone="success">{model.successMessage ?? t("settings.saveSuccess")}</Toast>
+  {/if}
+  {#if model.saveError}
+    <Toast tone="danger" onDismiss={() => model.dismissError()}>{model.saveError}</Toast>
+  {/if}
+</ToastLayer>

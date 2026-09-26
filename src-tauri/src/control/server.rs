@@ -78,8 +78,8 @@ impl ControlServer {
     /// socket IPv6 sin desactivar `IPV6_V6ONLY`, algo que `tokio::net::TcpListener` no
     /// expone. Añadir `socket2` solo para ese ajuste habría sido una dependencia nueva
     /// para un problema que dos sockets ya resuelven con lo que hay. Si el bind IPv4
-    /// falla (por ejemplo, algo más ya lo ocupa) se seguirá aceptando solo por IPv6, en
-    /// vez de que arranque falle entero.
+    /// falla porque IPv4 no está disponible se seguirá aceptando solo por IPv6, en vez de
+    /// que arranque falle entero; si falla porque el **puerto está ocupado**, es un error.
     pub async fn bind_dual_stack(puerto: u16, identity: Arc<InstanceIdentity>) -> Result<Self> {
         use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
@@ -91,6 +91,11 @@ impl ControlServer {
                 .await
             {
                 Ok(l) => Some(l),
+                // Puerto ocupado por otra aplicación: es `NB-PORT-001`, no algo que tolerar.
+                // Seguir solo por IPv6 dejaría a los equipos que llegan por IPv4 (el caso
+                // común) sin poder conectar y sin que nadie lo supiera. Al salir se suelta
+                // el socket IPv6 ya abierto.
+                Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => return Err(e),
                 Err(e) => {
                     tracing::warn!(
                         "No se pudo ligar también 0.0.0.0:{puerto} ({e}); solo se aceptará por IPv6"

@@ -4,3 +4,9 @@
 :root {
   color-scheme: dark;
 }
+
+/* Sin esto el sistema dibuja como oscuros los controles nativos (la lista de un <select>, las
+   barras de desplazamiento) también con el tema claro. `theme.svelte.ts` pone data-theme. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
