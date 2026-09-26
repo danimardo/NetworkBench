@@ -55,6 +55,25 @@ impl SnapshotManager {
         self.revision_counter.load(Ordering::SeqCst)
     }
 
+    /// Sustituye el contenido por `nuevo` **solo si difiere** del actual (sin contar la
+    /// revisión). Si cambia, sube la revisión y devuelve el snapshot nuevo; si no,
+    /// devuelve `None` y la revisión no se toca: así un recálculo redundante no fabrica
+    /// eventos que la interfaz tendría que procesar sin que haya cambiado nada.
+    pub fn sincronizar(&self, nuevo: AppSnapshot) -> Option<AppSnapshot> {
+        let mut lock = self.current_snapshot.lock().unwrap();
+        let mut comparable = nuevo.clone();
+        comparable.revision = lock.revision;
+        if comparable == *lock {
+            return None;
+        }
+        let next_rev = self.revision_counter.fetch_add(1, Ordering::SeqCst) + 1;
+        *lock = AppSnapshot {
+            revision: next_rev,
+            ..nuevo
+        };
+        Some(lock.clone())
+    }
+
     /// Incrementa atómicamente la revisión monotónica y actualiza el snapshot
     pub fn update<F>(&self, mutate: F) -> AppSnapshot
     where
@@ -71,5 +90,35 @@ impl SnapshotManager {
 impl Default for SnapshotManager {
     fn default() -> Self {
         Self::new(AppSnapshot::default())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sincronizar_sin_cambios_no_sube_la_revision() {
+        let m = SnapshotManager::default();
+        let antes = m.current_revision();
+        assert!(m.sincronizar(m.get_snapshot()).is_none());
+        assert_eq!(m.current_revision(), antes);
+    }
+
+    #[test]
+    fn sincronizar_con_cambio_sube_la_revision_una_vez() {
+        let m = SnapshotManager::default();
+        let mut nuevo = m.get_snapshot();
+        nuevo.is_session_active = true;
+        nuevo.revision = 999; // la revisión entrante se ignora: la fija el gestor
+        let publicado = m.sincronizar(nuevo.clone()).expect("cambia");
+        assert_eq!(publicado.revision, 2);
+        assert!(publicado.is_session_active);
+        assert_eq!(m.get_snapshot(), publicado);
+        assert!(
+            m.sincronizar(nuevo).is_none(),
+            "repetir el mismo estado no es un cambio"
+        );
+        assert_eq!(m.current_revision(), 2);
     }
 }

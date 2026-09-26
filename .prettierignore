@@ -11,3 +11,6 @@ specs/
 pnpm-lock.yaml
 coverage/
 tests/contracts/fixtures/rust/
+test-results/
+playwright-report/
+.playwright-mcp/

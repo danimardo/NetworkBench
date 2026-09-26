@@ -57,3 +57,10 @@ run(
 console.log("\n========================================================");
 console.log("✓ Verificación canónica completada con éxito.");
 console.log("========================================================\n");
+console.log(
+  "Nota (T147): `pnpm test:e2e` (Playwright, con axe-core real) existe pero no se " +
+    "encadena aquí a propósito — necesita un navegador y un servidor Vite reales, y en " +
+    "esta máquina de desarrollo la navegación del navegador ha sido intermitente contra " +
+    "un servidor recién arrancado (ver VALIDACION.md §1.32). Encadenarlo habría hecho de " +
+    "`pnpm verify` un gate no determinista. Ejecutar `pnpm test:e2e` aparte.",
+);

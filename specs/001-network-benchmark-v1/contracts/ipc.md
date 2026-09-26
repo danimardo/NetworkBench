@@ -103,6 +103,7 @@ secuencia monotónica por sesión.
 | Evento | Finalidad | Presión/descartes |
 |---|---|---|
 | `app.snapshotInvalidated` | pedir snapshot tras hueco irrecuperable | combinado |
+| `app.snapshotChanged` | snapshot completo tras un cambio de estado de la aplicación (sesión activa, equipos, idioma, tema); implementado como `app://snapshot-changed` (T150, 2026-09-25) | último gana; se descarta con `revision <=` la actual |
 | `peers.changed` | cambio de proyección | combinado por peer |
 | `pairing.changed` | código/estado/caducidad | transición sin pérdida |
 | `session.changed` | estado/progreso/checks autoritativos | transición sin pérdida |

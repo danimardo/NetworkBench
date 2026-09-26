@@ -129,6 +129,8 @@ pub async fn atender_emparejamiento_entrante<S>(
         if let Err(e) = guardado {
             tracing::error!("No se pudo guardar el equipo emparejado: {e}");
             aceptado = false;
+        } else {
+            ctx.aviso.notify_one();
         }
     }
 

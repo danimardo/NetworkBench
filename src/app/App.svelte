@@ -3,19 +3,64 @@
   import AppBackground from "../lib/components/AppBackground.svelte";
   import TitleBar from "../lib/components/TitleBar.svelte";
   import Sidebar from "../lib/components/Sidebar.svelte";
-  import Card from "../lib/components/Card.svelte";
-  import StatusPill from "../lib/components/StatusPill.svelte";
   import { router } from "./router.svelte";
   import { snapshotStore } from "../lib/api/snapshot.svelte";
   import { t } from "../lib/i18n";
   import { theme } from "../lib/design-system/theme.svelte";
   import { logger } from "../lib/logging";
   import SettingsScreen from "../features/settings/SettingsScreen.svelte";
+  import PeersScreen from "../features/peers/PeersScreen.svelte";
+  import { PeersModel } from "../features/peers/model.svelte";
+  import SessionScreen from "../features/session/SessionScreen.svelte";
+  import { SessionController } from "../features/session/controller.svelte";
+  import ResultScreen from "../features/results/ResultScreen.svelte";
+  import HistoryScreen from "../features/history/HistoryScreen.svelte";
+  import ConsentDialog from "../features/consent/ConsentDialog.svelte";
+  import { ConsentModel } from "../features/consent/model.svelte";
+  import type { Peer } from "../lib/contracts/peer";
   import CloseDialog from "./CloseDialog.svelte";
   import { evaluateAppClose } from "../lib/api/settings";
   import { restoreAndShowWindow, setupWindowTracking } from "../lib/window";
 
   let showCloseDialog = $state(false);
+
+  const peersModel = new PeersModel();
+  const session = new SessionController();
+  const consent = new ConsentModel();
+
+  // Una solicitud entrante puede llegar en cualquier pantalla: se vigila siempre.
+  onMount(() => {
+    void consent.start();
+    return () => consent.stop();
+  });
+
+  // La lista de equipos solo se sondea mientras Inicio está a la vista.
+  $effect(() => {
+    if (router.currentRoute !== "inicio") return;
+    peersModel.start();
+    return () => peersModel.stop();
+  });
+
+  async function handleSelectPeer(peer: Peer) {
+    if (!peersModel.isTrusted(peer)) {
+      await peersModel.beginPairing(peer);
+      return;
+    }
+    router.navigate("session");
+    await session.begin(peer);
+  }
+
+  async function handleRetry() {
+    const peer = session.peer;
+    if (!peer) return;
+    router.navigate("session");
+    await session.begin(peer);
+  }
+
+  function handleNewTest() {
+    session.reset();
+    router.navigate("inicio");
+  }
 
   onMount(() => {
     logger.installGlobalErrorCapture();
@@ -75,31 +120,50 @@
     <!-- Área de contenido de la shell -->
     <main class="flex-1 overflow-y-auto p-6" id="main-content" tabindex="-1">
       {#if router.currentRoute === "inicio"}
-        <div class="space-y-6">
-          <header class="flex items-center justify-between">
-            <div>
-              <h1 class="text-2xl font-bold tracking-tight">{t("nav.peers")}</h1>
-              <p class="text-sm text-[var(--color-text-secondary)]">{t("peers.discover")}</p>
-            </div>
-            <StatusPill tone={snapshotStore.snapshot?.isSessionActive ? "warning" : "neutral"}>
-              {snapshotStore.snapshot?.isSessionActive ? t("session.running") : t("common.loading")}
-            </StatusPill>
-          </header>
-
-          <Card variant="default">
-            <div class="p-6 text-center">
-              <p class="text-base font-semibold">{t("peers.emptyTitle")}</p>
-              <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{t("peers.emptyDesc")}</p>
-            </div>
-          </Card>
+        <PeersScreen
+          peers={peersModel.peers}
+          isScanning={peersModel.scanning}
+          statusOf={peersModel.statusOf}
+          errorMessage={peersModel.error}
+          onDismissError={() => peersModel.clearError()}
+          busy={peersModel.busy}
+          onSelectPeer={(peer) => void handleSelectPeer(peer)}
+          onManualConnect={(host, port) => void peersModel.manualConnect(host, port)}
+          activePairingPeer={peersModel.pairing?.peer ?? null}
+          pairingCode={peersModel.pairing?.code ?? ""}
+          pairingSecondsLeft={peersModel.pairing?.secondsLeft ?? 60}
+          onCancelPairing={() => void peersModel.cancelPairing()}
+          onConfirmPairing={() => void peersModel.confirmPairing()}
+        />
+      {:else if router.currentRoute === "session" && session.peer}
+        <SessionScreen
+          peer={session.peer}
+          plan={session.plan}
+          phase={session.phase === "idle" ? "preparing" : session.phase}
+          progressPercent={session.progressPercent}
+          currentThroughputBps={session.currentBps}
+          errorMessage={session.errorMessage}
+          onCancel={() => void session.cancel()}
+          onViewResults={() => router.navigate("results")}
+          onRetry={() => void handleRetry()}
+        />
+      {:else if router.currentRoute === "results" && session.result}
+        <ResultScreen
+          result={session.result}
+          samplesForward={session.samplesForward}
+          samplesReverse={session.samplesReverse}
+          onRetest={() => void handleRetry()}
+          onNewTest={handleNewTest}
+        />
+      {:else if router.currentRoute === "results"}
+        <div class="space-y-4" role="alert">
+          <p>{session.errorMessage || t("session.errors.noResult")}</p>
+          <button type="button" class="underline" onclick={handleNewTest}>
+            {t("nav.peers")}
+          </button>
         </div>
       {:else if router.currentRoute === "historial"}
-        <div class="space-y-6">
-          <header>
-            <h1 class="text-2xl font-bold tracking-tight">{t("history.title")}</h1>
-            <p class="text-sm text-[var(--color-text-secondary)]">{t("history.empty")}</p>
-          </header>
-        </div>
+        <HistoryScreen />
       {:else if router.currentRoute === "ajustes"}
         <SettingsScreen />
       {/if}
@@ -111,4 +175,6 @@
     oncancel={() => (showCloseDialog = false)}
     onconfirm={handleConfirmExit}
   />
+
+  <ConsentDialog model={consent} />
 </div>

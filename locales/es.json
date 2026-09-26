@@ -216,6 +216,10 @@
     "licenseNotice": "Distribuido bajo la Licencia Pública General de GNU v3 (GPL-3.0-or-later). Software libre y de código abierto sin telemetría ni servicios externos.",
     "attributionNotice": "Microsoft y NTTTCP son marcas o componentes de Microsoft Corporation. Consulta THIRD_PARTY_NOTICES.md para avisos y licencias de terceros."
   },
+  "plan": {
+    "protocol": "Protocolo",
+    "streams": "Flujos"
+  },
   "peers": {
     "title": "Equipos de red",
     "discover": "Buscando equipos en la red local...",
@@ -228,7 +232,24 @@
     "pairingCode": "Código de emparejamiento",
     "confirmPairing": "Confirmar emparejamiento",
     "cancelPairing": "Cancelar emparejamiento",
-    "trustPeer": "Recordar este equipo como de confianza"
+    "trustPeer": "Recordar este equipo como de confianza",
+    "incoming": {
+      "sessionTitle": "Solicitud de medición entrante",
+      "sessionDesc": "{peer} quiere iniciar una medición de rendimiento contigo.",
+      "pairingTitle": "Solicitud de emparejamiento entrante",
+      "pairingDesc": "{peer} quiere emparejarse contigo. Comprueba que el código coincide en los dos equipos.",
+      "accept": "Aceptar",
+      "reject": "Rechazar"
+    },
+    "errors": {
+      "refresh": "No se pudo actualizar la lista de equipos.",
+      "connect": "No se pudo conectar con ese equipo.",
+      "noAddress": "El equipo no tiene una dirección válida.",
+      "pairStart": "No se pudo iniciar el emparejamiento.",
+      "pairRejected": "El otro equipo no confirmó el emparejamiento.",
+      "pairFailed": "No se pudo completar el emparejamiento.",
+      "pairExpired": "El emparejamiento caducó."
+    }
   },
   "session": {
     "title": "Sesión de prueba de red",
@@ -242,7 +263,13 @@
     "preflight": "Verificaciones previas (Preflight)",
     "directionSend": "Envío de datos (Subida)",
     "directionReceive": "Recepción de datos (Bajada)",
-    "progress": "Progreso de la sesión"
+    "progress": "Progreso de la sesión",
+    "errors": {
+      "start": "No se pudo iniciar la prueba.",
+      "cancel": "No se pudo cancelar la prueba.",
+      "failed": "La prueba terminó con un error. Si se completó una dirección, se ha guardado como sesión incompleta en el historial.",
+      "noResult": "La prueba terminó, pero no se pudo leer el resultado guardado."
+    }
   },
   "results": {
     "title": "Resultados de rendimiento",

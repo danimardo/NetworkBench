@@ -16,6 +16,7 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "test:unit": "vitest run",
+    "test:e2e": "playwright test",
     "test:coverage": "vitest run --coverage",
     "test:coverage:rust": "node scripts/test/coverage-rust.mjs",
     "test": "vitest run",

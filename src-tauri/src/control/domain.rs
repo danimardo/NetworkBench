@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::Notify;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,6 +62,11 @@ pub struct SessionStateMachine {
     current_state: SessionState,
     session_id: Option<Uuid>,
     peer_instance_id: Option<Uuid>,
+    /// Se avisa aquí cada vez que cambia el estado, para que quien proyecta el
+    /// snapshot de la interfaz (T150) no tenga que sondear. `notify_one` guarda un
+    /// permiso si nadie espera, así que un cambio nunca se pierde; varios seguidos se
+    /// funden en un solo aviso, y quien lo recibe recalcula desde la fuente.
+    aviso: Arc<Notify>,
 }
 
 impl Default for SessionStateMachine {
@@ -70,10 +77,15 @@ impl Default for SessionStateMachine {
 
 impl SessionStateMachine {
     pub fn new() -> Self {
+        Self::con_aviso(Arc::new(Notify::new()))
+    }
+
+    pub fn con_aviso(aviso: Arc<Notify>) -> Self {
         Self {
             current_state: SessionState::Idle,
             session_id: None,
             peer_instance_id: None,
+            aviso,
         }
     }
 
@@ -104,6 +116,7 @@ impl SessionStateMachine {
         self.session_id = Some(session_id);
         self.peer_instance_id = Some(peer_instance_id);
         self.current_state = SessionState::Connecting;
+        self.aviso.notify_one();
         Ok(())
     }
 
@@ -125,7 +138,10 @@ impl SessionStateMachine {
         }
 
         if self.can_transition_to(target) {
-            self.current_state = target;
+            if self.current_state != target {
+                self.current_state = target;
+                self.aviso.notify_one();
+            }
             Ok(())
         } else {
             Err(StateMachineError::IllegalTransition {
@@ -193,6 +209,7 @@ impl SessionStateMachine {
         }
 
         self.current_state = SessionState::Cancelling;
+        self.aviso.notify_one();
         Ok(())
     }
 
@@ -200,6 +217,7 @@ impl SessionStateMachine {
     pub fn complete_cancellation(&mut self) {
         if self.current_state == SessionState::Cancelling {
             self.current_state = SessionState::Cancelled;
+            self.aviso.notify_one();
         }
     }
 
@@ -214,7 +232,10 @@ impl SessionStateMachine {
             });
         }
 
-        self.current_state = SessionState::Failed;
+        if self.current_state != SessionState::Failed {
+            self.current_state = SessionState::Failed;
+            self.aviso.notify_one();
+        }
         Ok(())
     }
 }

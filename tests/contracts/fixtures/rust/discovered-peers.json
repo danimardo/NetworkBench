@@ -1,0 +1,27 @@
+[
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000200",
+    "fingerprintDeclarada": "0000000000000000000000000000000000000000000000000000000000000200",
+    "displayName": "Equipo libre",
+    "addresses": [
+      "192.168.1.30:7411"
+    ],
+    "protocolVersion": 1,
+    "appVersion": "0.1.0",
+    "linkMbps": 1000,
+    "busy": false
+  },
+  {
+    "instanceId": "00000000-0000-4000-8000-000000000201",
+    "fingerprintDeclarada": "0000000000000000000000000000000000000000000000000000000000000201",
+    "displayName": "Equipo ocupado",
+    "addresses": [
+      "192.168.1.31:7411",
+      "fd00::31:7411"
+    ],
+    "protocolVersion": 2,
+    "appVersion": "0.2.0",
+    "linkMbps": 0,
+    "busy": true
+  }
+]

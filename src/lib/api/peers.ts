@@ -15,6 +15,27 @@ const pairingOutcomeSchema = z.object({
 });
 export type PairingOutcome = z.infer<typeof pairingOutcomeSchema>;
 
+/**
+ * Un equipo visto por mDNS. **Ningún campo prueba identidad** (FR-011): nombre, dirección
+ * y huella son lo que el equipo dice de sí. La identidad real la demuestra el certificado
+ * TLS al conectar. Por eso no hay estado de confianza aquí.
+ */
+export const discoveredPeerSchema = z.object({
+  instanceId: z.uuid(),
+  fingerprintDeclarada: z.string().regex(/^[0-9a-f]{64}$/i),
+  displayName: z.string(),
+  addresses: z.array(z.string()),
+  protocolVersion: z.number().int().nonnegative(),
+  appVersion: z.string(),
+  linkMbps: z.number().int().nonnegative(),
+  busy: z.boolean(),
+});
+export type DiscoveredPeer = z.infer<typeof discoveredPeerSchema>;
+
+export async function listDiscoveredPeers(): Promise<DiscoveredPeer[]> {
+  return invokeCommand("peers_discovered_list", undefined, z.array(discoveredPeerSchema));
+}
+
 export async function listPeers(): Promise<Peer[]> {
   const result = await invokeCommand("peers_list", undefined, z.array(peerSchema));
   return result;

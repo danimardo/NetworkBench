@@ -39,6 +39,12 @@ pub fn run() {
                     tracing::error!("El canal de control no pudo arrancar: {e}");
                 }
             });
+            // El snapshot que lee la interfaz se mantiene al día y se emite cuando cambia.
+            tauri::async_runtime::spawn(
+                app_state
+                    .proyector()
+                    .vigilar(std::sync::Arc::new(tauri::Manager::app_handle(app).clone())),
+            );
             // Con el ajuste encendido (por defecto), la instancia se anuncia y busca a las demás.
             app_state.aplicar_descubrimiento(app_state.settings.get().mdns_enabled);
             tauri::Manager::manage(app, app_state);

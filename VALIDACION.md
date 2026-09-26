@@ -1012,6 +1012,282 @@ existen. Sustituidos por capturas reales `real_5.40_*.xml`, TCP y UDP, ambos rol
 - **Estado**: `VERIFICADO` (forma del JSON Rust↔TS para los 8 documentos; APIs prohibidas
   por patrón) · `NO PRESENTE` (fixtures del resto de eventos y comandos)
 
+### 1.30 Snapshot de la aplicación actualizado y emitido (T150)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Rust 1.98.1, 2026-09-25.
+- **Antes**: `SnapshotManager::update` no se invocaba desde ningún sitio. El snapshot se
+  fijaba al arrancar y `isSessionActive`, `activeSessionId`, `peersCount`, idioma y tema no
+  cambiaban nunca. `App.svelte` usa `isSessionActive` para el fondo y para deshabilitar un
+  botón: la interfaz no habría reflejado jamás una sesión en curso.
+- **Diseño**: la máquina de estados avisa por `Notify` en cada transición real (no en las
+  idempotentes); `ProyectorDeSnapshot` recalcula desde las fuentes, no aplica parches, así un
+  aviso perdido o repetido no deja un estado sin respaldo; `sincronizar` solo sube la
+  revisión si el contenido difiere; el cambio sale como `app://snapshot-changed`.
+- **Comandos**: `cargo test --lib ipc::proyector ipc::snapshot control::domain` (14 en
+  verde) · `pnpm exec vitest run tests/contracts/snapshot.test.ts` (9 en verde) ·
+  `cargo fmt` y `clippy --all-targets -- -D warnings` sin avisos · `pnpm verify` y
+  `cargo test` completo (resultado en el cierre de la tarea).
+- **Qué prueban**: una sesión que empieza y termina produce dos emisiones con revisión
+  creciente, con `activeSessionId` presente y luego ausente; un aviso sin cambios no emite
+  y no toca la revisión; un equipo nuevo sube `peersCount` y repetir no cambia nada; en el
+  frontend, un evento más nuevo sustituye, uno obsoleto o repetido se descarta, uno
+  malformado se ignora, y uno previo al snapshot inicial no es pisado por este.
+- **Defectos hermanos corregidos**: `settings_update` y `app_close_evaluate` consideraban
+  activa una sesión `Completed` o `Failed` (`!= Idle && != Cancelled`). Sin prueba propia: exigen un
+  `tauri::State`.
+- **Decisión INFERIDA declarada**: el contrato no nombraba un evento de snapshot completo
+  (`session.changed`, `app.snapshotInvalidated`); se añadió `app.snapshotChanged` a la tabla
+  de `contracts/ipc.md`.
+- **NO VERIFICABLE aquí**: que el evento llegue realmente a un WebView2 (solo hay dobles del
+  emisor); el comportamiento visual de `App.svelte` con el estado cambiando.
+- **No hecho**: evento de progreso de sesión y de comprobaciones; proyección de sesión y
+  equipos completa en el snapshot; borrado de equipos (no existe el comando).
+- **Estado**: `VERIFICADO` (proyección, revisión monotónica, descarte de obsoletos con
+  dobles) · `NO VERIFICABLE` (entrega al WebView2 real) · `NO PRESENTE` (evento de progreso)
+
+### 1.31 Cableado del frontend: equipos, sesión, resultado y consentimiento (T181, T150 UI)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Node 24.4.1, 2026-09-25.
+- **Antes**: `App.svelte` no montaba ningún componente de `features/`; «Inicio» era una
+  tarjeta estática. `PeersScreen`, `SessionScreen`, `ResultScreen`, `HistoryScreen` existían
+  con pruebas de componente propias pero sin consumidor real. No había forma de completar
+  el recorrido equipos → medición → resultado desde la interfaz.
+- **Comandos**: `pnpm exec vitest run` (128 en verde, 26 ficheros) · `pnpm check` (0 errores)
+  · `pnpm lint` (0 errores; 1 aviso preexistente en `artifacts/coverage/`, ajeno) ·
+  `node scripts/architecture/check-imports.mjs` (en verde tras el arreglo) · `pnpm verify`
+  completo en verde · `cargo test` completo (173 en verde).
+- **PeersModel** (9 pruebas): funde equipo descubierto + guardado por id **y** huella;
+  un anuncio con huella distinta a la guardada no hereda confianza (FR-011); ocupado e
+  incompatible se derivan de lo que declara el anuncio; un error de red no rompe el modelo;
+  el reloj de caducidad del emparejamiento cuenta atrás.
+- **SessionController** (6 pruebas): un fallo al arrancar pasa a `failed` con mensaje
+  traducido; el sondeo traduce cada estado de Rust y, al completar, **lee** el resultado
+  guardado (usa el fixture real generado por Rust en T160, no uno inventado a mano);
+  cancelar antes de terminar pasa a `cancelling`; `reset()` limpia sin tocar lo guardado.
+- **Un despiste de la propia prueba, no del código**: mi primera aserción leía
+  `result.protocol`, un campo que no existe — `protocol` vive en `result.plan.protocol`.
+  Lo detectó `pnpm check` al escribir el test, no una revisión posterior.
+- **ConsentModel** (4 pruebas): sin nada pendiente `current` es `null`; una solicitud de
+  sesión se antepone a un emparejamiento; aceptar retira la solicitud de la lista; un error
+  al responder se refleja en `error` sin vaciar la solicitud (para poder reintentar).
+- **Límite de arquitectura real, no hipotético**: `check-imports.mjs` fallaba porque los
+  dos controladores nuevos importaban `@tauri-apps/api/event` directamente. Corregido con
+  wrappers en `lib/api/` (`onSampleBatch` ya existente; `onIncomingSessionRequest` y
+  `onIncomingPairingRequest` nuevos en `lib/api/consent.ts`).
+- **Verificado en navegador real (mismo día, tras esta sección)**: la extensión Claude en
+  Chrome no conectó en esta sesión; los dos primeros intentos con Playwright agotaron el
+  tiempo de espera al navegar a `localhost:5183` porque el servidor de una ejecución
+  anterior seguía ocupando el puerto (`curl` a `127.0.0.1:5183` fallaba mientras
+  `localhost:5183` respondía 200: un servidor huérfano, no un problema de Playwright). Con
+  `pnpm exec vite dev` realmente arriba, la navegación funcionó a la primera. Comprobado con
+  capturas de accesibilidad de Playwright: «Inicio» renderiza «No se han detectado
+  equipos» junto con el aviso de error de `peers_list`/`peers_discovered_list`
+  (`NB-INTERNAL-001`, esperado sin backend Tauri) y su botón de cierre; «Historial»
+  renderiza sus filtros y «No hay pruebas registradas todavía». Ninguna pantalla se rompe
+  al fallar sus llamadas nativas: cada error se registra por el logger y se refleja donde
+  corresponde, tal como se diseñó.
+- **Sigue NO VERIFICABLE**: WebView2 real, un backend Tauri real detrás (nada de esto
+  ejercita `session_start`, el diálogo de emparejamiento saliente ni el de consentimiento
+  entrante con datos reales), y el resto de pantallas (`SessionScreen`, `ResultScreen`,
+  `ConsentDialog`) sin un backend que dispare sus estados.
+- **No hecho**: `PreflightScreen` y `AdvancedPlan` no están montados (el plan es siempre el
+  estándar); no hay reconexión tras pérdida de canal; los estados «Ocupado»/«Versión
+  incompatible» de una tarjeta de equipo nunca se han visto con un segundo equipo real.
+- **Estado**: `VERIFICADO` (lógica de los tres modelos con dobles de transporte; límites de
+  arquitectura; «Inicio» e «Historial» renderizan sin crash en navegador real) ·
+  `NO VERIFICABLE` (WebView2 real; el resto de pantallas sin backend real) · `NO PRESENTE`
+  (preflight/plan avanzado montados, reconexión)
+
+### 1.32 Suites E2E reales con axe-core: cuatro defectos reales encontrados (T147)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, Node 24.4.1, Playwright 1.63.0
+  (Chromium ya instalado), 2026-09-25.
+- **Antes**: `e2e/smoke.spec.ts`, `e2e/accessibility/a11y.spec.ts` y `e2e/visual/visual.spec.ts`
+  eran `expect(true).toBe(true)`. No existía `test:e2e` ni `webServer` en
+  `playwright.config.ts`. `e2e/**/*.ts` no estaba en el `include` de `tsconfig.json`: nadie
+  tipaba estos ficheros.
+- **Comandos que se ejecutaron y pasaron, al final**: `pnpm check` (491 ficheros, 0 errores)
+  · `pnpm lint` (0 errores; 1 aviso preexistente ajeno en `artifacts/coverage/`) ·
+  `pnpm exec vitest run` (128 en verde) · `pnpm exec playwright test` (**9 en verde, 1
+  `skip` declarado**, ~25-30 s) · `pnpm verify` completo en verde.
+- **Obstáculo inicial y su causa real, no un misterio sin resolver**: las primeras
+  ejecuciones de `pnpm exec playwright test` contra `vite dev` colgaban o superaban 60 s de
+  forma intermitente en la primera navegación de cada test, mientras `curl` al mismo
+  servidor respondía en 7-10 s. Aislado con `curl -m 90` y con `workers: 1`: no era un
+  problema de red ni del navegador, era **compilación bajo demanda en frío** — `vite dev`
+  transforma cada módulo la primera vez que se pide, y una aplicación de 316 módulos con
+  Tailwind 4 JIT tarda más de lo que cualquier timeout razonable de un test debería esperar
+  bajo carga. Arreglado sirviendo el **build de producción** (`vite build && vite preview`)
+  en `playwright.config.ts`: sin transformación bajo demanda, sin esa fuente de
+  intermitencia — de 5+ minutos con fallos a ~25 s en verde.
+- **El hallazgo más grave, y el más simple: `src/lib/design-system/tokens.css` no se
+  importaba en ningún sitio.** `src/app.css` solo tenía `@import "tailwindcss"`. El fichero
+  con las 524 líneas de tokens de color oscuro/claro —referenciado desde 888 usos de
+  `var(--color-*)` en 46 componentes— compilaba dentro del bundle (Vite lo procesa porque
+  algo lo importa transitivamente en dev, pero en el HTML servido nunca llegaba a
+  aplicarse su contenido a `:root`) sin que ninguna hoja de estilos real lo cargara. Lo
+  detectó el primer test de `visual.spec.ts` (`--color-bg-main` calculado devolvía cadena
+  vacía en vez de `#191c30`). **Verificado visualmente con una captura real** (Playwright,
+  `vite preview`, tema oscuro): antes de la corrección no se había mirado nunca un
+  render con atención al color — solo árboles de accesibilidad, que no muestran color. Con
+  el `@import` añadido en `src/app.css`, la app renderiza el diseño "Graphite Violet"
+  previsto (fondo degradado violeta, tarjetas, botón primario lila). Sin este arreglo, la
+  aplicación entera se habría visto sin ningún color de marca en un WebView2 real.
+- **Dos defectos de accesibilidad reales, encontrados al escribir las pruebas**: (1) el
+  `tablist` de `SettingsScreen` (`role="tab"`) y el `radiogroup` de tema de
+  `AppearanceSettings` (`role="radio"`) declaraban el rol ARIA compuesto correcto pero
+  **sin implementar su patrón de teclado** (WAI-ARIA APG): sin flechas, sin roving
+  `tabindex` — cada pestaña/radio estaba en el orden de Tab por separado y las flechas no
+  hacían nada. Corregido en los dos: `ArrowLeft/ArrowRight/Home/End` mueven **y**
+  seleccionan, solo el elemento activo tiene `tabindex="0"`. (2) axe-core marcó
+  `.titlebar-name` (el texto "NetworkBench" de la barra de título) como «contenido no
+  contenido en ningún landmark» (RGAA-9.2.1): la raíz de `TitleBar.svelte` era un `<div>`
+  sin rol; cambiada a `<header>` (landmark `banner` implícito), sin tocar ningún selector
+  CSS (todos por clase, ninguno ligado a la etiqueta).
+- **Un defecto de integración que el propio componente ya había previsto y advertido en su
+  comentario, confirmado real**: `Dialog.svelte` marcaba `inert` solo los hermanos
+  directos de `scrimEl.parentElement` — válido si el diálogo cuelga justo del contenedor
+  de ruta, como decía su comentario "se asume... si en la integración real acaba anidado
+  más adentro, hay que revisar qué nivel se marca inert". En la integración real (T181),
+  el diálogo de conexión manual cuelga dentro de `PeersScreen` → `<main>` → un `div`
+  hermano de `Sidebar`: con el algoritmo de un solo nivel, la barra lateral **no** quedaba
+  `inert` mientras el diálogo estaba abierto (detectado por el test de atrapado de foco).
+  Corregido: ahora sube por toda la cadena de ancestros hasta `<body>`, marcando en cada
+  nivel a los hermanos que no llevan al diálogo — cumple la promesa del componente
+  ("todo menos el diálogo") sin importar la profundidad de anidamiento real.
+- **Un cuarto hallazgo, en el mismo diálogo**: el propio comentario de `Dialog.svelte` deja
+  explícito que el retorno de foco al cerrar es responsabilidad de quien instancia el
+  diálogo, no del componente. `PeersScreen.svelte` nunca lo implementaba: cerrar con
+  Escape, con "Cancelar" o al conectar no devolvía el foco al botón que lo abrió.
+  Corregido con `manualModalTrigger` (captura `document.activeElement` al abrir) y
+  `await tick()` antes de restaurar el foco — sin el `tick()`, el botón seguía `inert`
+  (recién liberado por el `onDestroy` del diálogo, que Svelte no aplica de forma síncrona
+  con el cambio de estado) y `.focus()` no habría hecho nada.
+- **No hecho**: el tercer test visual («plantilla de impresión PDF A4») se dejó `test.skip`
+  con motivo — `PrintReport.svelte` no tiene ninguna ruta, ventana ni regla `@media print`
+  que lo haga alcanzable (verificado por grep en todo `src/`), así que no hay nada que un
+  E2E pueda ejercitar todavía; corresponde a quien cablee la exportación a PDF.
+- **Decisión declarada**: `test:e2e` no se encadena en `scripts/verify-app.mjs` pese a estar
+  en verde: un E2E necesita un build previo (~13 s) y un navegador real, más lento y con
+  más superficie de fallo ajena al código que el resto del gate. Queda como comando manual
+  (`pnpm test:e2e`), con la razón impresa al final de `verify-app.mjs`.
+- **Estado**: `VERIFICADO` (las 9 pruebas reales en verde contra un build de producción;
+  4 defectos reales encontrados y corregidos, con captura real del resultado visual) ·
+  `NO PRESENTE` (ruta/ventana de impresión que el tercer test de `visual.spec.ts`
+  necesitaría)
+
+### 1.33 Cierre de T144: los cuatro huecos declarados ya estaban cerrados por otras tareas
+- **Entorno**: revisión documental y de código, sin comandos nuevos que ejecutar — cada
+  pieza citada ya tenía su propia verificación en la tarea que la cerró (T173, T175, T176,
+  T177, T181, T182).
+- **Qué se comprobó, en vez de dar la nota por buena**: los cuatro huecos que la última
+  actualización de T144 declaraba abiertos (preflight en el recorrido de sesión,
+  cancelación graciosa, `SESSION_RESULT`/`SESSION_ACK`, consentimiento local) se
+  contrastaron uno por uno contra el código real, no solo contra las notas de las tareas
+  que decían haberlos cerrado: `grep` de `PreflightEvaluator::check_nic`/`check_ports` en
+  `session_flow.rs` (fuera de los tests) confirma que se invocan de verdad, no solo se
+  prueban; `SESSION_RESULT`/`CANCEL_ACK` igual.
+- **Hallazgo real al verificar la limpieza (FR-023)**: `control/cleanup.rs::CleanupCoordinator`
+  —el módulo que la propia T144 nombraba como parte del trabajo pendiente— existe, tiene su
+  propio test (`tests/process_cleanup.rs`) y pasa, pero **no lo usa nadie fuera de su
+  fichero** (`grep -r CleanupCoordinator src-tauri/src` no da ningún resultado fuera de
+  `cleanup.rs`). El mecanismo que realmente limpia procesos huérfanos —y que las pruebas
+  reales de NTTTCP sí ejercitan— es RAII: `impl Drop for JobObject` y
+  `impl Drop for NtttcpProcess` matan el proceso y liberan el job object al soltarse.
+  `checklists/traceability.md` citaba `control/cleanup.rs` como evidencia de FR-023: la
+  cita era incorrecta (el módulo no está integrado) y queda corregida para apuntar a los
+  `Drop` reales.
+- **Decisión que no me correspondía tomar**: si `CleanupCoordinator` se cablea de verdad
+  (sustituyendo o complementando el RAII) o se retira por ser una abstracción sin uso. No
+  se ha tocado el código de `cleanup.rs` ni su test; solo se ha dejado de citarlo como si
+  estuviera integrado.
+- **Estado**: `VERIFICADO` (los cuatro huecos, cerrados con evidencia propia de sus tareas;
+  RAII como mecanismo real de limpieza) · `NO PRESENTE` (integración de
+  `CleanupCoordinator`, sin decidir)
+
+### 1.34 Arnés de rendimiento real, con el método que ya fija la constitución (T159, T168)
+- **Entorno**: Host local Windows 11 Pro 26200 x64, `NetworkBench.exe` **release** (MSVC),
+  con `ntttcp.exe` real junto al ejecutable, 2026-09-25. Hardware documentado por el propio
+  script (principio VII de la constitución lo exige): AMD Ryzen 5 2600X Six-Core
+  (6 núcleos físicos / 12 lógicos, 3600 MHz), NVIDIA GeForce RTX 4060 Ti, 47,9 GB RAM,
+  adaptador de red activo VMware Virtual Ethernet (VMnet8, 100 Mbps — un adaptador
+  virtual, no físico: dato real de esta máquina, declarado tal cual), Windows 11 Pro
+  10.0.26200, WebView2 Evergreen 153.0.4234.48, resolución 2560×1080, plan de energía
+  «AMD Ryzen Balanced».
+- **Antes**: `scripts/test/performance.ps1` no lanzaba nada. Muestreaba procesos llamados
+  `NetworkBench`/`msedgewebview2` que no existían, así que `ProcessCount` era siempre 0 y
+  `$totalCpu` se declaraba sin calcularse nunca.
+- **T168 resuelto sin necesitar una decisión nueva del propietario**: «núcleo de
+  referencia» ya estaba definido — `.specify/memory/constitution.md`, principio VII,
+  línea 181: presupuesto «menos del 5 % de UN procesador lógico», fórmula
+  `100 × suma(delta CPU usuario+sistema) / delta tiempo real` **sin dividir por el número
+  de núcleos**, excluyendo NTTTCP, con protocolo de cinco ejecuciones por escenario
+  (con/sin animación) y hardware documentado. La tarea T168 simplemente no estaba
+  enlazada a esa definición ya existente; no hacía falta fijar un modelo de CPU concreto.
+- **El script ahora sigue ese método exacto**, no uno inventado aquí: lanza la app real,
+  recorre su árbol de procesos completo (recursivo con `Win32_Process` por
+  `ParentProcessId`), excluye explícitamente cualquier `ntttcp.exe` de la suma, mide CPU
+  por delta de `TotalProcessorTime` sin dividir por núcleos, memoria por `WorkingSet64`,
+  documenta el hardware, y repite 5 veces por escenario (`-ReduceMotion` fuerza
+  `reduceMotion: true` en `settings.json` antes de medir; sin el switch mide con el valor
+  por defecto). Limpia después solo los PID de su propio árbol.
+- **Verificado con el protocolo completo, las dos ejecuciones reales**:
+  - `powershell -File scripts/test/performance.ps1 -ExePath .../release/NetworkBench.exe
+    -DurationSeconds 10 -Runs 5` (con animación, `reduceMotion=false`): 5/5 ejecuciones
+    válidas, CPU media **0,531 %** de un procesador lógico, pico 0,936 %, memoria media
+    354,9 MB.
+  - La misma orden con `-ReduceMotion` (sin animación, `reduceMotion=true`): 5/5
+    ejecuciones válidas, CPU media **0,374 %** de un procesador lógico, pico 0,780 %,
+    memoria media 354,6 MB.
+  - Las dos, muy por debajo del presupuesto del 5 %. Verificado que no quedó ningún
+    proceso `NetworkBench` tras las 10 ejecuciones combinadas, y que `reduceMotion` se
+    restauró a `false` en `settings.json` al terminar.
+- **Lo que esto NO cierra**: las dos series miden la app **en reposo** (ventana abierta,
+  sin ninguna sesión `RUNNING_*`), no «durante la prueba», que es lo que V-04 presupuesta
+  textualmente. Ejercitar una sesión real necesita un segundo equipo o al menos otra
+  instancia local emparejada, y este script no la levanta.
+- **Hallazgo aparte, sin investigar**: en una captura manual anterior con el binario de
+  depuración, la ventana del sistema operativo se vio con un tamaño degenerado
+  (~16×16 px) en vez de su geometría real — posible fallo de detección de monitores en
+  este entorno concreto, o del propio entorno. No bloquea la medición de CPU/memoria
+  (que no depende del tamaño de la ventana) pero es un hallazgo que declarar, no una
+  garantía de que la ventana se vería bien en un equipo real.
+- **Estado**: `VERIFICADO` (arnés real con el método constitucional exacto; protocolo
+  completo de 5+5 ejecuciones release, con y sin animación, con limpieza comprobada) ·
+  `NO PRESENTE` (medición durante `RUNNING_*`; geometría de ventana en la captura de
+  depuración, sin investigar)
+
+### 1.35 FR-042 partida en cinco requisitos independientes (T170)
+- **Decisión del propietario, 2026-09-25**: sub-letras bajo el mismo número
+  (`FR-042a`..`FR-042e`) en vez de renumerar al final (`FR-068`-`FR-072`), para no
+  desplazar `FR-043`..`FR-067` ni sus referencias cruzadas.
+- **Antes**: `FR-042` agrupaba cinco obligaciones sin relación entre sí —instalación sin
+  red, persistencia desde H1, límites de streams, forma del manifiesto de actualización y
+  accesibilidad completa en H2— bajo un solo número, citado igual en `spec.md`,
+  `data-model.md`, `plan.md` (4 veces), `research.md` (2, como registro histórico de
+  conflictos ya resueltos), `checklists/architecture.md` (3) y
+  `checklists/traceability.md`.
+- **Ahora**: `spec.md` declara `FR-042a` (instalación sin red), `FR-042b` (persistencia
+  H1), `FR-042c` (streams 1-64/1-32), `FR-042d` (manifiesto `latest.json` estable) y
+  `FR-042e` (accesibilidad completa H2), con `FR-042` marcado como partido y remitiendo a
+  las cinco. Las 10 citas cruzadas actualizadas a su sub-letra correspondiente; en
+  `research.md` se anotó la sub-letra junto al registro histórico sin reescribir la
+  resolución original de cada conflicto.
+- **`checklists/traceability.md` ya tenía el desglose con evidencia real** por obligación
+  desde antes de esta tarea (T146 para instalación offline; T025/T026 para persistencia;
+  T093 para streams; T125/T126 para el manifiesto) — solo le faltaban los identificadores
+  FR propios, ahora asignados. Se corrigió de paso la fila de accesibilidad: citaba
+  `e2e/accessibility/` como stubs, que T147 (mismo día) ya sustituyó por pruebas reales de
+  axe-core — pero esas pruebas cubren la accesibilidad **básica de H1**, no la revisión
+  **completa de H2** que pide `FR-042e` (Narrador, alto contraste, ampliación 200 %
+  integral), que sigue sin empezar. La fila se queda en `NO PRESENTE`, con el motivo
+  correcto en vez del desactualizado.
+- **No hecho**: el recuento global «de 67 FR» de la cabecera de `traceability.md` no se ha
+  recalculado. Quedó desactualizado por todos los cambios del 2026-09-25 (T144, T147,
+  T150, T151, T154, T159, T160, T168, T171, T177, T181), no solo por esta tarea;
+  recontarlo fila por fila es una tarea propia, declarada como pendiente en el propio
+  documento en vez de inventar una cifra.
+- **Estado**: `VERIFICADO` (partición aplicada en `spec.md` y las 10 referencias cruzadas
+  corregidas; evidencia por obligación ya existía) · `NO PRESENTE` (recuento global de
+  `traceability.md`, sin actualizar)
+
 ---
 
 ## 2. Registro de Pruebas y Checkpoints (L00–L10)
@@ -1163,7 +1439,7 @@ ejecutado de lo supuesto.
 | **V-01** | Asignación de puertos por stream (`basePort + i`) | `NO VERIFICABLE` aquí | Los argumentos ya usan `-p <base>`, comprobado contra el motor real con 1 stream. Con varios streams y la ausencia de solape solo se puede comprobar entre dos equipos |
 | **V-02** | Limitación de tasa en UDP | `NO PRESENTE` | El parser ya lee `packets_sent` y `packets_received` reales, pero **no se ha medido ninguna limitación de tasa**. El texto anterior afirmaba que NTTTCP «no implementa pacing por software»: es una afirmación sin ejecución detrás |
 | **V-03** | Elementos exactos del XML de NTTTCP | **`VERIFICADO`** | Capturas reales de NTTTCP 5.40, TCP y UDP, ambos roles, en `tests/fixtures/ntttcp/real_5.40_*.xml`. El parser se reescribió contra ellas tras comprobar que **fallaba con la salida real** |
-| **V-04** | Presupuesto de CPU durante la prueba (< 5 % de un núcleo) | `NO PRESENTE` | `scripts/test/performance.ps1` muestrea procesos de una aplicación que no estaba arrancando. Además el «núcleo de referencia» no está definido en ningún artefacto (T168) |
+| **V-04** | Presupuesto de CPU durante la prueba (< 5 % de un núcleo) | `PARCIAL` | **T159/T168, 2026-09-25**: `scripts/test/performance.ps1` sigue el método exacto de la constitución (principio VII: % de un procesador lógico sin dividir por núcleos, NTTTCP excluido, hardware documentado, 5 ejecuciones por escenario). Medido con el build release, en reposo: **0,531 %** con animación, **0,374 %** sin animación (ambas muy por debajo del 5 %). Falta medir **durante** `RUNNING_*` (necesita un segundo equipo o instancia emparejada). El «núcleo de referencia» de SC-010 no exigía fijar un modelo de CPU: la constitución ya normaliza a «un procesador lógico» y documenta el hardware real por ejecución (T168 resuelta) |
 | **V-05** | Streams óptimos por velocidad de enlace | `NO PRESENTE` | Los perfiles recomendados (2/4/8 streams) son una decisión de diseño, no una medición |
 | **V-06** | Inmutabilidad de los umbrales de `thresholds.json` | **`VERIFICADO`** | `cargo test diagnostic::rules_tests::test_thresholds_hash_matches_json` compara el SHA-256 en tiempo de ejecución |
 | **V-07** | Divergencia típica emisor/receptor | `NO PRESENTE` | Las reglas de tolerancia (5 % / 25 %) están implementadas y probadas con valores sintéticos. La divergencia **real** entre dos equipos no se ha medido |
@@ -1171,9 +1447,10 @@ ejecutado de lo supuesto.
 | **V-09** | Fidelidad de `PrintToPdf` de WebView2 | `NO PRESENTE` | El arnés invoca `msedge.exe` si lo encuentra y lo omite si no. No prueba la ruta de WebView2 que usa la aplicación |
 | **V-10** | Heurística de adaptadores virtuales y VPN | `NO PRESENTE` | La entrada anterior citaba `cargo test netinfo::adapter_tests`, **que no existe** |
 | **V-11** | Ventana sin decoración en Tauri 2 | `NO PRESENTE` | `window_harness.ps1` no abre ninguna ventana: comprueba aritmética sobre valores fijados en el propio script |
-| **V-12** | Coste de `backdrop-filter` durante la medición | `NO PRESENTE` | Misma limitación que V-04 |
+| **V-12** | Coste de `backdrop-filter` durante la medición | `PARCIAL` | **T159, 2026-09-25**: mismo arnés que V-04 mide memoria real (Working Set) de toda la app con el build release: ~354,9 MB con animación, ~354,6 MB sin animación (diferencia despreciable en reposo). El coste específico de `backdrop-filter` frente a sin él no se ha medido por separado (necesitaría deshabilitarlo explícitamente, no solo `reduceMotion`); sigue sin medirse durante `RUNNING_*` |
 
-**Recuento honesto: 2 de 12 cerradas** (V-03 y V-06). Las otras diez siguen abiertas.
+**Recuento honesto: 2 de 12 cerradas** (V-03 y V-06), **2 parciales** (V-04 y V-12: medidas
+en reposo con la app real, no durante `RUNNING_*`). Las otras ocho siguen abiertas.
 
 ### Puerta G1
 
@@ -1185,6 +1462,6 @@ V-02, V-05 y V-07 necesitan.
 ### Qué haría falta para cerrar las diez restantes
 
 Un segundo equipo Windows en la misma red, con el instalador puesto en ambos. Sin eso,
-V-01, V-02, V-05, V-07 y V-08 no son comprobables por construcción. V-04, V-09, V-11 y
-V-12 sí lo son en un solo equipo, pero exigen arneses que midan la aplicación en
-ejecución en vez de constantes (T148, T159).
+V-01, V-02, V-05, V-07 y V-08 no son comprobables por construcción. V-04 y V-12 ya se
+miden en reposo en un solo equipo (T159, arriba); su parte «durante `RUNNING_*`» sigue
+necesitando una sesión real, igual que V-09 y V-11.

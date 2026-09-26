@@ -33,6 +33,13 @@ pub fn upsert_peer(conn: &Connection, peer: &Peer) -> Result<()> {
     Ok(())
 }
 
+/// Cuántos equipos conocidos hay guardados (el `peersCount` del snapshot de la interfaz).
+pub fn contar_peers(conn: &Connection) -> Result<usize> {
+    conn.query_row("SELECT COUNT(*) FROM peers", [], |fila| {
+        fila.get::<_, i64>(0).map(|n| n as usize)
+    })
+}
+
 pub fn get_peer_by_fingerprint(conn: &Connection, fingerprint: &str) -> Result<Option<Peer>> {
     let norm_fp = fingerprint.trim().to_lowercase();
     let mut stmt = conn.prepare(

@@ -103,7 +103,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="titlebar" data-tauri-drag-region ondblclick={handleDoubleClick}>
+<header class="titlebar" data-tauri-drag-region ondblclick={handleDoubleClick}>
   <div class="titlebar-brand" data-tauri-drag-region>
     <span class="titlebar-mark" aria-hidden="true"></span>
     <span class="titlebar-name">{appName}</span>
@@ -175,7 +175,7 @@
       </svg>
     </button>
   </div>
-</div>
+</header>
 
 <style>
   .titlebar {

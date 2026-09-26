@@ -357,6 +357,62 @@ pub fn init_logger(log_dir: PathBuf, default_level: LogLevel) -> Arc<Logger> {
     logger
 }
 
+/// Escritor que duplica cada línea a stderr (para verla en vivo bajo `cargo run`/
+/// `pnpm tauri dev`) y a un fichero, sin depender de una librería de tracing aparte.
+struct EscritorDoble(fs::File);
+
+impl Write for EscritorDoble {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let _ = std::io::stderr().write_all(buf);
+        self.0.write_all(buf)?;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        let _ = std::io::stderr().flush();
+        self.0.flush()
+    }
+}
+
+/// Instala el subscriber global de `tracing`.
+///
+/// Hallazgo real de T180 (2026-09-26): `tracing-subscriber` está declarado en
+/// `Cargo.toml` desde el principio, pero nadie lo inicializaba — cada
+/// `tracing::info!/warn!/error!` de las diez llamadas del backend (descubrimiento,
+/// diálogo de sesión, arranque del canal de control…) era un no-op silencioso, sin
+/// aparecer ni en consola ni en ningún fichero. Distinto del logger de `LogEvent` de
+/// este mismo módulo (`log()`, más arriba), que sí escribía siempre: solo dos ficheros
+/// lo usaban. Escribe en `<log_dir>/tracing.log`, sin rotación propia todavía (a
+/// diferencia de `Logger`, que sí rota) — vigilar su tamaño si esto se deja mucho tiempo
+/// en producción es trabajo pendiente, no resuelto en esta pasada.
+pub fn init_tracing(log_dir: &Path) {
+    use tracing_subscriber::EnvFilter;
+
+    let _ = fs::create_dir_all(log_dir);
+    let filtro = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn"));
+    let ruta = log_dir.join("tracing.log");
+
+    let resultado = match OpenOptions::new().create(true).append(true).open(&ruta) {
+        Ok(fichero) => tracing_subscriber::fmt()
+            .with_env_filter(filtro)
+            .with_writer(move || {
+                EscritorDoble(
+                    fichero
+                        .try_clone()
+                        .expect("clonar el descriptor de tracing.log"),
+                )
+            })
+            .try_init(),
+        Err(e) => {
+            eprintln!("No se pudo abrir {ruta:?} para tracing ({e}); solo saldrá por stderr");
+            tracing_subscriber::fmt().with_env_filter(filtro).try_init()
+        }
+    };
+    if let Err(e) = resultado {
+        eprintln!("No se pudo instalar el subscriber de tracing: {e}");
+    }
+}
+
 pub fn get_logger() -> Option<Arc<Logger>> {
     GLOBAL_LOGGER.get().cloned()
 }

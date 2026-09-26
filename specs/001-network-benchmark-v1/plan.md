@@ -52,7 +52,7 @@ atribuibles, excluido NTTTCP; cancelar no espera más de 2 segundos al ACK remot
 sin argumentos libres al motor; buffers, mensajes y colas acotados; precisión por encima de UI
 y logging; español e inglés; escala y texto hasta 200 %; sin pérdida de precisión de enteros.
 
-**Scale/Scope**: dos peers por sesión, 1–64 streams por sentido en secuencial y 1–32 en simultáneo (FR-042),
+**Scale/Scope**: dos peers por sesión, 1–64 streams por sentido en secuencial y 1–32 en simultáneo (FR-042c),
 historial local sin caducidad automática, H1–H3 completos para v1 y siete áreas de UI. No se
 diseña para múltiples motores, cloud, Linux/macOS, ARM64 ni monitorización continua.
 
@@ -69,10 +69,10 @@ diseña para múltiples motores, cloud, Linux/macOS, ARM64 ni monitorización co
 | Versiones | Pendiente G5 | La línea base está documentada; faltan manifiestos, lockfiles, build, instalador y arranque reales. |
 | Seguridad | Cumple | mTLS por identidad, consentimiento, validación repetida, capabilities mínimas y helper allowlisted. |
 | Datos | Cumple | Propietario único de SQLite, migraciones inmutables, backup/restauración y rechazo de esquema futuro. |
-| Accesibilidad | Cumple | Constitución 0.5.0 (VI): básica desde H1 (teclado, foco, contraste, texto además de color, reducción de movimiento); revisión completa con Narrador, alto contraste y 200 % en H2. Coincide con FR-042. |
+| Accesibilidad | Cumple | Constitución 0.5.0 (VI): básica desde H1 (teclado, foco, contraste, texto además de color, reducción de movimiento); revisión completa con Narrador, alto contraste y 200 % en H2. Coincide con FR-042e. |
 | Rendimiento | Pendiente V-04/V-12 | Presupuesto y método definidos; falta evidencia en hardware real. |
 | Pruebas | Cumple | Estrategia y herramientas definidas; umbrales Q2 fijados en la constitución 0.7.0 (T132 los configura tras medir la baseline). |
-| Distribución | Cumple | `spec.md` FR-042 alineado el 2026-09-21: `latest.json` estable cuyo artefacto apunta a la URL inmutable de la etiqueta `vX.Y.Z`. T125 verifica esa forma; no queda conflicto. |
+| Distribución | Cumple | `spec.md` FR-042d alineado el 2026-09-21: `latest.json` estable cuyo artefacto apunta a la URL inmutable de la etiqueta `vX.Y.Z`. T125 verifica esa forma; no queda conflicto. |
 | Puertas técnicas | Pendiente | G1–G6 y V-01–V-12 tienen responsable, lote y criterio de cierre en este plan. |
 
 No se introduce una excepción. Los conflictos no impiden diseñar ni ejecutar trabajo
@@ -88,7 +88,7 @@ independiente; sí impiden declarar cerrado el lote que materialice la regla en 
 - `quickstart.md` distingue comprobaciones disponibles, futuras y de laboratorio.
 - Q2 y ADR-001–ADR-006 quedaron decididos el 2026-09-21; solo la ratificación constitucional
   y Q4 siguen pendientes del propietario. Los conflictos de accesibilidad y
-  updater quedaron resueltos el 2026-09-21 (constitución 0.5.0 y FR-042).
+  updater quedaron resueltos el 2026-09-21 (constitución 0.5.0 y FR-042e/FR-042d).
 - No quedan marcadores de aclaración; los pendientes son gates registrados, no supuestos.
 
 ## Estrategia de entrega
@@ -103,8 +103,8 @@ independiente; sí impiden declarar cerrado el lote que materialice la regla en 
 | L05 | Muestreo, diagnóstico, gráficas y detalle | L03/L04; G4, V-04/V-06/V-07 | Resultado explica hechos sin inventar causas y cumple presupuesto medido |
 | L06 | Firewall y errores completos | L02/L03; helper y entorno Windows | Consentimiento/UAC aceptado y rechazado, reglas propias y cleanup |
 | L07 | Historial, comparación y exportación | L04/L05; V-09 | Filtros/cohortes y exportaciones reales con anonimización |
-| L08 | Avanzado, UDP y simultáneo | L03/L06; G1, V-01/V-02/V-03/V-05; V-01 valida los límites 64/32 de FR-042 | Límites y pérdida UDP validados en dos equipos |
-| L09 | Ajustes, bandeja, cierre, autoarranque y updater | L01/L04/L06; forma del updater fijada en FR-042 y registrada por T125 | Ciclo de vida nativo y actualización auténtica/pospuesta |
+| L08 | Avanzado, UDP y simultáneo | L03/L06; G1, V-01/V-02/V-03/V-05; V-01 valida los límites 64/32 de FR-042c | Límites y pérdida UDP validados en dos equipos |
+| L09 | Ajustes, bandeja, cierre, autoarranque y updater | L01/L04/L06; forma del updater fijada en FR-042d y registrada por T125 | Ciclo de vida nativo y actualización auténtica/pospuesta |
 | L10 | Distribución y cierre v1 | Todos; G5 y V-01–V-12 | Instalador exacto probado, evidencias registradas y release autorizable |
 
 Cada lote implementa comportamiento y pruebas conjuntamente. `tasks.md` debe agrupar trabajo

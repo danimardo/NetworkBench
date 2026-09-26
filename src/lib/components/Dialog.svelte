@@ -90,17 +90,24 @@
 
     // C04: `inert` en todo lo que no sea este overlay, para que Tab y la
     // navegación de un lector de pantalla no puedan salir del diálogo por
-    // ningún camino (no solo el foco por teclado). Se asume que `scrimEl`
-    // cuelga cerca de la raíz — ver comentario de arriba sobre el supuesto.
-    const root = scrimEl?.parentElement;
-    if (root) {
-      Array.from(root.children).forEach((el) => {
+    // ningún camino (no solo el foco por teclado). Un solo nivel de
+    // `parentElement` solo bastaría si este componente colgara siempre
+    // justo del contenedor de ruta; en la integración real puede quedar
+    // anidado varios niveles por debajo de la barra lateral o la barra de
+    // título (hallazgo real de un test E2E, T147), así que se sube por toda
+    // la cadena de ancestros hasta `<body>` marcando en cada nivel a los
+    // hermanos que no llevan al diálogo.
+    let nodo: HTMLElement | null = scrimEl ?? null;
+    while (nodo && nodo.parentElement && nodo.parentElement !== document.body.parentElement) {
+      const padre: HTMLElement = nodo.parentElement;
+      Array.from(padre.children).forEach((el) => {
         const htmlEl = el as HTMLElement;
-        if (htmlEl !== scrimEl && !htmlEl.inert) {
+        if (htmlEl !== nodo && !htmlEl.inert) {
           htmlEl.inert = true;
           unInertedOnClose.push(htmlEl);
         }
       });
+      nodo = padre;
     }
   });
 

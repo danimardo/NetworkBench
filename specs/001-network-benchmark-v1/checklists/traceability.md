@@ -20,6 +20,12 @@ equipos, elevación o una máquina que este entorno no tiene).
 `NO PRESENTE`, 1 `NO VERIFICABLE`. Nada de esto es
 «100 % cobertura».
 
+**Este recuento está desactualizado desde el 2026-09-25**: T144, T147, T150, T151, T154,
+T159, T160, T168, T170, T171, T177 y T181 cambiaron el estado de varias filas ese mismo
+día (FR-042 pasó de una fila compuesta a FR-042a–e, por ejemplo). Recontar las 67+4 FR y
+15 SC fila por fila es su propia tarea, no una comprobación que quepa de paso al cerrar
+T170; no se ha hecho aquí.
+
 ---
 
 ## 1. Requisitos funcionales (FR-001 a FR-067)
@@ -60,7 +66,7 @@ equipos, elevación o una máquina que este entorno no tiene).
 | **FR-020** | `control/preflight.rs`, `control/session_flow.rs` (T173) | T067, T070, T072, T173 | `firewall_harness.ps1`, `cargo test control::preflight control::session_flow::preflight_en_el_dialogo`: puertos de datos del receptor comprobados antes de aceptar, con NTTTCP real de por medio | `VERIFICADO` |
 | **FR-021** | `control/plan.rs::BenchmarkPlan::validate` | T039, T093 | `cargo test control::advanced_plan_tests` | `VERIFICADO` |
 | **FR-022** | `control/domain.rs::can_transition_to` | T031, T065 | `cargo test --test protocol_abuse` | `VERIFICADO` |
-| **FR-023** | `engine/ntttcp/job_object.rs`, `control/cleanup.rs`, `control/session_flow.rs` (T175) | T042, T066, T071, T175 | `cargo test --test process_cleanup`; `session_service_real` (`--ignored`) cancela a mitad de medición sin dejar `ntttcp.exe`, y cancela antes de arrancarlo con `CANCEL`/`CANCEL_ACK` real | `VERIFICADO` |
+| **FR-023** | `engine/ntttcp/job_object.rs::JobObject` (Drop), `engine/ntttcp/process.rs::NtttcpProcess` (Drop), `control/session_flow.rs` (T175) | T042, T066, T071, T175, T144 | `session_service_real` (`--ignored`) cancela a mitad de medición sin dejar `ntttcp.exe`, y cancela antes de arrancarlo con `CANCEL`/`CANCEL_ACK` real | `VERIFICADO` — **corregido el 2026-09-25**: la limpieza real es RAII (`Drop` de `JobObject`/`NtttcpProcess`), no `control/cleanup.rs::CleanupCoordinator`, que sigue existiendo con su propio test (`process_cleanup.rs`) pero **sin invocarse desde `AppState` ni desde ningún camino de ejecución real** (verificado por grep, cero usos fuera de su propio fichero) — la cita anterior era incorrecta |
 | **FR-024** | `control/session_flow.rs::conservar_lo_completado`, `control/service.rs`, `sampling/` | T171 | `session_flow::perdida_de_canal`; `session_service_real t171` (`--ignored`, NTTTCP real): tras perder el canal en la segunda pata se conserva la primera, la cortada no aparece como continua y la sesión se guarda `incomplete`. La reconexión con el mismo `sessionId` («MAY») y el latido de §8.5 **no existen** | `PARCIAL` |
 | **FR-025** | `control/protocol.rs::ResultadoSincronizacion`, `control/session_flow.rs` (T176) | T044, T152, T176 | `cargo test control::protocol control::session_flow::reconciliacion_de_resultado`; `session_service_real` (`--ignored`): B adopta el `resultSource: "initiator"` de A tras validar `SESSION_RESULT` real | `VERIFICADO` |
 | **FR-026** | `sampling/vivo.rs`, `control/service.rs::lanzar_aplicador` | T043, T058, T174 | `cargo test sampling::vivo`, `session_service_real` (`--ignored`, NTTTCP real): muestreo real por interfaz, salvo en bucle local (VALIDACION §1.17); arnés de `performance.ps1` sigue midiendo procesos existentes (T159) | `PARCIAL` |
@@ -80,16 +86,15 @@ equipos, elevación o una máquina que este entorno no tiene).
 |---|---|---|---|---|
 | **FR-036** | `src/lib/design-system/tokens.css` | T012 | `node Design/scripts/verify-tokens.mjs` | `VERIFICADO` |
 | **FR-037** | `src/lib/design-system/theme.svelte.ts` (Oscuro por defecto) | T120 | `tests/contracts/appearance.test.ts` | `VERIFICADO` |
-| **FR-038** | Componentes Svelte (`StatusPill.svelte`, `Icon.svelte`) | T034, T059 | Pruebas de componente sobre fixtures; **sin verificación real en navegador** | `PARCIAL` — `e2e/accessibility/a11y.spec.ts` son `expect(true).toBe(true)` (T147 abierta) |
-| **FR-039** | Componentes Svelte con manejo de teclado | T034, T053 | Igual que FR-038 | `PARCIAL` |
+| **FR-038** | Componentes Svelte (`StatusPill.svelte`, `Icon.svelte`) | T034, T059, T147 | Pruebas de componente sobre fixtures; `e2e/accessibility/a11y.spec.ts` con axe-core real sobre Inicio/Historial/Ajustes (cero violaciones) | `VERIFICADO` |
+| **FR-039** | Componentes Svelte con manejo de teclado; `SettingsScreen.svelte` (tablist), `AppearanceSettings.svelte` (radiogroup), `Dialog.svelte` (atrapado de foco) | T034, T053, T147 | `e2e/accessibility/a11y.spec.ts`: flechas/Home/End en tablist y radiogroup (huecos APG reales encontrados y corregidos), foco atrapado y devuelto al cerrar un diálogo | `VERIFICADO` |
 | **FR-040** | `src/lib/components/Tooltip.svelte`, `HelpTooltip.svelte` | T040, T062 | Igual que FR-038 | `PARCIAL` |
-| **FR-041** | `src/lib/design-system/theme.svelte.ts` (reduceMotion) | T120 | `appearance.test.ts` cubre la preferencia; escalado 200 % sin prueba real | `PARCIAL` |
-| **FR-042** | *(ver T170 — requisito compuesto, pendiente de partir)*: | | | |
-| | · instalación offline | T146 | `installer_harness.ps1`: 209,9 MiB, `offlineInstaller` | `VERIFICADO` |
-| | · persistencia H1 | T025, T026 | `cargo test --test history_migrations`, `settings_store` | `VERIFICADO` |
-| | · streams 1–64/1–32 | T093 | `cargo test control::advanced_plan_tests` | `VERIFICADO` |
-| | · manifiesto `latest.json` estable | T125, T126 | `test_updater_rejects_mutable_latest_urls` | `VERIFICADO` |
-| | · accesibilidad completa H2 | T133 | `e2e/accessibility/` son stubs | `NO PRESENTE` |
+| **FR-041** | `src/lib/design-system/theme.svelte.ts` (reduceMotion) | T120, T147 | `appearance.test.ts` cubre la preferencia; `e2e/visual/visual.spec.ts` comprueba zoom 100/150/200 % sin desbordamiento (aproximación con zoom CSS, no DPI real de Windows) | `PARCIAL` |
+| **FR-042a** *(instalación sin red)* | `tauri.conf.json` (NSIS `offlineInstaller`) | T146 | `installer_harness.ps1`: 209,9 MiB, `offlineInstaller` | `VERIFICADO` |
+| **FR-042b** *(persistencia desde H1)* | `history/database.rs`, `settings/mod.rs` | T025, T026 | `cargo test --test history_migrations`, `settings_store` | `VERIFICADO` |
+| **FR-042c** *(streams 1–64/1–32)* | `control/plan.rs::BenchmarkPlan::validate` | T093 | `cargo test control::advanced_plan_tests` | `VERIFICADO` |
+| **FR-042d** *(manifiesto `latest.json` estable)* | `updater/mod.rs` | T125, T126 | `test_updater_rejects_mutable_latest_urls` | `VERIFICADO` |
+| **FR-042e** *(accesibilidad completa en H2)* | Fuera de alcance de v1 (H1); `e2e/accessibility/a11y.spec.ts` (T147) cubre la accesibilidad básica de H1, no la revisión completa que exige H2 | T133, T147 | `e2e/accessibility/a11y.spec.ts`: axe-core real sobre Inicio/Historial/Ajustes, cero violaciones — es la comprobación de H1, no la de H2 (Narrador, alto contraste, 200 % integral) | `NO PRESENTE` — H2 no ha empezado |
 | **FR-043** | `platform/window.rs` | T121 | `cargo test --test window_geometry` (regla 100×100, fallback) | `VERIFICADO` — multi-monitor real sin probar (`window_harness.ps1` no abre ventana, T159) |
 | **FR-044** | `sampling/aggregate.rs` (batching ≤4 Hz), `sampling/vivo.rs` (T174) | T043, T058, T174 | `cargo test sampling::aggregate sampling::vivo` | `VERIFICADO` — medición de cancelación bajo degradación real sin probar |
 
@@ -144,14 +149,14 @@ equipos, elevación o una máquina que este entorno no tiene).
 | **SC-005** | 100 % de resultados insuficientes muestran «no evaluable» | `test_sin_receptor_no_hay_velocidad_oficial`, `diagnostic::capacity` (sin `refBps` no hay veredicto) | `VERIFICADO` |
 | **SC-006** | 100 % de errores visibles con explicación, acción y código | `errors/mod.rs` catálogo completo, `ErrorResolution.test.ts` | `VERIFICADO` |
 | **SC-007** | Ningún recorrido ordinario menciona el motor fuera de detalles/licencias | Inspección de `locales/*.json` y pantallas: NTTTCP solo en `AboutScreen.svelte` y detalles técnicos | `VERIFICADO` |
-| **SC-008** | Todas las pantallas funcionan por teclado y escalan a 200 % | `e2e/accessibility/a11y.spec.ts` y `e2e/visual/visual.spec.ts` son `expect(true).toBe(true)` | `NO PRESENTE` |
+| **SC-008** | Todas las pantallas funcionan por teclado y escalan a 200 % | `e2e/accessibility/a11y.spec.ts`, `e2e/visual/visual.spec.ts` (T147): 9 pruebas reales en verde contra un build de producción, con axe-core real | `PARCIAL` — cubre Inicio/Historial/Ajustes y el diálogo de conexión manual; el resto de pantallas (Sesión, Resultado, consentimiento) sin ejercitar aquí |
 | **SC-009** | Español e inglés con las mismas claves y formatos/plurales coherentes | `check-locales.mjs`: 369 claves sincronizadas, marcadores `{placeholder}` coherentes en las 7 claves interpoladas; sin claves de plural que verificar todavía (T169) | `VERIFICADO` |
-| **SC-010** | < 5 % de CPU y ≤ 4 Hz de refresco durante la prueba | `sampling/aggregate.rs` limita a ≤4 Hz por diseño; el «núcleo de referencia» no está definido (T168) y no hay medición real de CPU de la app en ejecución | `NO PRESENTE` |
+| **SC-010** | < 5 % de CPU y ≤ 4 Hz de refresco durante la prueba | `sampling/aggregate.rs` limita a ≤4 Hz por diseño; `scripts/test/performance.ps1` (T159/T168) sigue el método exacto de la constitución (% de un procesador lógico, NTTTCP excluido, hardware documentado) y mide CPU real de la app release en reposo: 0,531 % con animación, 0,374 % sin animación — falta medirla durante `RUNNING_*` | `PARCIAL` |
 | **SC-011** | Ninguna entrada inválida/repetida/fuera de estado tiene efecto | `cargo test --test protocol_abuse`, validación Zod/Serde en fixtures | `VERIFICADO` |
 | **SC-012** | Toda migración conserva backup restaurable | `cargo test --test history_migrations` (`.v1.bak`, rechazo de esquema futuro) | `VERIFICADO` |
 | **SC-013** | La anonimización elimina el 100 % de identificadores sintéticos | `cargo test export::redact_tests` (fixture con IP/MAC/huellas anidadas, sin fugas) | `VERIFICADO` |
 | **SC-014** | Instalación y primer arranque sin Internet | WebView2 offline embebido (209,9 MiB) y sidecars locales; instalación real sin ejecutar | `PARCIAL` |
-| **SC-015** | V-01 a V-12 cerradas con evidencia empírica antes de publicar v1 | `VALIDACION.md` §3: **2 de 12** (V-03, V-06). Las otras diez, `NO PRESENTE` con su motivo | `NO PRESENTE` |
+| **SC-015** | V-01 a V-12 cerradas con evidencia empírica antes de publicar v1 | `VALIDACION.md` §3: **2 de 12 cerradas** (V-03, V-06), **2 parciales** (V-04, V-12: medidas en reposo, T159). Las otras ocho, `NO PRESENTE` con su motivo | `NO PRESENTE` |
 
 ---
 

@@ -6,6 +6,7 @@ pub mod firewall;
 pub mod history;
 pub mod pairing;
 pub mod peers;
+pub mod proyector;
 pub mod response;
 pub mod session;
 pub mod settings;

@@ -194,7 +194,7 @@ runtime WebView embebido.
 
 ## R14 — Actualizaciones: conflicto resuelto el 2026-09-21
 
-**Resolución**: `spec.md` FR-042 se alineó con la Constitución: `latest.json` estable cuyo artefacto apunta a la URL inmutable de la etiqueta `vX.Y.Z`. El texto siguiente se conserva como registro del conflicto original.
+**Resolución**: `spec.md` FR-042 (partida en FR-042a–e el 2026-09-25, T170; esta obligación es **FR-042d**) se alineó con la Constitución: `latest.json` estable cuyo artefacto apunta a la URL inmutable de la etiqueta `vX.Y.Z`. El texto siguiente se conserva como registro del conflicto original.
 
 **Decisión**: diseñar H3 contra un único manifiesto estable de última versión porque así quedó
 resuelta la spec, pero bloquear implementación/publicación hasta alinear la Constitución, cuya
@@ -208,7 +208,7 @@ tres duplican comportamiento o rompen la jerarquía documental.
 
 ## R15 — Accesibilidad por hito: conflicto resuelto el 2026-09-21
 
-**Resolución**: la Constitución 0.5.0 (VI) fija accesibilidad básica desde H1 y revisión completa en H2, coincidiendo con FR-042. El texto siguiente se conserva como registro del conflicto original.
+**Resolución**: la Constitución 0.5.0 (VI) fija accesibilidad básica desde H1 y revisión completa en H2, coincidiendo con FR-042 (partida en FR-042a–e el 2026-09-25, T170; esta obligación es **FR-042e**). El texto siguiente se conserva como registro del conflicto original.
 
 **Decisión**: mantener el alcance de la spec —accesibilidad completa en H2— y no declarar H1
 cerrado contra la propuesta constitucional de accesibilidad desde H1 hasta que se alineen ambas.

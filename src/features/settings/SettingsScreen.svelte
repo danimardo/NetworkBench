@@ -24,6 +24,29 @@
     | "about";
 
   let activeTab = $state<TabId>("appearance");
+  let tabEls: Record<string, HTMLButtonElement | undefined> = {};
+
+  /**
+   * Navegación por flechas del `tablist` (WAI-ARIA APG, patrón «activación automática»):
+   * hasta ahora solo se podía activar una pestaña con Tab + clic/Enter, sin flechas ni
+   * Home/End, y las pestañas no seleccionadas quedaban en el orden de tabulación en vez de
+   * fuera de él (`tabindex` en roving, más abajo).
+   */
+  function handleTabsKeydown(event: KeyboardEvent) {
+    const i = TABS.findIndex((tab) => tab.id === activeTab);
+    let next = i;
+    if (event.key === "ArrowRight") next = (i + 1) % TABS.length;
+    else if (event.key === "ArrowLeft") next = (i - 1 + TABS.length) % TABS.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = TABS.length - 1;
+    else return;
+
+    event.preventDefault();
+    const destino = TABS[next];
+    if (!destino) return;
+    activeTab = destino.id;
+    tabEls[destino.id]?.focus();
+  }
 
   const TABS: { id: TabId; labelKey: string }[] = [
     { id: "appearance", labelKey: "settings.tabAppearance" },
@@ -74,15 +97,19 @@
     class="border-b border-[var(--color-border)]"
     role="tablist"
     aria-label={t("settings.title")}
+    tabindex="-1"
+    onkeydown={handleTabsKeydown}
   >
     <div class="flex gap-2 overflow-x-auto pb-px">
       {#each TABS as tab (tab.id)}
         <button
+          bind:this={tabEls[tab.id]}
           type="button"
           role="tab"
           id="tab-{tab.id}"
           aria-controls="panel-{tab.id}"
           aria-selected={activeTab === tab.id}
+          tabindex={activeTab === tab.id ? 0 : -1}
           class="whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2"
           class:border-[var(--color-primary)]={activeTab === tab.id}
           class:text-[var(--color-primary)]={activeTab === tab.id}

@@ -105,6 +105,7 @@ async fn nodo(nombre: &str, motor_real: bool) -> Nodo {
         emparejamientos: Arc::new(
             networkbench_lib::control::consent::EmparejamientosEntrantes::new(),
         ),
+        aviso: Arc::new(tokio::sync::Notify::new()),
     };
     let servicio = Arc::new(SessionService::new());
 

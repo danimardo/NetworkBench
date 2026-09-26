@@ -1,5 +1,4 @@
 use crate::app::AppState;
-use crate::control::domain::SessionState;
 use crate::ipc::response::IpcResult;
 use crate::platform::autostart;
 use crate::platform::lifecycle::{CloseActionDecision, evaluate_close_request};
@@ -39,8 +38,8 @@ pub async fn settings_update(
     preferences: Preferences,
 ) -> Result<IpcResult<Preferences>, String> {
     let session_state = state.session_service.current_state().await;
-    let is_session_active =
-        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    // `Completed` y `Failed` son terminales: una sesión que ya acabó no bloquea los ajustes.
+    let is_session_active = session_state.is_active();
 
     let res = state.settings.validate_and_update(is_session_active, |p| {
         *p = preferences;
@@ -51,6 +50,7 @@ pub async fn settings_update(
             // El ajuste se aplica al instante (`Historias.md` §7.1): apagarlo retira el
             // anuncio y deja de navegar; encenderlo publica y vuelve a navegar.
             state.aplicar_descubrimiento(saved.mdns_enabled);
+            state.aviso_snapshot.notify_one();
             Ok(IpcResult::ok(saved))
         }
         Err(e) => Ok(IpcResult::err(e)),
@@ -145,9 +145,7 @@ pub async fn app_close_evaluate(
     state: tauri::State<'_, AppState>,
     force: bool,
 ) -> Result<IpcResult<CloseActionDecision>, String> {
-    let session_state = state.session_service.current_state().await;
-    let is_session_active =
-        session_state != SessionState::Idle && session_state != SessionState::Cancelled;
+    let is_session_active = state.session_service.current_state().await.is_active();
     let minimize_to_tray = state.settings.get().minimize_to_tray;
 
     let decision = evaluate_close_request(is_session_active, minimize_to_tray, force);

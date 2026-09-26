@@ -5,6 +5,7 @@ import { z } from "zod";
 import { sessionResultSchema } from "../../src/lib/contracts/session-result";
 import { benchmarkPlanSchema } from "../../src/lib/contracts/plan";
 import { peerSchema } from "../../src/lib/contracts/peer";
+import { discoveredPeerSchema } from "../../src/lib/api/peers";
 import { appErrorSchema } from "../../src/lib/contracts/errors";
 import { appSnapshotSchema } from "../../src/lib/api/snapshot.svelte";
 import { sampleBatchSchema } from "../../src/lib/api/samples";
@@ -41,6 +42,10 @@ describe("Contratos: el JSON emitido por Rust cumple los esquemas de TypeScript 
 
   it("equipos en cada estado de confianza", () => {
     comprobar(z.array(peerSchema), "peers");
+  });
+
+  it("equipos descubiertos por mDNS", () => {
+    comprobar(z.array(discoveredPeerSchema), "discovered-peers");
   });
 
   it("instantánea de la aplicación", () => {

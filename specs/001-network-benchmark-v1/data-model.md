@@ -110,7 +110,7 @@ Contrato validado en iniciador y receptor.
 |---|---|
 | `protocol` | `tcp` o `udp` |
 | `directions` | forward, reverse o ambos; secuencial por defecto; simultáneo avanzado |
-| `streams` | 1–64 por sentido en secuencial; 1–32 por sentido en simultáneo (FR-042, decisión 2026-09-21); G1/V-01 valida viabilidad/puertos |
+| `streams` | 1–64 por sentido en secuencial; 1–32 por sentido en simultáneo (FR-042c, decisión 2026-09-21); G1/V-01 valida viabilidad/puertos |
 | `bufferBytes` | rango cerrado definido en thresholds/plan |
 | `warmupSeconds` | 0–10 |
 | `measureSeconds` | 5–300 |

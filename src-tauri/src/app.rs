@@ -35,6 +35,9 @@ pub struct AppState {
     /// Anuncio y descubrimiento mDNS (T151). `None` si el ajuste está apagado o si mDNS no
     /// pudo abrirse: sin descubrimiento se sigue pudiendo conectar a mano (FR-010).
     pub descubrimiento: std::sync::Mutex<Option<crate::discovery::Descubrimiento>>,
+    /// Se dispara cuando cambia algo que refleja el snapshot de la interfaz (T150):
+    /// estado de la sesión, equipos guardados o ajustes. Lo escucha `ProyectorDeSnapshot`.
+    pub aviso_snapshot: Arc<tokio::sync::Notify>,
 }
 
 impl AppState {
@@ -62,6 +65,17 @@ impl AppState {
         }
     }
 
+    /// Recalcula el snapshot desde sus fuentes y emite los cambios (T150).
+    pub fn proyector(&self) -> Arc<crate::ipc::proyector::ProyectorDeSnapshot> {
+        Arc::new(crate::ipc::proyector::ProyectorDeSnapshot {
+            snapshot: Arc::clone(&self.snapshot),
+            settings: Arc::clone(&self.settings),
+            session_service: Arc::clone(&self.session_service),
+            database: Arc::clone(&self.database),
+            aviso: Arc::clone(&self.aviso_snapshot),
+        })
+    }
+
     /// Lo que una sesión necesita del resto de la aplicación. `emisor` es por donde salen
     /// las muestras en vivo hacia la interfaz; sin él, la sesión no las produce.
     pub fn contexto_de_sesion(&self, emisor: Option<Arc<dyn EmisorDeEventos>>) -> ContextoSesion {
@@ -76,6 +90,7 @@ impl AppState {
             consentimiento: Arc::clone(&self.solicitudes_entrantes),
             emisor_eventos: emisor,
             emparejamientos: Arc::clone(&self.emparejamientos_entrantes),
+            aviso: Arc::clone(&self.aviso_snapshot),
         }
     }
 }
@@ -83,8 +98,13 @@ impl AppState {
 use crate::platform::window::{MonitorBounds, WindowGeometry, normalize_or_fallback_geometry};
 
 #[tauri::command]
-pub fn app_get_snapshot(state: tauri::State<AppState>) -> IpcResult<AppSnapshot> {
-    IpcResult::ok(state.snapshot.get_snapshot())
+pub async fn app_get_snapshot(
+    state: tauri::State<'_, AppState>,
+) -> Result<IpcResult<AppSnapshot>, String> {
+    // Se recalcula antes de responder: una lectura nunca devuelve algo más viejo que las
+    // fuentes, aunque el aviso de un cambio reciente aún no se haya procesado.
+    let _ = state.proyector().refrescar().await;
+    Ok(IpcResult::ok(state.snapshot.get_snapshot()))
 }
 
 #[tauri::command]
@@ -140,6 +160,17 @@ pub fn window_restore_and_show(
 
     let target_geom = normalize_or_fallback_geometry(saved, primary, &monitors);
 
+    // T180 (2026-09-26): la ventana apareció con 16×16 px reales en pantalla en dos
+    // sesiones de desarrollo distintas, algo que la aritmética de
+    // `normalize_or_fallback_geometry` no debería poder producir (ambas ramas fuerzan
+    // ancho/alto a >= MIN_WIDTH/MIN_HEIGHT). Traza para ver qué monitores detecta Tauri
+    // de verdad y qué geometría calcula antes de aplicarla, en vez de seguir adivinando
+    // la causa desde el código. Ahora sí llega a algún sitio: `logging::init_tracing`
+    // (mismo hallazgo de T180) instaló un subscriber real.
+    tracing::warn!(
+        "window_restore_and_show: guardada={saved:?} primario={primary:?} monitores={monitors:?} objetivo={target_geom:?}"
+    );
+
     let _ = window.set_size(tauri::LogicalSize::new(
         target_geom.width,
         target_geom.height,
@@ -162,6 +193,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let settings_path = app_dir.join("settings.json");
     let identity_dir = app_dir.join("identity");
 
+    crate::logging::init_tracing(&log_dir);
     let _logger = init_logger(log_dir, LogLevel::Warn);
     let settings = Arc::new(SettingsStore::new(settings_path));
     let database = Arc::new(Database::open(db_path)?);
@@ -171,7 +203,8 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         &identity_dir,
         "NetworkBench",
     )?);
-    let session_service = Arc::new(SessionService::new());
+    let aviso_snapshot = Arc::new(tokio::sync::Notify::new());
+    let session_service = Arc::new(SessionService::con_aviso(Arc::clone(&aviso_snapshot)));
     let delete_tokens = Arc::new(crate::history::delete::DeleteTokenStore::new());
 
     // Ruta del motor junto al ejecutable, como quedará tras la instalación NSIS.
@@ -217,6 +250,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
             crate::control::consent::EmparejamientosEntrantes::new(),
         ),
         descubrimiento: std::sync::Mutex::new(None),
+        aviso_snapshot,
     })
 }
 
@@ -233,24 +267,15 @@ pub async fn start_control_server(
     puerto: u16,
 ) -> Result<u16, Box<dyn std::error::Error>> {
     let identity = Arc::clone(&ctx.identity);
-    use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 
-    // `::` acepta también IPv4 mapeada, de modo que un solo socket cubre ambas
-    // familias sin abrir dos puertos (FR-010).
-    let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), puerto);
-    let servidor = match ControlServer::bind(addr, Arc::clone(&identity)).await {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::warn!(
-                "No se pudo ligar el canal de control a [::]:{puerto} ({e}); se reintenta en IPv4"
-            );
-            ControlServer::bind(
-                SocketAddr::new(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), puerto),
-                identity,
-            )
-            .await?
-        }
-    };
+    // `bind_dual_stack` abre IPv6 `[::]` e IPv4 `0.0.0.0` como dos sockets reales: en
+    // Windows, `[::]` con IPV6_V6ONLY (el valor por defecto del sistema) NO acepta IPv4
+    // mapeada como se asumía aquí antes — sin el segundo socket, ningún par que llegara
+    // por IPv4 (el caso común) completaba nunca el saludo. Hallazgo real de T180
+    // (2026-09-26, dos equipos físicos): `Get-NetTCPConnection` mostraba el puerto en
+    // escucha y aun así `Test-NetConnection` por IPv4 fallaba incluso desde la propia
+    // máquina.
+    let servidor = ControlServer::bind_dual_stack(puerto, identity).await?;
 
     let real = servidor.local_addr()?.port();
     tracing::info!("Canal de control escuchando en el puerto {real}");

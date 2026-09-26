@@ -3,17 +3,17 @@
 //! Hasta esta tarea, el backend no emitía un solo evento: `src/lib/api/samples.ts`
 //! escucha `session://sample-batch` desde que existe (T058), y nada lo disparaba nunca.
 //!
-//! El progreso general y los cambios de estado de sesión no tienen todavía un contrato
-//! de evento definido en el frontend — solo existe el de muestras. Antes de inventar un
-//! nombre y una forma de payload que nadie consume, se deja documentado como pendiente
-//! (ver `VALIDACION.md`): el mecanismo real para eso hoy es la suscripción con
-//! `revision` monotónica de `ipc/snapshot.rs` (T024), que ya cubre `isSessionActive` y
-//! `activeSessionId`.
+//! Los cambios de estado de la aplicación (sesión activa, equipos, idioma, tema) viajan
+//! como el snapshot completo con su `revision` (`app://snapshot-changed`): la interfaz
+//! descarta los obsoletos y sustituye el suyo, sin reconstruir estado a base de
+//! conjeturas (`contracts/ipc.md`, «Modelo de lectura»). El progreso fino de una sesión
+//! sigue sin evento propio.
 //!
 //! El emisor va detrás de un trait, igual que el motor de medida (`engine_port.rs`):
 //! así el código que agrupa y despacha muestras se prueba sin un `AppHandle` real.
 
 use super::response::IpcResult;
+use super::snapshot::AppSnapshot;
 use crate::control::consent::{EmparejamientoEntranteEvento, SolicitudEntranteEvento};
 use crate::sampling::aggregate::SampleBatch;
 use tauri::{AppHandle, Emitter};
@@ -21,6 +21,7 @@ use tauri::{AppHandle, Emitter};
 pub const EVENTO_MUESTRAS: &str = "session://sample-batch";
 pub const EVENTO_SOLICITUD_ENTRANTE: &str = "session://incoming-request";
 pub const EVENTO_EMPAREJAMIENTO_ENTRANTE: &str = "peers://incoming-pairing";
+pub const EVENTO_SNAPSHOT: &str = "app://snapshot-changed";
 
 /// Sale de la sesión de medida hacia el frontend. No decide cuándo hay un lote listo
 /// —eso es `SampleBatcher`— solo lo entrega.
@@ -44,6 +45,11 @@ pub trait EmisorDeEventos: Send + Sync {
     ) -> Result<(), String> {
         Ok(())
     }
+
+    /// Avisa de que cambió el snapshot de la aplicación (T150). Lleva el snapshot entero.
+    fn emitir_snapshot(&self, _snapshot: &AppSnapshot) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 impl EmisorDeEventos for AppHandle {
@@ -63,6 +69,11 @@ impl EmisorDeEventos for AppHandle {
     ) -> Result<(), String> {
         self.emit(EVENTO_EMPAREJAMIENTO_ENTRANTE, emparejamiento)
             .map_err(|e| format!("No se pudo emitir {EVENTO_EMPAREJAMIENTO_ENTRANTE}: {e}"))
+    }
+
+    fn emitir_snapshot(&self, snapshot: &AppSnapshot) -> Result<(), String> {
+        self.emit(EVENTO_SNAPSHOT, snapshot)
+            .map_err(|e| format!("No se pudo emitir {EVENTO_SNAPSHOT}: {e}"))
     }
 }
 

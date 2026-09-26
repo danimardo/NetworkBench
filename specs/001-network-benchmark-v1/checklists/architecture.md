@@ -78,9 +78,9 @@
 | Conflicto | Estado | Acción necesaria |
 |---|---|---|
 | Windows 10 22H2 de spec frente a propuesta Q1 1809+ | Cumple | constitución 0.6.0 (2026-09-21): Windows 10 22H2 y Windows 11 x64; T002 prueba esa matriz |
-| Accesibilidad completa H2 frente a propuesta H1 | Cumple | constitución 0.5.0 (2026-09-21): básica desde H1, completa en H2; coincide con FR-042 |
-| 64 streams frente a propuesta de 32 simultáneos | Cumple | decisión del propietario 2026-09-21: FR-042 adopta 1–64 secuencial y 1–32 simultáneo por sentido; V-01 valida viabilidad |
-| Manifiesto latest estable frente a URL versionada | Cumple | ADR-007 aceptado el 2026-09-22: `latest.json` estable con artefacto en URL inmutable por etiqueta (FR-042, T125); probado en `tests/updater.rs` |
+| Accesibilidad completa H2 frente a propuesta H1 | Cumple | constitución 0.5.0 (2026-09-21): básica desde H1, completa en H2; coincide con FR-042e |
+| 64 streams frente a propuesta de 32 simultáneos | Cumple | decisión del propietario 2026-09-21: FR-042c adopta 1–64 secuencial y 1–32 simultáneo por sentido; V-01 valida viabilidad |
+| Manifiesto latest estable frente a URL versionada | Cumple | ADR-007 aceptado el 2026-09-22: `latest.json` estable con artefacto en URL inmutable por etiqueta (FR-042d, T125); probado en `tests/updater.rs` |
 | Feature-first frente a `Historias.md` §25 | Cumple | ADR-002 aceptado; §25 anota que rige `ARCHITECTURE.md` |
 | Identificadores de log en redacción antigua | Cumple en plan | aplicar privacidad constitucional; reconciliar con autorización |
 

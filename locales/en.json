@@ -216,6 +216,10 @@
     "licenseNotice": "Distributed under the GNU General Public License v3 (GPL-3.0-or-later). Free and open source software with no telemetry or external services.",
     "attributionNotice": "Microsoft and NTTTCP are trademarks or components of Microsoft Corporation. See THIRD_PARTY_NOTICES.md for third-party notices and licenses."
   },
+  "plan": {
+    "protocol": "Protocol",
+    "streams": "Streams"
+  },
   "peers": {
     "title": "Network Peers",
     "discover": "Discovering peers on local network...",
@@ -228,7 +232,24 @@
     "pairingCode": "Pairing Code",
     "confirmPairing": "Confirm Pairing",
     "cancelPairing": "Cancel Pairing",
-    "trustPeer": "Remember this peer as trusted"
+    "trustPeer": "Remember this peer as trusted",
+    "incoming": {
+      "sessionTitle": "Incoming measurement request",
+      "sessionDesc": "{peer} wants to start a network performance test with you.",
+      "pairingTitle": "Incoming pairing request",
+      "pairingDesc": "{peer} wants to pair with you. Check that the code matches on both computers.",
+      "accept": "Accept",
+      "reject": "Reject"
+    },
+    "errors": {
+      "refresh": "Could not refresh the list of computers.",
+      "connect": "Could not connect to that computer.",
+      "noAddress": "The computer has no valid address.",
+      "pairStart": "Could not start pairing.",
+      "pairRejected": "The other computer did not confirm the pairing.",
+      "pairFailed": "Could not complete pairing.",
+      "pairExpired": "Pairing expired."
+    }
   },
   "session": {
     "title": "Network Benchmark Session",
@@ -242,7 +263,13 @@
     "preflight": "Preflight Checks",
     "directionSend": "Data Sending (Upload)",
     "directionReceive": "Data Receiving (Download)",
-    "progress": "Session Progress"
+    "progress": "Session Progress",
+    "errors": {
+      "start": "Could not start the test.",
+      "cancel": "Could not cancel the test.",
+      "failed": "The test ended with an error. If one direction completed, it was saved as an incomplete session in the history.",
+      "noResult": "The test finished, but the saved result could not be read."
+    }
   },
   "results": {
     "title": "Performance Results",

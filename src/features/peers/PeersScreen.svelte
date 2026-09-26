@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import DeviceCard from "../../lib/components/DeviceCard.svelte";
   import Button from "../../lib/components/Button.svelte";
   import Dialog from "../../lib/components/Dialog.svelte";
@@ -18,6 +19,11 @@
     activePairingPeer?: Peer | null;
     pairingCode?: string;
     pairingSecondsLeft?: number;
+    /** Disponibilidad y compatibilidad por equipo; sin ella todos se muestran disponibles. */
+    statusOf?: (peer: Peer) => { availability: "available" | "busy"; compatible: boolean };
+    errorMessage?: string | null;
+    onDismissError?: () => void;
+    busy?: boolean;
   }
 
   let {
@@ -30,18 +36,39 @@
     activePairingPeer = null,
     pairingCode = "",
     pairingSecondsLeft = 60,
+    statusOf,
+    errorMessage = null,
+    onDismissError,
+    busy = false,
   }: Props = $props();
 
   let showManualModal = $state(false);
   let manualAddress = $state("");
   let manualPort = $state("7411");
   let manualError = $state("");
+  // Quién abrió el diálogo (§13 del correo: el retorno de foco lo gestiona quien lo
+  // instancia, Dialog.svelte solo mueve el foco hacia dentro al montarse). Hay dos
+  // botones que pueden abrirlo ("Conectar manualmente" y "Conectar por IP" del estado
+  // vacío): `document.activeElement` en el momento de abrir vale para cualquiera de los dos.
+  let manualModalTrigger: HTMLElement | null = null;
 
   function handleOpenManual() {
+    manualModalTrigger = document.activeElement as HTMLElement | null;
     manualAddress = "";
     manualPort = "7411";
     manualError = "";
     showManualModal = true;
+  }
+
+  async function closeManualModal() {
+    showManualModal = false;
+    // Sin esperar el siguiente `tick`, el botón desencadenante todavía estaría marcado
+    // `inert` por el diálogo que se está destruyendo (Dialog.svelte quita `inert` en su
+    // `onDestroy`, que Svelte no ejecuta de forma síncrona con esta asignación) y
+    // `.focus()` no haría nada.
+    await tick();
+    manualModalTrigger?.focus();
+    manualModalTrigger = null;
   }
 
   function handleManualSubmit(e: SubmitEvent) {
@@ -59,8 +86,8 @@
     }
 
     manualError = "";
-    showManualModal = false;
     onManualConnect?.(addr, portNum);
+    closeManualModal();
   }
 
   function mapTrust(peer: Peer) {
@@ -90,6 +117,13 @@
     </Button>
   </header>
 
+  {#if errorMessage}
+    <div class="nb-peers-error" role="alert" data-testid="peers-error">
+      <span>{errorMessage}</span>
+      <Button variant="ghost" onclick={() => onDismissError?.()}>{t("common.close")}</Button>
+    </div>
+  {/if}
+
   {#if peers.length === 0}
     <div class="nb-peers-empty" role="status" aria-live="polite">
       <div class="nb-peers-empty-icon">
@@ -115,8 +149,8 @@
             ip={peer.addresses[0] ?? "127.0.0.1"}
             adapterType="ethernet"
             trust={mapTrust(peer)}
-            availability="available"
-            compatible={true}
+            availability={statusOf?.(peer).availability ?? "available"}
+            compatible={statusOf?.(peer).compatible ?? true}
             onclick={() => onSelectPeer?.(peer)}
           />
         </div>
@@ -126,7 +160,7 @@
 
   <!-- Diálogo de conexión manual -->
   {#if showManualModal}
-    <Dialog title="Conexión manual por IP" onClose={() => (showManualModal = false)}>
+    <Dialog title="Conexión manual por IP" onClose={closeManualModal}>
       <form onsubmit={handleManualSubmit} class="nb-manual-form">
         <p class="nb-manual-desc">
           Introduce la dirección IP o nombre DNS y el puerto de control (por defecto 7411).
@@ -142,7 +176,7 @@
         <TextField label="Puerto de control" placeholder="7411" bind:value={manualPort} />
 
         <div class="nb-dialog-actions">
-          <Button variant="ghost" onclick={() => (showManualModal = false)}>
+          <Button variant="ghost" onclick={closeManualModal}>
             {t("common.cancel")}
           </Button>
           <Button variant="primary" type="submit">Conectar</Button>
@@ -180,6 +214,7 @@
             variant="primary"
             onclick={() => onConfirmPairing?.(activePairingPeer!, pairingCode)}
             data-testid="pairing-confirm-btn"
+            disabled={busy}
           >
             Confirmar código
           </Button>
@@ -218,6 +253,18 @@
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
     margin: var(--space-1) 0 0 0;
+  }
+
+  .nb-peers-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
   }
 
   .nb-peers-empty {

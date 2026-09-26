@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listen } from "@tauri-apps/api/event";
 import { invokeCommand, IpcError } from "./transport";
 import { logger } from "../logging";
 
@@ -16,6 +17,8 @@ export const appSnapshotSchema = z.object({
 
 export type AppSnapshot = z.infer<typeof appSnapshotSchema>;
 
+export const EVENTO_SNAPSHOT = "app://snapshot-changed";
+
 export class SnapshotStore {
   snapshot = $state<AppSnapshot | null>(null);
   isLoading = $state<boolean>(true);
@@ -29,13 +32,21 @@ export class SnapshotStore {
     this.error = null;
 
     try {
-      // 1. Obtener snapshot inicial
+      // 1. Suscribirse antes de pedir el snapshot: un cambio entre las dos cosas no se
+      // pierde (contracts/ipc.md). Sin `window.__TAURI__` (pruebas, navegador) no hay
+      // eventos y el snapshot inicial sigue funcionando.
+      await this.suscribir();
+
+      // 2. Obtener snapshot inicial. Si un evento más reciente llegó mientras tanto,
+      // se conserva ese.
       const data = await invokeCommand<AppSnapshot>(
         "app_get_snapshot",
         undefined,
         appSnapshotSchema,
       );
-      this.snapshot = data;
+      if (!this.snapshot || data.revision > this.snapshot.revision) {
+        this.snapshot = data;
+      }
       this.isSubscribed = true;
     } catch (err) {
       const msg = err instanceof IpcError ? err.appError.messageKey : "Error al obtener snapshot";
@@ -48,6 +59,42 @@ export class SnapshotStore {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async suscribir(): Promise<void> {
+    if (this.eventCleanup) return;
+    try {
+      this.eventCleanup = await listen<unknown>(EVENTO_SNAPSHOT, (evento) => {
+        this.aplicarEvento(evento.payload);
+      });
+    } catch {
+      logger.warn({
+        module: "snapshot",
+        eventCode: "SNAPSHOT_SUBSCRIBE_FAILED",
+        message: "No se pudo suscribir a los cambios del snapshot; solo habrá lectura inicial",
+      });
+    }
+  }
+
+  /**
+   * El evento lleva el snapshot completo, así que es autosuficiente: se descarta si no es
+   * más nuevo que el actual y, si lo es, lo sustituye sin reconstruir nada por partes.
+   */
+  aplicarEvento(payload: unknown): "applied" | "discarded" | "invalid" {
+    const parsed = appSnapshotSchema.safeParse(payload);
+    if (!parsed.success) {
+      logger.warn({
+        module: "snapshot",
+        eventCode: "SNAPSHOT_EVENT_INVALID",
+        message: "Evento de snapshot con forma inválida; se ignora",
+      });
+      return "invalid";
+    }
+    if (this.snapshot && parsed.data.revision <= this.snapshot.revision) {
+      return "discarded";
+    }
+    this.snapshot = parsed.data;
+    return "applied";
   }
 
   /**

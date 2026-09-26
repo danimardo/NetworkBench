@@ -117,6 +117,7 @@ pub async fn peers_manual_connect(
         final_peer.alias = existing.alias;
     }
     let _ = upsert_peer(&db_lock, &final_peer);
+    state.aviso_snapshot.notify_one();
 
     Ok(IpcResult::ok(final_peer))
 }

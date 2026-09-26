@@ -22,6 +22,7 @@ use networkbench_lib::control::engine_port::MotorDeLaboratorio;
 use networkbench_lib::control::orquestador::{
     Direccion, EntradaSesion, MedidasDireccion, Orquestador,
 };
+use networkbench_lib::discovery::EquipoDescubierto;
 use networkbench_lib::engine::ntttcp::parser::NtttcpRole;
 use networkbench_lib::errors::{AppError, ErrorCode};
 use networkbench_lib::ipc::snapshot::AppSnapshot;
@@ -167,6 +168,33 @@ fn equipos_en_cada_estado_de_confianza() {
         v.push(p);
     }
     fijar("peers", &v);
+}
+
+#[test]
+fn equipos_descubiertos_por_mdns() {
+    let v = vec![
+        EquipoDescubierto {
+            instance_id: id(0x200),
+            fingerprint_declarada: format!("{:064x}", 0x200),
+            display_name: "Equipo libre".into(),
+            addresses: vec!["192.168.1.30:7411".into()],
+            protocol_version: 1,
+            app_version: "0.1.0".into(),
+            link_mbps: 1000,
+            busy: false,
+        },
+        EquipoDescubierto {
+            instance_id: id(0x201),
+            fingerprint_declarada: format!("{:064x}", 0x201),
+            display_name: "Equipo ocupado".into(),
+            addresses: vec!["192.168.1.31:7411".into(), "fd00::31:7411".into()],
+            protocol_version: 2,
+            app_version: "0.2.0".into(),
+            link_mbps: 0,
+            busy: true,
+        },
+    ];
+    fijar("discovered-peers", &v);
 }
 
 #[test]

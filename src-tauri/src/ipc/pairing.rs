@@ -159,6 +159,7 @@ pub async fn peers_pairing_confirm(
                     format!("No se pudo guardar el equipo emparejado: {e}"),
                 )));
             }
+            state.aviso_snapshot.notify_one();
 
             Ok(IpcResult::ok(PairingOutcome {
                 accepted: true,

@@ -47,6 +47,9 @@ pub struct ContextoSesion {
     pub emisor_eventos: Option<Arc<dyn crate::ipc::events::EmisorDeEventos>>,
     /// Emparejamientos entrantes esperando decisión humana (T182, FR-012).
     pub emparejamientos: Arc<crate::control::consent::EmparejamientosEntrantes>,
+    /// Aviso de que cambió algo que refleja el snapshot de la interfaz (T150): se
+    /// dispara al guardar un equipo nuevo. Es el mismo que usa la máquina de estados.
+    pub aviso: Arc<tokio::sync::Notify>,
 }
 
 /// Convierte las fronteras de pata en transiciones de estado y en muestreo en vivo.
@@ -140,8 +143,13 @@ impl Default for SessionService {
 
 impl SessionService {
     pub fn new() -> Self {
+        Self::con_aviso(Arc::new(tokio::sync::Notify::new()))
+    }
+
+    /// `aviso` se dispara con cada cambio de estado de la sesión (T150).
+    pub fn con_aviso(aviso: Arc<tokio::sync::Notify>) -> Self {
         Self {
-            state_machine: Arc::new(Mutex::new(SessionStateMachine::new())),
+            state_machine: Arc::new(Mutex::new(SessionStateMachine::con_aviso(aviso))),
             active_peer: Arc::new(Mutex::new(None)),
             active_plan: Arc::new(Mutex::new(None)),
             tarea: Arc::new(Mutex::new(None)),

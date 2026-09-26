@@ -120,4 +120,66 @@ describe("Atomic Subscription & Snapshot Contract Tests (contracts/ipc.md)", () 
     expect(store.snapshot?.isSessionActive).toBe(true);
     expect(store.snapshot?.peersCount).toBe(4);
   });
+
+  describe("evento app://snapshot-changed (T150)", () => {
+    const base = {
+      revision: 10,
+      appVersion: "0.1.0",
+      locale: "es",
+      theme: "dark",
+      instanceId: "inst-1",
+      instanceName: "PC",
+      isSessionActive: false,
+      peersCount: 1,
+    };
+
+    async function storeConSnapshot() {
+      setTransportMock(async () => ({ ok: true, value: base }));
+      const store = new SnapshotStore();
+      await store.init();
+      return store;
+    }
+
+    it("sustituye el snapshot si la revisión es más nueva", async () => {
+      const store = await storeConSnapshot();
+      const resultado = store.aplicarEvento({
+        ...base,
+        revision: 11,
+        isSessionActive: true,
+        activeSessionId: "s-1",
+      });
+      expect(resultado).toBe("applied");
+      expect(store.snapshot?.revision).toBe(11);
+      expect(store.snapshot?.isSessionActive).toBe(true);
+      expect(store.snapshot?.activeSessionId).toBe("s-1");
+    });
+
+    it("no salta un hueco: el evento lleva el estado completo, así que basta aplicarlo", async () => {
+      const store = await storeConSnapshot();
+      expect(store.aplicarEvento({ ...base, revision: 15, peersCount: 4 })).toBe("applied");
+      expect(store.snapshot?.peersCount).toBe(4);
+    });
+
+    it("descarta un evento obsoleto o repetido sin rebobinar la interfaz", async () => {
+      const store = await storeConSnapshot();
+      expect(store.aplicarEvento({ ...base, revision: 9, peersCount: 99 })).toBe("discarded");
+      expect(store.aplicarEvento({ ...base, revision: 10, peersCount: 99 })).toBe("discarded");
+      expect(store.snapshot?.peersCount).toBe(1);
+    });
+
+    it("ignora un payload malformado", async () => {
+      const store = await storeConSnapshot();
+      expect(store.aplicarEvento({ revision: "11" })).toBe("invalid");
+      expect(store.aplicarEvento(null)).toBe("invalid");
+      expect(store.snapshot?.revision).toBe(10);
+    });
+
+    it("un evento previo al snapshot inicial se acepta y el inicial más viejo no lo pisa", async () => {
+      setTransportMock(async () => ({ ok: true, value: base }));
+      const store = new SnapshotStore();
+      expect(store.aplicarEvento({ ...base, revision: 12 })).toBe("applied");
+      await store.init();
+      expect(store.snapshot?.revision).toBe(12);
+    });
+  });
 });

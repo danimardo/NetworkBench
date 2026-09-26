@@ -286,12 +286,17 @@ y se simula una actualización válida e inválida. Se conservan decisiones y se
 - **FR-040**: Las ayudas MUST explicar términos no evidentes, funcionar por foco/puntero,
   cerrarse con Escape y no contener controles interactivos.
 - **FR-041**: La interfaz MUST respetar reducción de movimiento y ampliación de texto sin pérdida.
-- **FR-042**: La instalación sin red y la persistencia MUST estar disponibles desde H1; cada
-  sentido MUST admitir entre 1 y 64 streams en ejecución secuencial y entre 1 y 32 en
-  ejecución simultánea; la actualización MUST consultar un único
-  manifiesto estable (`latest.json`) cuyo artefacto apunte a la URL inmutable de su etiqueta
-  `vX.Y.Z`, nunca a un binario mutable; y la accesibilidad completa MUST entregarse en H2,
-  conforme a `Historias.md`.
+- **FR-042** *(partida en T170, 2026-09-25 — agrupaba cinco obligaciones sin relación entre
+  sí bajo un solo número, lo que impedía trazar la cobertura de cada una por separado)*:
+  ver FR-042a a FR-042e.
+- **FR-042a**: La instalación MUST funcionar sin conexión de red desde H1.
+- **FR-042b**: La persistencia (historial, ajustes, identidad) MUST estar disponible desde H1.
+- **FR-042c**: Cada sentido MUST admitir entre 1 y 64 streams en ejecución secuencial y
+  entre 1 y 32 en ejecución simultánea.
+- **FR-042d**: La actualización MUST consultar un único manifiesto estable (`latest.json`)
+  cuyo artefacto apunte a la URL inmutable de su etiqueta `vX.Y.Z`, nunca a un binario
+  mutable.
+- **FR-042e**: La accesibilidad completa MUST entregarse en H2, conforme a `Historias.md`.
 - **FR-043**: La ventana MUST funcionar en tamaños compacto/estándar/amplio y restaurarse visible
   tras cambios de monitor o escala.
 - **FR-044**: Durante medición, actualizaciones visuales MUST estar acotadas y cancelar MUST

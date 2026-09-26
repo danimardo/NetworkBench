@@ -15,6 +15,29 @@
     { id: "light", labelKey: "settings.themeLight" },
     { id: "system", labelKey: "settings.themeSystem" },
   ];
+
+  let radioEls: Record<string, HTMLButtonElement | undefined> = {};
+
+  /**
+   * `role="radiogroup"` sin flechas ni orden de tabulación en roving: el patrón APG de
+   * grupo de radios exige que las flechas muevan **y** seleccionen, y que solo la opción
+   * marcada esté en el orden de Tab (mismo hueco que tenía el `tablist` de esta pantalla).
+   */
+  function handleThemeKeydown(event: KeyboardEvent) {
+    const i = THEME_OPTIONS.findIndex((opt) => opt.id === theme.mode);
+    let next = i;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown")
+      next = (i + 1) % THEME_OPTIONS.length;
+    else if (event.key === "ArrowLeft" || event.key === "ArrowUp")
+      next = (i - 1 + THEME_OPTIONS.length) % THEME_OPTIONS.length;
+    else return;
+
+    event.preventDefault();
+    const destino = THEME_OPTIONS[next];
+    if (!destino) return;
+    theme.setMode(destino.id);
+    radioEls[destino.id]?.focus();
+  }
 </script>
 
 <div class="space-y-6">
@@ -28,12 +51,20 @@
             {t("settings.appearance")}
           </p>
         </div>
-        <div class="nb-segmented-group" role="radiogroup" aria-label={t("settings.theme")}>
+        <div
+          class="nb-segmented-group"
+          role="radiogroup"
+          aria-label={t("settings.theme")}
+          tabindex="-1"
+          onkeydown={handleThemeKeydown}
+        >
           {#each THEME_OPTIONS as opt (opt.id)}
             <button
+              bind:this={radioEls[opt.id]}
               type="button"
               role="radio"
               aria-checked={theme.mode === opt.id}
+              tabindex={theme.mode === opt.id ? 0 : -1}
               class="nb-segmented-item"
               class:nb-segmented-item-active={theme.mode === opt.id}
               onclick={() => theme.setMode(opt.id)}
