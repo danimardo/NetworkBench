@@ -50,6 +50,10 @@ pub async fn settings_update(
             // El ajuste se aplica al instante (`Historias.md` §7.1): apagarlo retira el
             // anuncio y deja de navegar; encenderlo publica y vuelve a navegar.
             state.aplicar_descubrimiento(saved.mdns_enabled);
+            // El nivel de registro también se aplica al instante, sin reiniciar.
+            if let Some(logger) = crate::logging::get_logger() {
+                logger.set_level(saved.log_level);
+            }
             state.aviso_snapshot.notify_one();
             Ok(IpcResult::ok(saved))
         }

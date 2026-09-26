@@ -24,7 +24,7 @@ export async function getAutostart(): Promise<boolean> {
 }
 
 export async function setAutostart(enabled: boolean): Promise<void> {
-  await invokeCommand("settings_autostart_set", { enabled }, z.void().optional());
+  await invokeCommand("settings_autostart_set", { enabled }, z.void().nullable());
 }
 
 export async function getDataInfo(): Promise<DataInfo> {
@@ -32,7 +32,7 @@ export async function getDataInfo(): Promise<DataInfo> {
 }
 
 export async function purgeData(): Promise<void> {
-  await invokeCommand("settings_data_purge", {}, z.void().optional());
+  await invokeCommand("settings_data_purge", {}, z.void().nullable());
 }
 
 export async function getAboutInfo(): Promise<AboutInfo> {

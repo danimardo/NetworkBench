@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from "../../lib/components/Card.svelte";
+  import Switch from "../../lib/components/Switch.svelte";
   import { t } from "../../lib/i18n";
   import type { SettingsModel } from "./model.svelte";
 
@@ -9,9 +10,8 @@
 
   let { model }: Props = $props();
 
-  function handleTrayToggle() {
-    if (!model.prefs) return;
-    model.update({ minimizeToTray: !model.prefs.minimizeToTray });
+  function handleTrayToggle(value: boolean) {
+    void model.update({ minimizeToTray: value });
   }
 </script>
 
@@ -26,17 +26,11 @@
             {t("settings.autostartDesc")}
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={model.autostart}
-          class="nb-switch"
-          class:nb-switch-checked={model.autostart}
-          onclick={() => model.toggleAutostart()}
-          aria-label={t("settings.autostart")}
-        >
-          <span class="nb-switch-thumb"></span>
-        </button>
+        <Switch
+          checked={model.autostart}
+          onchange={() => model.toggleAutostart()}
+          label={t("settings.autostart")}
+        />
       </div>
     </div>
   </Card>
@@ -51,17 +45,12 @@
             {t("settings.minimizeToTrayDesc")}
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={model.prefs?.minimizeToTray ?? false}
-          class="nb-switch"
-          class:nb-switch-checked={model.prefs?.minimizeToTray ?? false}
-          onclick={handleTrayToggle}
-          aria-label={t("settings.minimizeToTray")}
-        >
-          <span class="nb-switch-thumb"></span>
-        </button>
+        <Switch
+          checked={model.prefs?.minimizeToTray ?? false}
+          onchange={handleTrayToggle}
+          disabled={!model.prefs}
+          label={t("settings.minimizeToTray")}
+        />
       </div>
     </div>
   </Card>

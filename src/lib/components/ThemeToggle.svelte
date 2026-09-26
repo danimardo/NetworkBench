@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   /**
    * Control de Ajustes → General → "Tema": Sistema / Claro / Oscuro (§23).
    * Es la única pieza de UI que toca `theme.setMode(...)` directamente —
@@ -14,7 +15,7 @@
   ];
 </script>
 
-<div class="nb-theme-toggle" role="radiogroup" aria-label="Tema">
+<div class="nb-theme-toggle" role="radiogroup" aria-label={t("settings.theme")}>
   {#each OPTIONS as option (option.id)}
     <button
       type="button"

@@ -27,15 +27,15 @@
   const capacityText = $derived(() => {
     if (!capacityBps || capacityBps <= 0) {
       if (refSource === "wifi") {
-        return "Conexión inalámbrica (capacidad de enlace no determinable)";
+        return t("results.verdict.wifiCapacity");
       }
-      return "Capacidad de referencia no determinable";
+      return t("results.verdict.capacityUnknown");
     }
 
     const num = Number(officialBps || 0);
     const util = Math.round((num / capacityBps) * 100);
     const capFormatted = formatThroughput(capacityBps.toString());
-    return `${util}% de un enlace de ${capFormatted}`;
+    return t("results.verdict.linkUtilization", { percent: util, capacity: capFormatted });
   });
 
   const pillTone = $derived(() => {
@@ -61,7 +61,7 @@
         </StatusPill>
         <HelpTooltip
           text={t("tooltips.official_bps")}
-          label="Explicación del veredicto y velocidad oficial"
+          label={t("results.verdict.explanationLabel")}
         />
       </div>
 
@@ -79,8 +79,7 @@
       </div>
 
       <p class="disclaimer-note">
-        La velocidad oficial procede exclusivamente de los datos recibidos por el receptor en
-        destino.
+        {t("results.verdict.officialNote")}
       </p>
     </div>
   </Card>

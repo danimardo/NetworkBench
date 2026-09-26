@@ -95,18 +95,22 @@
     <p class="error-desc">{errorDesc}</p>
 
     {#if showManualInstructions}
-      <div class="manual-instructions-box" role="region" aria-label="Instrucciones manuales">
+      <div
+        class="manual-instructions-box"
+        role="region"
+        aria-label={t("errorResolution.manualAria")}
+      >
         <div class="instructions-header">
-          <strong>Instrucciones para PowerShell (como Administrador)</strong>
+          <strong>{t("errorResolution.powershellTitle")}</strong>
           <Button variant="ghost" onclick={handleCopyInstructions}>
-            {copyFeedback ? "¡Copiado!" : "Copiar comandos"}
+            {copyFeedback ? t("errorResolution.copied") : t("errorResolution.copyCommands")}
           </Button>
         </div>
         <pre class="commands-block"><code>{manualCommands}</code></pre>
       </div>
     {/if}
 
-    <div class="actions-toolbar" role="toolbar" aria-label="Acciones de resolución">
+    <div class="actions-toolbar" role="toolbar" aria-label={t("errorResolution.actionsAria")}>
       {#each error.actions as action (action)}
         <Button
           variant={action === "retry" || action === "configure_firewall" ? "primary" : "secondary"}
@@ -117,7 +121,7 @@
       {/each}
 
       {#if onCancel}
-        <Button variant="ghost" onclick={onCancel}>Cancelar</Button>
+        <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
       {/if}
     </div>
   </Card>

@@ -20,8 +20,12 @@
     return (num / 1_000_000).toFixed(2) + " Mbit/s";
   }
 
-  let initiatorName = $derived(anonymize ? "Equipo Local" : session.initiator.displayName);
-  let responderName = $derived(anonymize ? "Equipo Remoto" : session.responder.displayName);
+  let initiatorName = $derived(
+    anonymize ? t("export.report.localDevice") : session.initiator.displayName,
+  );
+  let responderName = $derived(
+    anonymize ? t("export.report.remoteDevice") : session.responder.displayName,
+  );
   let forwardDir = $derived(session.directions.find((d) => d.direction === "forward"));
   let reverseDir = $derived(session.directions.find((d) => d.direction === "reverse"));
 </script>

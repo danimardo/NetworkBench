@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   /**
    * Tarjeta de equipo — Inicio (§16.2), selector (§16.3), "Otros equipos" (§7.3).
    *
@@ -103,14 +104,15 @@
     other: "adapter-other",
   };
 
-  const AVAILABILITY_META: Record<
-    Availability,
-    { tone: "success" | "warning" | "danger"; label: string; icon?: IconName }
-  > = {
-    available: { tone: "success", label: "Disponible" },
-    busy: { tone: "warning", label: "Ocupado" },
-    unreachable: { tone: "danger", label: "No accesible", icon: "x-circle" },
-  };
+  // `$derived` y no una constante: una constante de módulo se evalúa una sola vez y las
+  // etiquetas no seguirían al idioma.
+  const AVAILABILITY_META = $derived<
+    Record<Availability, { tone: "success" | "warning" | "danger"; label: string; icon?: IconName }>
+  >({
+    available: { tone: "success", label: t("device.available") },
+    busy: { tone: "warning", label: t("device.busy") },
+    unreachable: { tone: "danger", label: t("device.unreachable"), icon: "x-circle" },
+  });
 
   // Un equipo ocupado, no accesible o incompatible no se puede elegir para
   // una prueba nueva (§5.5: `NB-PEER-003` si de todas formas se intentara).
@@ -120,7 +122,7 @@
     !compatible
       ? {
           tone: "danger" as const,
-          label: "Versión incompatible",
+          label: t("device.incompatible"),
           icon: "alert-triangle" as IconName,
         }
       : AVAILABILITY_META[availability],
@@ -162,7 +164,7 @@
                Tooltip (que ahora se muestra al recibir el foco, no por
                `:focus-within` — ver Tooltip.svelte) tenga algo que
                enfocar. -->
-          <Tooltip text={trust === "trusted" ? "De confianza" : "Conocido"}>
+          <Tooltip text={trust === "trusted" ? t("device.trusted") : t("device.known")}>
             {#snippet children(tooltipId)}
               <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <span
@@ -170,7 +172,7 @@
                 class:nb-device-trust-full={trust === "trusted"}
                 tabindex="0"
                 role="img"
-                aria-label={trust === "trusted" ? "De confianza" : "Conocido"}
+                aria-label={trust === "trusted" ? t("device.trusted") : t("device.known")}
                 aria-describedby={tooltipId}
               >
                 <Icon name="shield" size={12} />
@@ -186,7 +188,7 @@
           class="nb-device-fav"
           class:nb-device-fav-on={favorite}
           aria-pressed={favorite}
-          aria-label={favorite ? "Quitar de favoritos" : "Marcar como favorito"}
+          aria-label={favorite ? t("device.unfavorite") : t("device.favorite")}
           onclick={(e) => {
             e.stopPropagation();
             onToggleFavorite?.(e);

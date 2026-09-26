@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   /**
    * Composición principal de la pantalla de Ejecución (§16.4: "dos
    * tarjetas de equipo unidas por una línea de conexión, con una flecha
@@ -75,7 +76,7 @@
     <span class="nb-exec-node-icon"><Icon name="desktop" size={16} /></span>
     <div class="nb-exec-node-text">
       <span class="nb-exec-node-name">{local.name}</span>
-      <span class="nb-exec-node-tag">Este equipo</span>
+      <span class="nb-exec-node-tag">{t("common.thisDevice")}</span>
       <span class="nb-exec-node-nic">
         <Icon name={ADAPTER_ICON[local.adapterType]} size={12} />
         {local.nicModel} · {formatLinkSpeed(local.linkSpeedMbps)}

@@ -37,11 +37,11 @@
       </div>
 
       {#if inspectError}
-        <p class="text-xs text-[var(--color-text-danger)]">{inspectError}</p>
+        <p class="text-xs text-[var(--color-danger)]">{inspectError}</p>
       {/if}
 
       {#if inspection}
-        <div class="space-y-2 rounded bg-[var(--color-surface-sunken)] p-3 text-xs">
+        <div class="space-y-2 rounded bg-[var(--surface-field)] p-3 text-xs">
           <div class="flex justify-between">
             <span class="text-[var(--color-text-secondary)]"
               >{t("settings.firewallControlRule")}:</span

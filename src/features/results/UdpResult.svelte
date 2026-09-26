@@ -41,7 +41,7 @@
       case "high":
         return t("udp.loss_high");
       default:
-        return "No evaluable";
+        return t("common.notEvaluable");
     }
   });
 </script>

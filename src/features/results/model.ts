@@ -1,3 +1,4 @@
+import { t } from "../../lib/i18n";
 import type { Peer } from "../../lib/contracts/peer";
 import type { BenchmarkPlan } from "../../lib/contracts/plan";
 
@@ -12,7 +13,7 @@ export interface BasicResultModel {
 }
 
 export function formatThroughput(bpsStr: string | null | undefined): string {
-  if (!bpsStr) return "No disponible";
+  if (!bpsStr) return t("common.notAvailable");
   const num = Number(bpsStr);
   if (isNaN(num) || num <= 0) return "0 Mbit/s";
   const mbps = num / 1_000_000;

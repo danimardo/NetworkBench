@@ -104,7 +104,7 @@
     if (!result.success) {
       return {
         isValid: false,
-        error: result.error.issues?.[0]?.message ?? "Parámetros fuera de los límites permitidos",
+        error: result.error.issues?.[0]?.message ?? t("advanced.paramsOutOfRange"),
       };
     }
     return { isValid: true, error: null };
@@ -113,10 +113,16 @@
   // Cálculo de puertos asignados para la vista previa
   let allocatedPortsText = $derived.by<string>(() => {
     if (isSimultaneous) {
-      return `${port}..${port + 31} (envío) y ${port + 32}..${port + 63} (recepción)`;
+      return t("advanced.portRangeSummary", {
+        send: `${port}..${port + 31}`,
+        receive: `${port + 32}..${port + 63}`,
+      });
     }
     const endPort = port + Math.max(1, streams) - 1;
-    return `${port}..${endPort} (${streams} ${streams === 1 ? "puerto" : "puertos"})`;
+    return t(streams === 1 ? "advanced.portRangeOne" : "advanced.portRangeMany", {
+      range: `${port}..${endPort}`,
+      count: streams,
+    });
   });
 
   // Estimación de tiempo total
@@ -161,7 +167,7 @@
         {t("advanced.restore_defaults")}
       </Button>
       {#if onClose}
-        <Button variant="ghost" onclick={onClose} aria-label="Cerrar opciones avanzadas">✕</Button>
+        <Button variant="ghost" onclick={onClose} aria-label={t("advanced.closeAria")}>✕</Button>
       {/if}
     </div>
   </div>
@@ -315,7 +321,7 @@
 
     <TextField
       label={t("advanced.buffer_size")}
-      hint="4096..4194304 (potencias de 2)"
+      hint={t("advanced.bufferHint")}
       value={bufferSizeBytes}
       oninput={(val) => (bufferSizeBytes = val)}
     />
@@ -356,7 +362,7 @@
       <div class="preview-header">
         <h4>{t("advanced.preview_title")}</h4>
         <StatusPill tone={validationResult.isValid ? "success" : "danger"}>
-          {validationResult.isValid ? "PLAN VÁLIDO" : "PARÁMETROS INVÁLIDOS"}
+          {validationResult.isValid ? t("advanced.planValid") : t("advanced.planInvalid")}
         </StatusPill>
       </div>
 
@@ -375,7 +381,7 @@
       {#if onApply}
         <div class="apply-action">
           <Button variant="primary" disabled={!validationResult.isValid} onclick={handleApply}>
-            Aplicar configuración
+            {t("advanced.applyConfig")}
           </Button>
         </div>
       {/if}

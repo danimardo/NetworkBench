@@ -66,17 +66,12 @@
   }
 </script>
 
-<div
-  class="preflight-screen-container"
-  role="region"
-  aria-label="Comprobaciones previas (Preflight)"
->
+<div class="preflight-screen-container" role="region" aria-label={t("preflight.aria")}>
   <Card>
     <div class="header">
-      <h2 class="title">Verificaciones previas a la medición</h2>
+      <h2 class="title">{t("preflight.title")}</h2>
       <p class="subtitle">
-        Comprobando que el motor, los puertos, el cortafuegos y el adaptador están listos antes de
-        iniciar el benchmark.
+        {t("preflight.subtitle")}
       </p>
     </div>
 
@@ -99,7 +94,7 @@
             </StatusPill>
             {#if check.error && onErrorClick}
               <Button variant="ghost" onclick={() => onErrorClick?.(check.error!)}>
-                Ver detalle
+                {t("preflight.viewDetail")}
               </Button>
             {/if}
           </div>
@@ -109,15 +104,15 @@
 
     <div class="footer-actions">
       {#if hasFailed && onRetry}
-        <Button variant="primary" onclick={onRetry}>Reintentar verificaciones</Button>
+        <Button variant="primary" onclick={onRetry}>{t("preflight.retry")}</Button>
       {/if}
 
       {#if allPassedOrWarn && onProceed}
-        <Button variant="primary" onclick={onProceed}>Continuar con la prueba</Button>
+        <Button variant="primary" onclick={onProceed}>{t("preflight.proceed")}</Button>
       {/if}
 
       {#if onCancel}
-        <Button variant="ghost" onclick={onCancel}>Cancelar</Button>
+        <Button variant="ghost" onclick={onCancel}>{t("common.cancel")}</Button>
       {/if}
     </div>
   </Card>

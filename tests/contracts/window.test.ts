@@ -66,7 +66,7 @@ describe("Window Geometry Contract Tests (T121)", () => {
     let savedGeom: unknown = null;
     setTransportMock(async (cmd, args) => {
       if (cmd === "window_save_geometry") {
-        savedGeom = args?.request;
+        savedGeom = args?.geometry;
         return { ok: true, value: null };
       }
       return { ok: true, value: null };

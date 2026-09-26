@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../../lib/i18n";
   import Card from "../../lib/components/Card.svelte";
   import Button from "../../lib/components/Button.svelte";
   import Icon from "../../lib/components/Icon.svelte";
@@ -18,22 +19,24 @@
   <header class="nb-result-header">
     <div class="nb-result-title-group">
       <div class="nb-result-title-row">
-        <h1 class="nb-result-title">Resultado de la medición</h1>
-        <StatusPill tone="success">Completada</StatusPill>
+        <h1 class="nb-result-title">{t("results.basic.title")}</h1>
+        <StatusPill tone="success">{t("results.basic.completed")}</StatusPill>
       </div>
       <p class="nb-result-subtitle">
-        Medición bidireccional secuencial con {result.peer.displayName} ({result.peer
-          .addresses[0] ?? "red local"}).
+        {t("results.basic.subtitle", {
+          peer: result.peer.displayName,
+          address: result.peer.addresses[0] ?? t("results.basic.localNetwork"),
+        })}
       </p>
     </div>
 
     <div class="nb-result-header-actions">
       <Button variant="secondary" onclick={() => onRepeat?.()} data-testid="result-repeat-btn">
         <Icon name="refresh" size={14} />
-        Repetir prueba
+        {t("results.basic.repeat")}
       </Button>
       <Button variant="primary" onclick={() => onBackToPeers?.()} data-testid="result-back-btn">
-        Volver a equipos
+        {t("results.basic.backToPeers")}
       </Button>
     </div>
   </header>
@@ -47,8 +50,10 @@
             <Icon name="arrow-right" size={20} />
           </div>
           <div>
-            <h2 class="nb-direction-title">Envío (A → B)</h2>
-            <span class="nb-direction-desc">Desde este equipo hacia {result.peer.displayName}</span>
+            <h2 class="nb-direction-title">{t("results.basic.sendAtoB")}</h2>
+            <span class="nb-direction-desc"
+              >{t("results.basic.fromThisTo", { peer: result.peer.displayName })}</span
+            >
           </div>
         </div>
 
@@ -56,7 +61,7 @@
           <span class="nb-throughput-number" data-testid="forward-throughput">
             {formatThroughput(result.forwardOfficialBps)}
           </span>
-          <span class="nb-throughput-source">Medición oficial del receptor</span>
+          <span class="nb-throughput-source">{t("results.basic.officialReceiver")}</span>
         </div>
       </div>
     </Card>
@@ -69,8 +74,10 @@
             <Icon name="arrow-right" size={20} />
           </div>
           <div>
-            <h2 class="nb-direction-title">Recepción (B → A)</h2>
-            <span class="nb-direction-desc">Desde {result.peer.displayName} hacia este equipo</span>
+            <h2 class="nb-direction-title">{t("results.basic.receiveBtoA")}</h2>
+            <span class="nb-direction-desc"
+              >{t("results.basic.fromToThis", { peer: result.peer.displayName })}</span
+            >
           </div>
         </div>
 
@@ -78,7 +85,7 @@
           <span class="nb-throughput-number" data-testid="reverse-throughput">
             {formatThroughput(result.reverseOfficialBps)}
           </span>
-          <span class="nb-throughput-source">Medición oficial del receptor</span>
+          <span class="nb-throughput-source">{t("results.basic.officialReceiver")}</span>
         </div>
       </div>
     </Card>
@@ -87,17 +94,17 @@
   <Card>
     <div class="nb-result-meta-row">
       <div class="nb-meta-item">
-        <span class="nb-meta-label">Protocolo:</span>
+        <span class="nb-meta-label">{t("results.basic.protocol")}</span>
         <span class="nb-meta-value"
           >{result.plan.protocol.toUpperCase()} ({result.plan.streams} stream)</span
         >
       </div>
       <div class="nb-meta-item">
-        <span class="nb-meta-label">Duración por sentido:</span>
+        <span class="nb-meta-label">{t("results.basic.durationPerDirection")}</span>
         <span class="nb-meta-value">{result.durationSeconds} s</span>
       </div>
       <div class="nb-meta-item">
-        <span class="nb-meta-label">Fecha y hora:</span>
+        <span class="nb-meta-label">{t("results.basic.dateTime")}</span>
         <span class="nb-meta-value">{result.completedAt}</span>
       </div>
     </div>

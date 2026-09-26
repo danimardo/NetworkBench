@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../../lib/i18n";
   import Card from "../../lib/components/Card.svelte";
   import Icon from "../../lib/components/Icon.svelte";
   import HelpTooltip from "../../lib/components/HelpTooltip.svelte";
@@ -42,13 +43,15 @@
         <div class="directions-grid">
           <div class="dir-item">
             <div class="dir-label">
-              <Icon name="arrow-right" size={14} /> Subida (A → B)
+              <Icon name="arrow-right" size={14} />
+              {t("results.metric.uploadAtoB")}
             </div>
             <div class="dir-speed">{forwardSpeed}</div>
           </div>
           <div class="dir-item">
             <div class="dir-label">
-              <Icon name="arrow-left" size={14} /> Bajada (B → A)
+              <Icon name="arrow-left" size={14} />
+              {t("results.metric.downloadBtoA")}
             </div>
             <div class="dir-speed">{reverseSpeed}</div>
           </div>
@@ -56,20 +59,20 @@
       {:else if type === "stability"}
         <div class="stats-list">
           <div class="stat-row">
-            <span class="stat-name">Regularidad A → B:</span>
+            <span class="stat-name">{t("results.metric.regularityAtoB")}</span>
             <span class="stat-val"
-              >{forwardStability ? forwardStability.level : "No evaluable"}</span
+              >{forwardStability ? forwardStability.level : t("common.notEvaluable")}</span
             >
           </div>
           <div class="stat-row">
-            <span class="stat-name">Regularidad B → A:</span>
+            <span class="stat-name">{t("results.metric.regularityBtoA")}</span>
             <span class="stat-val"
-              >{reverseStability ? reverseStability.level : "No evaluable"}</span
+              >{reverseStability ? reverseStability.level : t("common.notEvaluable")}</span
             >
           </div>
           {#if forwardStability?.dropsCount || reverseStability?.dropsCount}
             <div class="stat-row warning-text">
-              <span class="stat-name">Caídas momentáneas:</span>
+              <span class="stat-name">{t("results.metric.dips")}</span>
               <span class="stat-val"
                 >{(forwardStability?.dropsCount ?? 0) + (reverseStability?.dropsCount ?? 0)} detectadas</span
               >
@@ -79,22 +82,22 @@
       {:else if type === "retransmission"}
         <div class="stats-list">
           <div class="stat-row">
-            <span class="stat-name">Pérdida/Retransmisión A → B:</span>
+            <span class="stat-name">{t("results.metric.lossAtoB")}</span>
             <span class="stat-val">{forwardRetrans ? forwardRetrans.level : "N/A"}</span>
           </div>
           <div class="stat-row">
-            <span class="stat-name">Pérdida/Retransmisión B → A:</span>
+            <span class="stat-name">{t("results.metric.lossBtoA")}</span>
             <span class="stat-val">{reverseRetrans ? reverseRetrans.level : "N/A"}</span>
           </div>
         </div>
       {:else if type === "cpu"}
         <div class="stats-list">
           <div class="stat-row">
-            <span class="stat-name">Uso receptor A → B:</span>
+            <span class="stat-name">{t("results.metric.receiverUseAtoB")}</span>
             <span class="stat-val">{forwardCpu != null ? `${forwardCpu.toFixed(1)}%` : "N/A"}</span>
           </div>
           <div class="stat-row">
-            <span class="stat-name">Uso receptor B → A:</span>
+            <span class="stat-name">{t("results.metric.receiverUseBtoA")}</span>
             <span class="stat-val">{reverseCpu != null ? `${reverseCpu.toFixed(1)}%` : "N/A"}</span>
           </div>
         </div>

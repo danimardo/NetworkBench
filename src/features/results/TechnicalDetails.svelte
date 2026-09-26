@@ -38,52 +38,51 @@
 {#if open}
   <Dialog
     title={t("verdict.technical_details")}
-    description="Parámetros exactos de la sesión, configuración de hardware y diagnóstico consolidado."
+    description={t("results.technical.description")}
     {onClose}
   >
     <div class="technical-details-content" data-testid="technical-details-dialog">
       <div class="disclosure-alert">
         <Icon name="info" size={16} />
         <span>
-          Aviso: La información técnica exportable ha sido saneada automáticamente para eliminar
-          contraseñas o certificados privados. Puede compartirse para diagnóstico técnico de red.
+          {t("results.technical.disclosure")}
         </span>
       </div>
 
       <div class="details-section">
-        <h4 class="section-title">Identificación y versiones</h4>
+        <h4 class="section-title">{t("results.technical.identification")}</h4>
         <dl class="meta-grid">
-          <dt>ID de sesión:</dt>
+          <dt>{t("results.technical.sessionId")}</dt>
           <dd class="mono">{result.sessionId}</dd>
-          <dt>Versión App:</dt>
+          <dt>{t("results.technical.appVersion")}</dt>
           <dd>{result.versions.appVersion}</dd>
-          <dt>Motor:</dt>
+          <dt>{t("results.technical.engine")}</dt>
           <dd>NTTTCP v{result.versions.engineVersion}</dd>
-          <dt>Hash Umbrales:</dt>
+          <dt>{t("results.technical.thresholdsHash")}</dt>
           <dd class="mono">{result.versions.thresholdsHash.slice(0, 16)}...</dd>
         </dl>
       </div>
 
       <div class="details-section">
-        <h4 class="section-title">Direcciones y Motor</h4>
+        <h4 class="section-title">{t("results.technical.addressesAndEngine")}</h4>
         {#each result.directions as dir (dir.direction)}
           <div class="direction-block">
             <h5 class="dir-heading">Sentido: {dir.direction} ({dir.status})</h5>
             <dl class="meta-grid">
-              <dt>Velocidad oficial (Receptor):</dt>
+              <dt>{t("results.technical.officialSpeed")}</dt>
               <dd class="highlight">{dir.officialBps ? `${dir.officialBps} bps` : "N/A"}</dd>
               {#if dir.sender}
-                <dt>Bytes enviados:</dt>
+                <dt>{t("results.technical.bytesSent")}</dt>
                 <dd>{dir.sender.totalBytes}</dd>
-                <dt>CPU Emisor:</dt>
+                <dt>{t("results.technical.cpuSender")}</dt>
                 <dd>
                   {dir.sender.cpuPercent != null ? `${dir.sender.cpuPercent.toFixed(1)}%` : "N/A"}
                 </dd>
               {/if}
               {#if dir.receiver}
-                <dt>Bytes recibidos:</dt>
+                <dt>{t("results.technical.bytesReceived")}</dt>
                 <dd>{dir.receiver.totalBytes}</dd>
-                <dt>CPU Receptor:</dt>
+                <dt>{t("results.technical.cpuReceiver")}</dt>
                 <dd>
                   {dir.receiver.cpuPercent != null
                     ? `${dir.receiver.cpuPercent.toFixed(1)}%`

@@ -36,6 +36,11 @@ export async function listDiscoveredPeers(): Promise<DiscoveredPeer[]> {
   return invokeCommand("peers_discovered_list", undefined, z.array(discoveredPeerSchema));
 }
 
+/** Reinicia el descubrimiento mDNS para volver a buscar equipos en la red. */
+export async function rescanPeers(): Promise<void> {
+  await invokeCommand("peers_rescan", undefined, z.void().nullable());
+}
+
 export async function listPeers(): Promise<Peer[]> {
   const result = await invokeCommand("peers_list", undefined, z.array(peerSchema));
   return result;

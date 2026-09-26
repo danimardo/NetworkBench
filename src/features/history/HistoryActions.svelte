@@ -23,14 +23,14 @@
       const config = await repeatPlan(sessionId);
       onRepeat?.(config);
     } catch {
-      repeatError = "No se pudieron reconstruir los parámetros válidos de la prueba";
+      repeatError = t("history.actions.repeatError");
     } finally {
       isRepeating = false;
     }
   }
 </script>
 
-<div class="history-actions" role="toolbar" aria-label="Acciones de la sesión">
+<div class="history-actions" role="toolbar" aria-label={t("history.actions.aria")}>
   <Button variant="primary" onclick={handleRepeat} disabled={isRepeating}>
     {isRepeating ? "Reconstruyendo..." : t("history.repeat_test")}
   </Button>

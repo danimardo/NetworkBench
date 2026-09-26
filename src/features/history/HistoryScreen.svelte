@@ -79,11 +79,11 @@
   }
 
   function getVerdictLabel(verdict: string | null | undefined): string {
-    if (!verdict) return "Sin datos";
-    if (verdict.includes("ok")) return "Óptimo";
-    if (verdict.includes("warn")) return "Aviso";
-    if (verdict.includes("problem")) return "Problema";
-    return "No evaluable";
+    if (!verdict) return t("history.verdict.noData");
+    if (verdict.includes("ok")) return t("history.verdict.ok");
+    if (verdict.includes("warn")) return t("history.verdict.warn");
+    if (verdict.includes("problem")) return t("history.verdict.problem");
+    return t("history.verdict.notEvaluable");
   }
 </script>
 
@@ -140,9 +140,9 @@
             }}
           >
             <option value="">{t("history.filter_all_verdicts")}</option>
-            <option value="ok">Óptimo</option>
-            <option value="warn">Aviso</option>
-            <option value="problem">Problema</option>
+            <option value="ok">{t("history.verdict.ok")}</option>
+            <option value="warn">{t("history.verdict.warn")}</option>
+            <option value="problem">{t("history.verdict.problem")}</option>
           </select>
 
           <select
@@ -164,7 +164,10 @@
 
       <!-- Evolución si hay peer seleccionado -->
       {#if model.selectedPeerId && model.peerTrend.length > 0}
-        <HistoryTrend points={model.peerTrend} peerName={model.items[0]?.peerName ?? "Equipo"} />
+        <HistoryTrend
+          points={model.peerTrend}
+          peerName={model.items[0]?.peerName ?? t("history.defaultPeerName")}
+        />
       {/if}
 
       <!-- Listado agrupado -->
@@ -228,12 +231,12 @@
         {#if model.deleteModal.preview}
           <div class="preview-stats">
             <span
-              >Sesiones afectadas: <strong>{model.deleteModal.preview.affectedSessions}</strong
-              ></span
+              >{t("history.delete_affected_sessions")}
+              <strong>{model.deleteModal.preview.affectedSessions}</strong></span
             >
             <span
-              >Muestras asociadas: <strong>{model.deleteModal.preview.affectedSamples}</strong
-              ></span
+              >{t("history.delete_affected_samples")}
+              <strong>{model.deleteModal.preview.affectedSamples}</strong></span
             >
           </div>
         {/if}

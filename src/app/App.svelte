@@ -5,7 +5,7 @@
   import Sidebar from "../lib/components/Sidebar.svelte";
   import { router } from "./router.svelte";
   import { snapshotStore } from "../lib/api/snapshot.svelte";
-  import { t } from "../lib/i18n";
+  import { setLocale, t } from "../lib/i18n";
   import { theme } from "../lib/design-system/theme.svelte";
   import { logger } from "../lib/logging";
   import SettingsScreen from "../features/settings/SettingsScreen.svelte";
@@ -62,13 +62,28 @@
     router.navigate("inicio");
   }
 
+  /** Tope de espera al backend antes de mostrar la ventana, para que nunca se quede oculta. */
+  const ESPERA_MAXIMA_IDIOMA_MS = 1500;
+
+  /** El idioma elegido en Ajustes vive en `settings.json` y llega en el snapshot. */
+  function aplicarIdiomaGuardado() {
+    const guardado = snapshotStore.snapshot?.locale;
+    if (guardado === "es" || guardado === "en") setLocale(guardado);
+  }
+
   onMount(() => {
     logger.installGlobalErrorCapture();
-    void snapshotStore.init();
+    // El idioma se aplica en cuanto llega el snapshot, aunque sea tarde.
+    const snapshotListo = snapshotStore.init().then(aplicarIdiomaGuardado);
     if (theme.mode === "system") {
       theme.setMode("dark");
     }
-    void restoreAndShowWindow();
+    // La ventana arranca oculta: se muestra con el idioma ya puesto para que quien usa
+    // inglés no vea un destello en español, pero sin esperar más de ESPERA_MAXIMA_IDIOMA_MS.
+    void Promise.race([
+      snapshotListo,
+      new Promise((resolver) => setTimeout(resolver, ESPERA_MAXIMA_IDIOMA_MS)),
+    ]).then(() => restoreAndShowWindow());
     void setupWindowTracking();
 
     void (async () => {
@@ -129,6 +144,7 @@
           busy={peersModel.busy}
           onSelectPeer={(peer) => void handleSelectPeer(peer)}
           onManualConnect={(host, port) => void peersModel.manualConnect(host, port)}
+          onRescan={() => void peersModel.rescan()}
           activePairingPeer={peersModel.pairing?.peer ?? null}
           pairingCode={peersModel.pairing?.code ?? ""}
           pairingSecondsLeft={peersModel.pairing?.secondsLeft ?? 60}

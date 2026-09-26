@@ -57,6 +57,7 @@ pub fn run() {
             app::window_restore_and_show,
             ipc::peers::peers_list,
             ipc::peers::peers_discovered_list,
+            ipc::peers::peers_rescan,
             ipc::peers::peers_manual_connect,
             ipc::peers::peers_set_trust,
             ipc::pairing::peers_pairing_start,

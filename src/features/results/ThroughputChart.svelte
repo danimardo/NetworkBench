@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../../lib/i18n";
   import type { SamplePoint } from "../../lib/api/samples";
 
   interface Props {
@@ -101,10 +102,12 @@
   <div class="chart-header">
     <div class="legend-row">
       <span class="legend-item">
-        <span class="line-swatch line-forward"></span> Subida A → B (trazo continuo)
+        <span class="line-swatch line-forward"></span>
+        {t("results.chart.legendForward")}
       </span>
       <span class="legend-item">
-        <span class="line-swatch line-reverse"></span> Bajada B → A (trazo discontinuo)
+        <span class="line-swatch line-reverse"></span>
+        {t("results.chart.legendReverse")}
       </span>
     </div>
     <span class="unit-badge">{unitLabel}</span>
@@ -167,9 +170,7 @@
   </svg>
 
   <p class="chart-disclaimer">
-    Nota: Las muestras periódicas reflejan el caudal de la interfaz y pueden incluir tráfico ajeno a
-    la prueba (FR-027). La velocidad oficial certificada proviene del cálculo consolidado del
-    receptor.
+    {t("results.chart.disclaimer")}
   </p>
 </div>
 

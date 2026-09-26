@@ -15,7 +15,9 @@
     "session": "Session",
     "results": "Results",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "home": "Home",
+    "main": "Main navigation"
   },
   "common": {
     "ok": "OK",
@@ -36,7 +38,13 @@
     "discard": "Discard",
     "apply": "Apply",
     "checking": "Checking...",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "on": "On",
+    "off": "Off",
+    "thisDevice": "This device",
+    "dismissNotice": "Dismiss notice",
+    "notEvaluable": "Not evaluable",
+    "notAvailable": "Not available"
   },
   "errors": {
     "NB-CONN-001": "Cannot reach target host at the specified address.",
@@ -151,7 +159,13 @@
     "status_running": "Checking...",
     "status_passed": "Passed",
     "status_warning": "Warning",
-    "status_failed": "Issue detected"
+    "status_failed": "Issue detected",
+    "aria": "Pre-checks (Preflight)",
+    "title": "Pre-measurement checks",
+    "subtitle": "Checking that the engine, ports, firewall and adapter are ready before starting the benchmark.",
+    "viewDetail": "View details",
+    "retry": "Retry checks",
+    "proceed": "Continue with the test"
   },
   "settings": {
     "title": "Application Settings",
@@ -214,7 +228,11 @@
     "engine": "Benchmark engine",
     "license": "License",
     "licenseNotice": "Distributed under the GNU General Public License v3 (GPL-3.0-or-later). Free and open source software with no telemetry or external services.",
-    "attributionNotice": "Microsoft and NTTTCP are trademarks or components of Microsoft Corporation. See THIRD_PARTY_NOTICES.md for third-party notices and licenses."
+    "attributionNotice": "Microsoft and NTTTCP are trademarks or components of Microsoft Corporation. See THIRD_PARTY_NOTICES.md for third-party notices and licenses.",
+    "languageDesc": "Interface language. Applies immediately.",
+    "recommended": "Recommended",
+    "reduceMotionDesc": "Turns off non-essential animations and transitions",
+    "developedBy": "Developed by Daniel Díez Mardomingo"
   },
   "plan": {
     "protocol": "Protocol",
@@ -249,6 +267,25 @@
       "pairRejected": "The other computer did not confirm the pairing.",
       "pairFailed": "Could not complete pairing.",
       "pairExpired": "Pairing expired."
+    },
+    "screen": {
+      "title": "Available devices",
+      "subtitle": "Select a device on the local network to start a network performance measurement.",
+      "connectByIp": "Connect by IP",
+      "rescan": "Search again",
+      "emptyDesc": "Make sure NetworkBench is open on the other device, press the magnifier to search again, or connect by IP.",
+      "manualTitle": "Manual connection by IP",
+      "manualDesc": "Enter the IP address or DNS name and the control port (7411 by default).",
+      "addressLabel": "IP address or hostname",
+      "addressPlaceholder": "e.g. 192.168.1.50 or lab-pc",
+      "portLabel": "Control port",
+      "errAddress": "Enter a valid IP address or hostname",
+      "errPort": "The port must be a number between 1024 and 65535",
+      "pairingTitle": "Pair a new device",
+      "pairingInstructions": "Check that the following 6-digit code matches exactly on both devices.",
+      "pairingExpires": "Expires in {seconds} s",
+      "pairingConfirm": "Confirm code",
+      "emptyTitle": "No devices detected"
     }
   },
   "session": {
@@ -269,6 +306,27 @@
       "cancel": "Could not cancel the test.",
       "failed": "The test ended with an error. If one direction completed, it was saved as an incomplete session in the history.",
       "noResult": "The test finished, but the saved result could not be read."
+    },
+    "screen": {
+      "preparingTitle": "Preparing test...",
+      "preparingSubtitle": "Checking ports and negotiating the measurement plan.",
+      "sendTitle": "Measuring send (A → B)",
+      "sendSubtitle": "Sending TCP flow of {streams} stream(s) to {peer}.",
+      "receiveTitle": "Measuring receive (B → A)",
+      "receiveSubtitle": "Receiving TCP flow of {streams} stream(s) from {peer}.",
+      "analyzingTitle": "Analyzing results",
+      "analyzingSubtitle": "Consolidating the receiver's official metrics and verdicts.",
+      "completedTitle": "Test completed successfully",
+      "completedSubtitle": "The bidirectional measurements have been recorded and saved.",
+      "cancellingTitle": "Cancelling test...",
+      "cancellingSubtitle": "Stopping engine processes and releasing ports...",
+      "cancelledTitle": "Test cancelled",
+      "cancelledSubtitle": "The test was cancelled by the user. No partial measurements were saved.",
+      "failedTitle": "Measurement error",
+      "failedSubtitle": "An unexpected error occurred during execution.",
+      "cancelAria": "Cancel the network test in progress",
+      "currentSpeed": "Current speed:",
+      "viewResults": "View detailed results"
     }
   },
   "results": {
@@ -277,10 +335,65 @@
     "latency": "Estimated Latency",
     "packetLoss": "Packet Loss",
     "cpuUsage": "CPU Utilization",
-    "verdict": "Network Diagnosis",
+    "verdict": {
+      "wifiCapacity": "Wireless connection (link capacity cannot be determined)",
+      "capacityUnknown": "Reference capacity cannot be determined",
+      "explanationLabel": "Verdict explanation and official speed",
+      "officialNote": "The official speed comes exclusively from the data received by the receiver at the destination.",
+      "linkUtilization": "{percent}% of a {capacity} link"
+    },
     "details": "Directional Details",
     "retest": "Repeat this benchmark",
-    "history": "View in history"
+    "history": "View in history",
+    "basic": {
+      "title": "Measurement result",
+      "completed": "Completed",
+      "subtitle": "Sequential bidirectional measurement with {peer} ({address}).",
+      "localNetwork": "local network",
+      "repeat": "Repeat test",
+      "backToPeers": "Back to devices",
+      "sendAtoB": "Send (A → B)",
+      "receiveBtoA": "Receive (B → A)",
+      "protocol": "Protocol:",
+      "durationPerDirection": "Duration per direction:",
+      "dateTime": "Date and time:",
+      "fromThisTo": "From this device to {peer}",
+      "fromToThis": "From {peer} to this device",
+      "officialReceiver": "Official receiver measurement"
+    },
+    "metric": {
+      "uploadAtoB": "Upload (A → B)",
+      "downloadBtoA": "Download (B → A)",
+      "regularityAtoB": "Consistency A → B:",
+      "regularityBtoA": "Consistency B → A:",
+      "dips": "Momentary dips:",
+      "lossAtoB": "Loss/Retransmission A → B:",
+      "lossBtoA": "Loss/Retransmission B → A:",
+      "receiverUseAtoB": "Receiver usage A → B:",
+      "receiverUseBtoA": "Receiver usage B → A:"
+    },
+    "stability": "Connection stability",
+    "lossAndRetransmissions": "Loss and retransmissions",
+    "technical": {
+      "description": "Exact session parameters, hardware configuration and consolidated diagnosis.",
+      "disclosure": "Notice: The exportable technical information has been automatically sanitized to remove passwords and private certificates. It can be shared for network technical diagnosis.",
+      "identification": "Identification and versions",
+      "sessionId": "Session ID:",
+      "appVersion": "App version:",
+      "engine": "Engine:",
+      "thresholdsHash": "Thresholds hash:",
+      "addressesAndEngine": "Addresses and engine",
+      "officialSpeed": "Official speed (Receiver):",
+      "bytesSent": "Bytes sent:",
+      "cpuSender": "Sender CPU:",
+      "bytesReceived": "Bytes received:",
+      "cpuReceiver": "Receiver CPU:"
+    },
+    "chart": {
+      "legendForward": "Upload A → B (solid line)",
+      "legendReverse": "Download B → A (dashed line)",
+      "disclaimer": "Note: Periodic samples reflect the interface throughput and may include traffic unrelated to the test (FR-027). The certified official speed comes from the receiver's consolidated calculation."
+    }
   },
   "verdict": {
     "ok_title": "Performance matches link capacity",
@@ -351,7 +464,37 @@
     "evolution_title": "Evolution with this peer",
     "empty_search": "No matching benchmarks found",
     "back_to_list": "Back to history",
-    "details": "View details"
+    "details": "View details",
+    "actions": {
+      "repeatError": "The test's valid parameters could not be rebuilt",
+      "aria": "Session actions"
+    },
+    "detail": {
+      "aria": "Historical test detail",
+      "send": "Send (Upload)",
+      "receive": "Receive (Download)",
+      "streams": "Streams",
+      "duration": "Duration",
+      "adapters": "Network adapters used",
+      "localClient": "Local client:",
+      "remoteServer": "Remote server:",
+      "unspecified": "Not specified"
+    },
+    "verdict": {
+      "noData": "No data",
+      "ok": "Optimal",
+      "warn": "Warning",
+      "problem": "Problem",
+      "notEvaluable": "Not evaluable"
+    },
+    "delete_affected_sessions": "Affected sessions:",
+    "delete_affected_samples": "Associated samples:",
+    "trend_empty": "Not enough completed measurements to plot the trend.",
+    "defaultPeerName": "Device",
+    "errors": {
+      "deletePreview": "The deletion preview could not be obtained",
+      "deleteExecute": "Error while running the transactional deletion"
+    }
   },
   "advanced": {
     "title": "Advanced Options",
@@ -383,7 +526,16 @@
     "preview_title": "Plan Preview",
     "preview_ports": "Allocated port block: {ports}",
     "preview_estimated": "Estimated total duration: ~{seconds} s",
-    "simultaneous_notice": "The simultaneous test runs concurrent sender and receiver on each host without port overlap (up to 32 streams per direction)."
+    "simultaneous_notice": "The simultaneous test runs concurrent sender and receiver on each host without port overlap (up to 32 streams per direction).",
+    "paramsOutOfRange": "Parameters outside the allowed limits",
+    "portRangeSummary": "{send} (send) and {receive} (receive)",
+    "closeAria": "Close advanced options",
+    "bufferHint": "4096..4194304 (powers of 2)",
+    "applyConfig": "Apply configuration",
+    "portRangeOne": "{range} ({count} port)",
+    "portRangeMany": "{range} ({count} ports)",
+    "planValid": "VALID PLAN",
+    "planInvalid": "INVALID PARAMETERS"
   },
   "udp": {
     "title": "UDP Benchmark Result",
@@ -435,6 +587,33 @@
       "initiator_address": "Local Host Address",
       "responder_address": "Remote Host Address",
       "page_notice": "Locally generated document without telemetry or external connection"
+    },
+    "report": {
+      "localDevice": "Local device",
+      "remoteDevice": "Remote device"
     }
+  },
+  "errorResolution": {
+    "manualAria": "Manual instructions",
+    "powershellTitle": "PowerShell instructions (as Administrator)",
+    "actionsAria": "Resolution actions",
+    "copied": "Copied!",
+    "copyCommands": "Copy commands"
+  },
+  "device": {
+    "available": "Available",
+    "busy": "Busy",
+    "unreachable": "Unreachable",
+    "incompatible": "Incompatible version",
+    "trusted": "Trusted",
+    "known": "Known",
+    "favorite": "Mark as favorite",
+    "unfavorite": "Remove from favorites"
+  },
+  "window": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "restore": "Restore",
+    "close": "Close"
   }
 }

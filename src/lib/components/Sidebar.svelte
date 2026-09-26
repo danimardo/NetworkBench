@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
   import Tooltip from "./Tooltip.svelte";
+  import { t } from "../i18n";
   import type { IconName } from "./icons";
 
   export interface NavItem {
@@ -35,21 +36,22 @@
     disabledHint?: string;
   }
 
-  let {
-    items = [
-      { id: "inicio", label: "Inicio", icon: "home" },
-      { id: "historial", label: "Historial", icon: "history" },
-      { id: "ajustes", label: "Ajustes", icon: "settings" },
+  let { items, activeId, onNavigate, disabled = false, disabledHint }: Props = $props();
+
+  // Se calculan aquí, y no como valor por defecto de la prop, para que las etiquetas
+  // sigan al idioma: un valor por defecto se evalúa una sola vez, al montar.
+  const navItems = $derived<NavItem[]>(
+    items ?? [
+      { id: "inicio", label: t("nav.home"), icon: "home" },
+      { id: "historial", label: t("nav.history"), icon: "history" },
+      { id: "ajustes", label: t("nav.settings"), icon: "settings" },
     ],
-    activeId,
-    onNavigate,
-    disabled = false,
-    disabledHint = "Prueba en curso",
-  }: Props = $props();
+  );
+  const hint = $derived(disabledHint ?? t("session.running"));
 </script>
 
-<nav class="nb-sidebar" aria-label="Navegación principal">
-  {#each items as item (item.id)}
+<nav class="nb-sidebar" aria-label={t("nav.main")}>
+  {#each navItems as item (item.id)}
     {#if disabled && item.id !== activeId && item.id !== "inicio"}
       <!-- §16.1: "el resto de la barra se deshabilita con tooltip «Prueba en
            curso»". Antes usaba `title=` (tooltip nativo del navegador) — ver
@@ -69,7 +71,7 @@
            no hay `onclick` en esta rama, así que no hace nada al activarlo),
            y el atenuado visual pasa de `:disabled` a `[aria-disabled]` en el
            CSS de abajo. -->
-      <Tooltip text={disabledHint} placement="right">
+      <Tooltip text={hint} placement="right">
         {#snippet children(tooltipId)}
           <button
             type="button"

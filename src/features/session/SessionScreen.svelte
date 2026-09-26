@@ -64,50 +64,56 @@
       }
     > = {
       preparing: {
-        title: "Preparando prueba...",
-        subtitle: "Comprobando puertos y negociando el plan de medición.",
+        title: t("session.screen.preparingTitle"),
+        subtitle: t("session.screen.preparingSubtitle"),
         icon: "clock",
         tone: "info",
       },
       runningSend: {
-        title: "Midiendo envío (A → B)",
-        subtitle: `Enviando flujo TCP de ${plan.streams} stream(s) hacia ${peer.displayName}.`,
+        title: t("session.screen.sendTitle"),
+        subtitle: t("session.screen.sendSubtitle", {
+          streams: plan.streams,
+          peer: peer.displayName,
+        }),
         icon: "arrow-right",
         tone: "info",
       },
       runningReceive: {
-        title: "Midiendo recepción (B → A)",
-        subtitle: `Recibiendo flujo TCP de ${plan.streams} stream(s) desde ${peer.displayName}.`,
+        title: t("session.screen.receiveTitle"),
+        subtitle: t("session.screen.receiveSubtitle", {
+          streams: plan.streams,
+          peer: peer.displayName,
+        }),
         icon: "arrow-right",
         tone: "info",
       },
       analyzing: {
-        title: "Analizando resultados",
-        subtitle: "Consolidando métricas oficiales del receptor y veredictos.",
+        title: t("session.screen.analyzingTitle"),
+        subtitle: t("session.screen.analyzingSubtitle"),
         icon: "info",
         tone: "info",
       },
       completed: {
-        title: "Prueba completada con éxito",
-        subtitle: "Las mediciones bidireccionales han sido registradas y persistidas.",
+        title: t("session.screen.completedTitle"),
+        subtitle: t("session.screen.completedSubtitle"),
         icon: "check",
         tone: "success",
       },
       cancelling: {
-        title: "Cancelando prueba...",
-        subtitle: "Deteniendo procesos del motor y liberando puertos...",
+        title: t("session.screen.cancellingTitle"),
+        subtitle: t("session.screen.cancellingSubtitle"),
         icon: "alert-triangle",
         tone: "warning",
       },
       cancelled: {
-        title: "Prueba cancelada",
-        subtitle: "La prueba fue cancelada por el usuario. No se guardaron mediciones parciales.",
+        title: t("session.screen.cancelledTitle"),
+        subtitle: t("session.screen.cancelledSubtitle"),
         icon: "x-circle",
         tone: "warning",
       },
       failed: {
-        title: "Error en la medición",
-        subtitle: errorMessage || "Ocurrió un error inesperado durante la ejecución.",
+        title: t("session.screen.failedTitle"),
+        subtitle: errorMessage || t("session.screen.failedSubtitle"),
         icon: "alert-triangle",
         tone: "danger",
       },
@@ -136,7 +142,7 @@
         variant="secondary"
         onclick={() => onCancel?.()}
         data-testid="session-cancel-btn"
-        aria-label="Cancelar prueba de red en curso"
+        aria-label={t("session.screen.cancelAria")}
       >
         <Icon name="close" size={14} />
         {t("common.cancel")}
@@ -171,7 +177,7 @@
 
           {#if phase === "runningSend" || phase === "runningReceive"}
             <div class="nb-live-metric" role="status" aria-live="polite">
-              <span class="nb-live-label">Velocidad actual:</span>
+              <span class="nb-live-label">{t("session.screen.currentSpeed")}</span>
               <span class="nb-live-value" data-testid="live-throughput"
                 >{formatBps(currentThroughputBps)}</span
               >
@@ -187,13 +193,13 @@
             onclick={() => onViewResults?.()}
             data-testid="view-results-btn"
           >
-            Ver resultados detallados
+            {t("session.screen.viewResults")}
           </Button>
         </div>
       {:else if phase === "cancelled" || phase === "failed"}
         <div class="nb-session-terminal-actions">
           <Button variant="secondary" onclick={() => onRetry?.()} data-testid="retry-btn">
-            Repetir prueba
+            {t("results.basic.repeat")}
           </Button>
         </div>
       {/if}

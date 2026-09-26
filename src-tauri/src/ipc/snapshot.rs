@@ -20,7 +20,7 @@ impl Default for AppSnapshot {
     fn default() -> Self {
         Self {
             revision: 1,
-            app_version: "0.1.0".to_string(),
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
             locale: "es".to_string(),
             theme: "dark".to_string(),
             instance_id: String::new(),

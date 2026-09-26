@@ -8,7 +8,7 @@ use crate::identity::InstanceIdentity;
 use crate::ipc::events::EmisorDeEventos;
 use crate::ipc::response::{IpcResult, OneTimeTokenStore};
 use crate::ipc::snapshot::{AppSnapshot, SnapshotManager};
-use crate::logging::{LogLevel, init_logger};
+use crate::logging::init_logger;
 use crate::sampling::vivo::{ContadoresWindows, Muestreo};
 use crate::settings::SettingsStore;
 use std::path::PathBuf;
@@ -49,19 +49,38 @@ impl AppState {
             return;
         };
         match (activo, guardado.is_some()) {
-            (true, false) => {
-                match crate::discovery::Descubrimiento::iniciar(
-                    &self.identity,
-                    crate::discovery::CONTROL_PORT_DEFAULT,
-                    env!("CARGO_PKG_VERSION"),
-                    crate::control::server::VERSION_PROTOCOLO,
-                ) {
-                    Ok(d) => *guardado = Some(d),
-                    Err(e) => tracing::warn!("Descubrimiento mDNS no disponible: {e}"),
-                }
-            }
+            (true, false) => *guardado = self.iniciar_descubrimiento(),
             (false, true) => *guardado = None,
             _ => {}
+        }
+    }
+
+    /// Relanza la búsqueda y el anuncio mDNS desde cero («Buscar de nuevo»). Si el
+    /// descubrimiento está apagado en Ajustes no lo enciende: respeta ese ajuste.
+    pub fn reiniciar_descubrimiento(&self) {
+        let Ok(mut guardado) = self.descubrimiento.lock() else {
+            return;
+        };
+        if guardado.is_none() {
+            return;
+        }
+        // Se suelta primero: su `Drop` retira el anuncio y libera el puerto antes de crear el nuevo.
+        *guardado = None;
+        *guardado = self.iniciar_descubrimiento();
+    }
+
+    fn iniciar_descubrimiento(&self) -> Option<crate::discovery::Descubrimiento> {
+        match crate::discovery::Descubrimiento::iniciar(
+            &self.identity,
+            crate::discovery::CONTROL_PORT_DEFAULT,
+            env!("CARGO_PKG_VERSION"),
+            crate::control::server::VERSION_PROTOCOLO,
+        ) {
+            Ok(d) => Some(d),
+            Err(e) => {
+                tracing::warn!("Descubrimiento mDNS no disponible: {e}");
+                None
+            }
         }
     }
 
@@ -194,8 +213,10 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let identity_dir = app_dir.join("identity");
 
     crate::logging::init_tracing(&log_dir);
-    let _logger = init_logger(log_dir, LogLevel::Warn);
     let settings = Arc::new(SettingsStore::new(settings_path));
+    // El nivel guardado en los ajustes manda desde el arranque; antes se fijaba en `Warn`
+    // y `settings.json` solo se guardaba, sin aplicarse nunca.
+    let _logger = init_logger(log_dir, settings.get().log_level);
     let database = Arc::new(Database::open(db_path)?);
     let tokens = Arc::new(OneTimeTokenStore::new());
 
@@ -221,7 +242,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let initial_prefs = settings.get();
     let snapshot = Arc::new(SnapshotManager::new(AppSnapshot {
         revision: 1,
-        app_version: "0.1.0".to_string(),
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
         locale: initial_prefs.locale,
         theme: match initial_prefs.theme {
             crate::settings::ThemeMode::System => "system".to_string(),

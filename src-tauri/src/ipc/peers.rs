@@ -23,6 +23,14 @@ pub async fn peers_discovered_list(
     Ok(IpcResult::ok(equipos))
 }
 
+/// «Buscar de nuevo»: reinicia el descubrimiento mDNS para volver a preguntar a la red, por
+/// si alguien abrió su aplicación después de que arrancara la nuestra.
+#[tauri::command]
+pub async fn peers_rescan(state: State<'_, AppState>) -> Result<IpcResult<()>, String> {
+    state.reiniciar_descubrimiento();
+    Ok(IpcResult::ok(()))
+}
+
 #[tauri::command]
 pub async fn peers_list(state: State<'_, AppState>) -> Result<IpcResult<Vec<Peer>>, String> {
     let db_lock = state.database.connection().lock().unwrap();

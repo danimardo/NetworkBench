@@ -263,3 +263,56 @@ impl SettingsStore {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Lo que manda el frontend en `settings_update` (esquema Zod → JSON camelCase): sin
+    /// `windowGeometry` cuando no hay ninguna y con `customControlPort: null`.
+    const DEL_FRONTEND: &str = r#"{
+        "schemaVersion": 1, "theme": "dark", "locale": "en", "reduceMotion": false,
+        "logLevel": "info", "autoAcceptTrusted": true, "customControlPort": null,
+        "autostart": false, "minimizeToTray": true, "mdnsEnabled": false
+    }"#;
+
+    #[test]
+    fn acepta_las_preferencias_tal_como_las_envia_el_frontend() {
+        let p: Preferences = serde_json::from_str(DEL_FRONTEND).expect("deserializar");
+        assert_eq!(p.locale, "en");
+        assert_eq!(p.log_level, LogLevel::Info);
+        assert!(p.auto_accept_trusted && p.minimize_to_tray && !p.mdns_enabled);
+        assert_eq!(p.custom_control_port, None);
+        assert_eq!(p.window_geometry, None);
+    }
+
+    #[test]
+    fn el_nivel_de_registro_acepta_todos_los_valores_que_ofrece_el_frontend() {
+        for nivel in ["trace", "debug", "info", "warn", "error"] {
+            let json = DEL_FRONTEND.replace("\"info\"", &format!("\"{nivel}\""));
+            let p: Preferences =
+                serde_json::from_str(&json).unwrap_or_else(|e| panic!("{nivel}: {e}"));
+            assert_eq!(p.log_level.as_str(), nivel);
+        }
+    }
+
+    #[test]
+    fn guardar_y_releer_conserva_lo_que_se_cambio() {
+        let dir = std::env::temp_dir().join(format!("nb_settings_{}", uuid::Uuid::new_v4()));
+        let ruta = dir.join("settings.json");
+        let almacen = SettingsStore::new(ruta.clone());
+
+        let guardadas = almacen
+            .validate_and_update(false, |p| {
+                *p = serde_json::from_str(DEL_FRONTEND).unwrap();
+            })
+            .expect("guardar");
+        assert!(guardadas.auto_accept_trusted);
+
+        // Un almacén nuevo sobre el mismo fichero (= reabrir la app) ve lo guardado.
+        let releidas = SettingsStore::new(ruta).get();
+        assert!(releidas.auto_accept_trusted && releidas.minimize_to_tray);
+        assert_eq!(releidas.locale, "en");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

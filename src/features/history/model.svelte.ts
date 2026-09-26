@@ -1,3 +1,4 @@
+import { t } from "../../lib/i18n";
 import type {
   CohortComparisonResult,
   DeletePreview,
@@ -111,7 +112,7 @@ export class HistoryModel {
       this.deleteModal.preview = preview;
     } catch {
       this.deleteModal.preview = null;
-      this.deleteModal.error = "No se pudo obtener la previsualización del borrado";
+      this.deleteModal.error = t("history.errors.deletePreview");
     }
   }
 
@@ -131,7 +132,7 @@ export class HistoryModel {
         return true;
       }
     } catch {
-      this.deleteModal.error = "Error al ejecutar el borrado transaccional";
+      this.deleteModal.error = t("history.errors.deleteExecute");
     } finally {
       this.deleteModal.isDeleting = false;
     }

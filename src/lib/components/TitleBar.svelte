@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   /**
    * Barra de título propia (§16.13). La ventana se crea con `decorations: false`
    * y esta barra sustituye por completo la decoración nativa: arrastre por la
@@ -33,6 +34,7 @@
    * barra (`border-bottom`) — ninguna de las dos dependía del degradado.
    */
   import { onMount } from "svelte";
+  import AppIcon from "./AppIcon.svelte";
 
   interface Props {
     appName?: string;
@@ -45,15 +47,18 @@
     };
   }
 
-  let {
-    appName = "NetworkBench",
-    labels = {
-      minimize: "Minimizar",
-      maximize: "Maximizar",
-      restore: "Restaurar",
-      close: "Cerrar",
+  let { appName = "NetworkBench", labels }: Props = $props();
+
+  // Por defecto salen del catálogo y siguen al idioma; una constante de la prop se evaluaría
+  // una sola vez al montar.
+  const controlLabels = $derived(
+    labels ?? {
+      minimize: t("window.minimize"),
+      maximize: t("window.maximize"),
+      restore: t("window.restore"),
+      close: t("window.close"),
     },
-  }: Props = $props();
+  );
 
   let isMaximized = $state(false);
   let appWindow: Awaited<ReturnType<typeof getWin>> | null = null;
@@ -105,12 +110,17 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <header class="titlebar" data-tauri-drag-region ondblclick={handleDoubleClick}>
   <div class="titlebar-brand" data-tauri-drag-region>
-    <span class="titlebar-mark" aria-hidden="true"></span>
+    <AppIcon size={18} />
     <span class="titlebar-name">{appName}</span>
   </div>
 
   <div class="titlebar-controls">
-    <button class="winctrl" type="button" aria-label={labels.minimize} onclick={handleMinimize}>
+    <button
+      class="winctrl"
+      type="button"
+      aria-label={controlLabels.minimize}
+      onclick={handleMinimize}
+    >
       <svg
         width="14"
         height="14"
@@ -127,7 +137,7 @@
     <button
       class="winctrl"
       type="button"
-      aria-label={isMaximized ? labels.restore : labels.maximize}
+      aria-label={isMaximized ? controlLabels.restore : controlLabels.maximize}
       onclick={handleMaximizeToggle}
     >
       {#if isMaximized}
@@ -159,7 +169,7 @@
     <button
       class="winctrl winctrl-close"
       type="button"
-      aria-label={labels.close}
+      aria-label={controlLabels.close}
       onclick={handleClose}
     >
       <svg
@@ -209,14 +219,6 @@
     /* Toda esta franja es región de arrastre; los botones quedan fuera. */
     flex: 1 1 auto;
     min-width: 0;
-  }
-
-  .titlebar-mark {
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: var(--gradient-brand-mark);
   }
 
   .titlebar-name {

@@ -76,7 +76,7 @@
 
   {#if model.saveSuccess}
     <div
-      class="rounded-md bg-[var(--color-surface-success)] p-3 text-xs text-[var(--color-text-success)]"
+      class="rounded-md bg-[var(--color-success-soft)] p-3 text-xs text-[var(--color-success)]"
       role="status"
     >
       {t("settings.saveSuccess")}
@@ -85,7 +85,7 @@
 
   {#if model.saveError}
     <div
-      class="rounded-md bg-[var(--color-surface-danger)] p-3 text-xs text-[var(--color-text-danger)]"
+      class="rounded-md bg-[var(--color-danger-soft)] p-3 text-xs text-[var(--color-danger)]"
       role="alert"
     >
       {model.saveError}
@@ -94,7 +94,7 @@
 
   <!-- Navegación por pestañas -->
   <div
-    class="border-b border-[var(--color-border)]"
+    class="border-b border-[var(--border-default)]"
     role="tablist"
     aria-label={t("settings.title")}
     tabindex="-1"
@@ -111,8 +111,8 @@
           aria-selected={activeTab === tab.id}
           tabindex={activeTab === tab.id ? 0 : -1}
           class="whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2"
-          class:border-[var(--color-primary)]={activeTab === tab.id}
-          class:text-[var(--color-primary)]={activeTab === tab.id}
+          class:border-[var(--color-accent)]={activeTab === tab.id}
+          class:text-[var(--color-accent)]={activeTab === tab.id}
           class:border-transparent={activeTab !== tab.id}
           class:text-[var(--color-text-secondary)]={activeTab !== tab.id}
           onclick={() => (activeTab = tab.id)}
@@ -126,7 +126,7 @@
   <!-- Contenido de las pestañas -->
   <div id="panel-{activeTab}" role="tabpanel" aria-labelledby="tab-{activeTab}">
     {#if activeTab === "appearance"}
-      <AppearanceSettings />
+      <AppearanceSettings {model} />
     {:else if activeTab === "network"}
       <NetworkSettings {model} />
     {:else if activeTab === "trust"}

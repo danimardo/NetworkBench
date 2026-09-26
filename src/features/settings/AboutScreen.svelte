@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from "../../lib/components/Card.svelte";
+  import AppIcon from "../../lib/components/AppIcon.svelte";
   import { t } from "../../lib/i18n";
   import type { SettingsModel } from "./model.svelte";
 
@@ -14,27 +15,26 @@
   <Card variant="default">
     <div class="p-6 space-y-6">
       <div class="flex items-center gap-4">
-        <div
-          class="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white font-bold text-xl"
-        >
-          NB
-        </div>
+        <AppIcon size={56} framed />
         <div>
           <h2 class="text-lg font-bold">NetworkBench</h2>
           <p class="text-xs text-[var(--color-text-secondary)]">
             {t("settings.aboutSubtitle")}
           </p>
+          <p class="mt-1 text-xs font-medium text-[var(--color-text-primary)]">
+            {t("settings.developedBy")}
+          </p>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4 rounded-lg bg-[var(--color-surface-sunken)] p-4 text-xs">
+      <div class="grid grid-cols-2 gap-4 rounded-lg bg-[var(--surface-field)] p-4 text-xs">
         <div>
           <span class="text-[var(--color-text-muted)] block">{t("settings.appVersion")}:</span>
-          <span class="font-mono font-semibold">{model.aboutInfo?.appVersion ?? "0.1.0"}</span>
+          <span class="font-mono font-semibold">{model.aboutInfo?.appVersion ?? "—"}</span>
         </div>
         <div>
           <span class="text-[var(--color-text-muted)] block">{t("settings.protocolVersion")}:</span>
-          <span class="font-mono font-semibold">{model.aboutInfo?.protocolVersion ?? "v1"}</span>
+          <span class="font-mono font-semibold">{model.aboutInfo?.protocolVersion ?? "—"}</span>
         </div>
         <div>
           <span class="text-[var(--color-text-muted)] block">{t("settings.engine")}:</span>
@@ -61,9 +61,9 @@
       </div>
 
       <div
-        class="pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)]"
+        class="pt-2 border-t border-[var(--border-default)] text-xs text-[var(--color-text-muted)]"
       >
-        {model.aboutInfo?.copyright ?? "© 2026 Daniel Díez Mardomingo y colaboradores"}
+        {model.aboutInfo?.copyright ?? ""}
       </div>
     </div>
   </Card>

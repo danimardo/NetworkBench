@@ -31,7 +31,7 @@ export async function getWindowGeometry(): Promise<WindowGeometry | null> {
 
 export async function saveWindowGeometry(geom: WindowGeometry): Promise<void> {
   try {
-    await invokeCommand("window_save_geometry", geom);
+    await invokeCommand("window_save_geometry", { geometry: geom });
   } catch {
     logger.error({
       module: "window",

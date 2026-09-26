@@ -47,7 +47,10 @@ export async function invokeCommand<
   TInput extends Record<string, unknown> = Record<string, unknown>,
 >(command: string, input?: TInput, outputSchema?: z.ZodType<TOutput>): Promise<TOutput> {
   try {
-    const rawResult = await callNativeInvoke(command, input ? { request: input } : undefined);
+    // `input` es el objeto de argumentos tal cual: Tauri casa sus claves (en camelCase) con
+    // los parámetros de la función Rust. Envolverlo en `{ request: … }` hacía fallar todo
+    // comando con parámetros; `check-ipc-commands.mjs` comprueba que las claves casan.
+    const rawResult = await callNativeInvoke(command, input);
 
     // Si viene en formato IpcResult nativo { ok: true, value } | { ok: false, error }
     if (rawResult && typeof rawResult === "object" && "ok" in rawResult) {

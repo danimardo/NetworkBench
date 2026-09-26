@@ -3,6 +3,7 @@ import {
   listDiscoveredPeers,
   listPeers,
   manualConnectPeer,
+  rescanPeers,
   startPairing,
   type DiscoveredPeer,
 } from "../../lib/api/peers";
@@ -116,6 +117,26 @@ export class PeersModel {
     this.scanTimer = setTimeout(() => {
       this.scanning = false;
     }, SCAN_TIMEOUT_MS);
+  }
+
+  /**
+   * «Buscar de nuevo»: pide al backend reiniciar mDNS y vuelve a mostrar «Buscando…» hasta
+   * que llegue una respuesta o pase `SCAN_TIMEOUT_MS`. Sin efecto mientras ya está buscando.
+   */
+  async rescan(): Promise<void> {
+    if (this.scanning) return;
+    this.scanning = true;
+    this.error = null;
+    if (this.scanTimer) clearTimeout(this.scanTimer);
+    this.scanTimer = setTimeout(() => {
+      this.scanning = false;
+    }, SCAN_TIMEOUT_MS);
+    try {
+      await rescanPeers();
+    } catch (err) {
+      this.error = messageOf(err, "peers.errors.refresh");
+    }
+    await this.refresh();
   }
 
   stop(): void {

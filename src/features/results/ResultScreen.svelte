@@ -52,14 +52,14 @@
     <MetricCard type="directions" title={t("results.details")} {forwardDir} {reverseDir} />
     <MetricCard
       type="stability"
-      title="Estabilidad de conexión"
+      title={t("results.stability")}
       helpText={t("tooltips.stability")}
       {forwardDir}
       {reverseDir}
     />
     <MetricCard
       type="retransmission"
-      title="Pérdidas y retransmisiones"
+      title={t("results.lossAndRetransmissions")}
       helpText={t("tooltips.retransmissions")}
       {forwardDir}
       {reverseDir}

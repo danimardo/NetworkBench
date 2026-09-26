@@ -1,5 +1,6 @@
 <script lang="ts">
   import Card from "../../lib/components/Card.svelte";
+  import Switch from "../../lib/components/Switch.svelte";
   import { t } from "../../lib/i18n";
   import type { SettingsModel } from "./model.svelte";
 
@@ -9,9 +10,8 @@
 
   let { model }: Props = $props();
 
-  function handleAutoAcceptToggle() {
-    if (!model.prefs) return;
-    model.update({ autoAcceptTrusted: !model.prefs.autoAcceptTrusted });
+  function handleAutoAcceptToggle(value: boolean) {
+    void model.update({ autoAcceptTrusted: value });
   }
 </script>
 
@@ -26,22 +26,15 @@
             {t("settings.autoAcceptTrustedDesc")}
           </p>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={model.prefs?.autoAcceptTrusted ?? false}
-          class="nb-switch"
-          class:nb-switch-checked={model.prefs?.autoAcceptTrusted ?? false}
-          onclick={handleAutoAcceptToggle}
-          aria-label={t("settings.autoAcceptTrusted")}
-        >
-          <span class="nb-switch-thumb"></span>
-        </button>
+        <Switch
+          checked={model.prefs?.autoAcceptTrusted ?? false}
+          onchange={handleAutoAcceptToggle}
+          disabled={!model.prefs}
+          label={t("settings.autoAcceptTrusted")}
+        />
       </div>
 
-      <div
-        class="rounded bg-[var(--color-surface-sunken)] p-3 text-xs text-[var(--color-text-muted)]"
-      >
+      <div class="rounded bg-[var(--surface-field)] p-3 text-xs text-[var(--color-text-muted)]">
         {t("settings.autoAcceptSecurityNotice")}
       </div>
     </div>

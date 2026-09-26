@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../i18n";
   /**
    * Notificación interna, DENTRO de la ventana de la app — no confundir con
    * el toast NATIVO de Windows (§10.4: solo cuando la app está minimizada/
@@ -42,7 +43,12 @@
   <span class="nb-toast-icon"><Icon name={resolvedIcon} size={16} /></span>
   <span class="nb-toast-text">{@render children()}</span>
   {#if onDismiss}
-    <button type="button" class="nb-toast-dismiss" aria-label="Cerrar aviso" onclick={onDismiss}>
+    <button
+      type="button"
+      class="nb-toast-dismiss"
+      aria-label={t("common.dismissNotice")}
+      onclick={onDismiss}
+    >
       <Icon name="close" size={13} />
     </button>
   {/if}

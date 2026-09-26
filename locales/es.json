@@ -15,7 +15,9 @@
     "session": "Medición",
     "results": "Resultados",
     "history": "Historial",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "home": "Inicio",
+    "main": "Navegación principal"
   },
   "common": {
     "ok": "Aceptar",
@@ -36,7 +38,13 @@
     "discard": "Descartar",
     "apply": "Aplicar",
     "checking": "Comprobando...",
-    "deleting": "Eliminando..."
+    "deleting": "Eliminando...",
+    "on": "Activado",
+    "off": "Desactivado",
+    "thisDevice": "Este equipo",
+    "dismissNotice": "Cerrar aviso",
+    "notEvaluable": "No evaluable",
+    "notAvailable": "No disponible"
   },
   "errors": {
     "NB-CONN-001": "No se puede alcanzar el equipo de destino en la dirección indicada.",
@@ -151,7 +159,13 @@
     "status_running": "Comprobando...",
     "status_passed": "Correcto",
     "status_warning": "Aviso",
-    "status_failed": "Problema detectado"
+    "status_failed": "Problema detectado",
+    "aria": "Comprobaciones previas (Preflight)",
+    "title": "Verificaciones previas a la medición",
+    "subtitle": "Comprobando que el motor, los puertos, el cortafuegos y el adaptador están listos antes de iniciar el benchmark.",
+    "viewDetail": "Ver detalle",
+    "retry": "Reintentar verificaciones",
+    "proceed": "Continuar con la prueba"
   },
   "settings": {
     "title": "Ajustes de la aplicación",
@@ -214,7 +228,11 @@
     "engine": "Motor de medición",
     "license": "Licencia",
     "licenseNotice": "Distribuido bajo la Licencia Pública General de GNU v3 (GPL-3.0-or-later). Software libre y de código abierto sin telemetría ni servicios externos.",
-    "attributionNotice": "Microsoft y NTTTCP son marcas o componentes de Microsoft Corporation. Consulta THIRD_PARTY_NOTICES.md para avisos y licencias de terceros."
+    "attributionNotice": "Microsoft y NTTTCP son marcas o componentes de Microsoft Corporation. Consulta THIRD_PARTY_NOTICES.md para avisos y licencias de terceros.",
+    "languageDesc": "Idioma de la interfaz. Se aplica al instante.",
+    "recommended": "Recomendado",
+    "reduceMotionDesc": "Desactiva animaciones y transiciones no esenciales",
+    "developedBy": "Desarrollada por Daniel Díez Mardomingo"
   },
   "plan": {
     "protocol": "Protocolo",
@@ -249,6 +267,25 @@
       "pairRejected": "El otro equipo no confirmó el emparejamiento.",
       "pairFailed": "No se pudo completar el emparejamiento.",
       "pairExpired": "El emparejamiento caducó."
+    },
+    "screen": {
+      "title": "Equipos disponibles",
+      "subtitle": "Selecciona un equipo de la red local para iniciar una medición de rendimiento de red.",
+      "connectByIp": "Conectar por IP",
+      "rescan": "Buscar de nuevo",
+      "emptyDesc": "Asegúrate de que NetworkBench esté abierto en el otro equipo, pulsa la lupa para buscar de nuevo o conéctate por IP.",
+      "manualTitle": "Conexión manual por IP",
+      "manualDesc": "Introduce la dirección IP o nombre DNS y el puerto de control (por defecto 7411).",
+      "addressLabel": "Dirección IP o Hostname",
+      "addressPlaceholder": "ej. 192.168.1.50 o pc-laboratorio",
+      "portLabel": "Puerto de control",
+      "errAddress": "Introduce una dirección IP o nombre de host válido",
+      "errPort": "El puerto debe ser un número entre 1024 y 65535",
+      "pairingTitle": "Emparejar equipo nuevo",
+      "pairingInstructions": "Comprueba que el siguiente código de 6 dígitos coincide exactamente en ambos equipos.",
+      "pairingExpires": "Caduca en {seconds} s",
+      "pairingConfirm": "Confirmar código",
+      "emptyTitle": "No se han detectado equipos"
     }
   },
   "session": {
@@ -269,6 +306,27 @@
       "cancel": "No se pudo cancelar la prueba.",
       "failed": "La prueba terminó con un error. Si se completó una dirección, se ha guardado como sesión incompleta en el historial.",
       "noResult": "La prueba terminó, pero no se pudo leer el resultado guardado."
+    },
+    "screen": {
+      "preparingTitle": "Preparando prueba...",
+      "preparingSubtitle": "Comprobando puertos y negociando el plan de medición.",
+      "sendTitle": "Midiendo envío (A → B)",
+      "sendSubtitle": "Enviando flujo TCP de {streams} stream(s) hacia {peer}.",
+      "receiveTitle": "Midiendo recepción (B → A)",
+      "receiveSubtitle": "Recibiendo flujo TCP de {streams} stream(s) desde {peer}.",
+      "analyzingTitle": "Analizando resultados",
+      "analyzingSubtitle": "Consolidando métricas oficiales del receptor y veredictos.",
+      "completedTitle": "Prueba completada con éxito",
+      "completedSubtitle": "Las mediciones bidireccionales han sido registradas y persistidas.",
+      "cancellingTitle": "Cancelando prueba...",
+      "cancellingSubtitle": "Deteniendo procesos del motor y liberando puertos...",
+      "cancelledTitle": "Prueba cancelada",
+      "cancelledSubtitle": "La prueba fue cancelada por el usuario. No se guardaron mediciones parciales.",
+      "failedTitle": "Error en la medición",
+      "failedSubtitle": "Ocurrió un error inesperado durante la ejecución.",
+      "cancelAria": "Cancelar prueba de red en curso",
+      "currentSpeed": "Velocidad actual:",
+      "viewResults": "Ver resultados detallados"
     }
   },
   "results": {
@@ -277,10 +335,65 @@
     "latency": "Latencia estimada",
     "packetLoss": "Pérdida de paquetes",
     "cpuUsage": "Uso de CPU",
-    "verdict": "Diagnóstico de red",
+    "verdict": {
+      "wifiCapacity": "Conexión inalámbrica (capacidad de enlace no determinable)",
+      "capacityUnknown": "Capacidad de referencia no determinable",
+      "explanationLabel": "Explicación del veredicto y velocidad oficial",
+      "officialNote": "La velocidad oficial procede exclusivamente de los datos recibidos por el receptor en destino.",
+      "linkUtilization": "{percent}% de un enlace de {capacity}"
+    },
     "details": "Detalles por sentido",
     "retest": "Repetir esta prueba",
-    "history": "Ver en el historial"
+    "history": "Ver en el historial",
+    "basic": {
+      "title": "Resultado de la medición",
+      "completed": "Completada",
+      "subtitle": "Medición bidireccional secuencial con {peer} ({address}).",
+      "localNetwork": "red local",
+      "repeat": "Repetir prueba",
+      "backToPeers": "Volver a equipos",
+      "sendAtoB": "Envío (A → B)",
+      "receiveBtoA": "Recepción (B → A)",
+      "protocol": "Protocolo:",
+      "durationPerDirection": "Duración por sentido:",
+      "dateTime": "Fecha y hora:",
+      "fromThisTo": "Desde este equipo hacia {peer}",
+      "fromToThis": "Desde {peer} hacia este equipo",
+      "officialReceiver": "Medición oficial del receptor"
+    },
+    "metric": {
+      "uploadAtoB": "Subida (A → B)",
+      "downloadBtoA": "Bajada (B → A)",
+      "regularityAtoB": "Regularidad A → B:",
+      "regularityBtoA": "Regularidad B → A:",
+      "dips": "Caídas momentáneas:",
+      "lossAtoB": "Pérdida/Retransmisión A → B:",
+      "lossBtoA": "Pérdida/Retransmisión B → A:",
+      "receiverUseAtoB": "Uso receptor A → B:",
+      "receiverUseBtoA": "Uso receptor B → A:"
+    },
+    "stability": "Estabilidad de conexión",
+    "lossAndRetransmissions": "Pérdidas y retransmisiones",
+    "technical": {
+      "description": "Parámetros exactos de la sesión, configuración de hardware y diagnóstico consolidado.",
+      "disclosure": "Aviso: La información técnica exportable ha sido saneada automáticamente para eliminar contraseñas o certificados privados. Puede compartirse para diagnóstico técnico de red.",
+      "identification": "Identificación y versiones",
+      "sessionId": "ID de sesión:",
+      "appVersion": "Versión App:",
+      "engine": "Motor:",
+      "thresholdsHash": "Hash Umbrales:",
+      "addressesAndEngine": "Direcciones y Motor",
+      "officialSpeed": "Velocidad oficial (Receptor):",
+      "bytesSent": "Bytes enviados:",
+      "cpuSender": "CPU Emisor:",
+      "bytesReceived": "Bytes recibidos:",
+      "cpuReceiver": "CPU Receptor:"
+    },
+    "chart": {
+      "legendForward": "Subida A → B (trazo continuo)",
+      "legendReverse": "Bajada B → A (trazo discontinuo)",
+      "disclaimer": "Nota: Las muestras periódicas reflejan el caudal de la interfaz y pueden incluir tráfico ajeno a la prueba (FR-027). La velocidad oficial certificada proviene del cálculo consolidado del receptor."
+    }
   },
   "verdict": {
     "ok_title": "Rendimiento acorde a la capacidad del enlace",
@@ -351,7 +464,37 @@
     "evolution_title": "Evolución con este equipo",
     "empty_search": "No se encontraron pruebas coincidentes",
     "back_to_list": "Volver al historial",
-    "details": "Ver detalles"
+    "details": "Ver detalles",
+    "actions": {
+      "repeatError": "No se pudieron reconstruir los parámetros válidos de la prueba",
+      "aria": "Acciones de la sesión"
+    },
+    "detail": {
+      "aria": "Detalle histórico de prueba",
+      "send": "Envío (Subida)",
+      "receive": "Recepción (Bajada)",
+      "streams": "Streams",
+      "duration": "Duración",
+      "adapters": "Adaptadores de red utilizados",
+      "localClient": "Cliente local:",
+      "remoteServer": "Servidor remoto:",
+      "unspecified": "No especificado"
+    },
+    "verdict": {
+      "noData": "Sin datos",
+      "ok": "Óptimo",
+      "warn": "Aviso",
+      "problem": "Problema",
+      "notEvaluable": "No evaluable"
+    },
+    "delete_affected_sessions": "Sesiones afectadas:",
+    "delete_affected_samples": "Muestras asociadas:",
+    "trend_empty": "No hay suficientes mediciones completadas para trazar la evolución.",
+    "defaultPeerName": "Equipo",
+    "errors": {
+      "deletePreview": "No se pudo obtener la previsualización del borrado",
+      "deleteExecute": "Error al ejecutar el borrado transaccional"
+    }
   },
   "advanced": {
     "title": "Opciones avanzadas",
@@ -383,7 +526,16 @@
     "preview_title": "Vista previa del plan",
     "preview_ports": "Bloque de puertos asignado: {ports}",
     "preview_estimated": "Duración estimada total: ~{seconds} s",
-    "simultaneous_notice": "La prueba simultánea ejecuta emisor y receptor concurrentes en cada equipo sin solape de puertos (hasta 32 streams por sentido)."
+    "simultaneous_notice": "La prueba simultánea ejecuta emisor y receptor concurrentes en cada equipo sin solape de puertos (hasta 32 streams por sentido).",
+    "paramsOutOfRange": "Parámetros fuera de los límites permitidos",
+    "portRangeSummary": "{send} (envío) y {receive} (recepción)",
+    "closeAria": "Cerrar opciones avanzadas",
+    "bufferHint": "4096..4194304 (potencias de 2)",
+    "applyConfig": "Aplicar configuración",
+    "portRangeOne": "{range} ({count} puerto)",
+    "portRangeMany": "{range} ({count} puertos)",
+    "planValid": "PLAN VÁLIDO",
+    "planInvalid": "PARÁMETROS INVÁLIDOS"
   },
   "udp": {
     "title": "Resultado de prueba UDP",
@@ -435,6 +587,33 @@
       "initiator_address": "Dirección del equipo local",
       "responder_address": "Dirección del equipo remoto",
       "page_notice": "Documento generado localmente sin telemetría ni conexión externa"
+    },
+    "report": {
+      "localDevice": "Equipo Local",
+      "remoteDevice": "Equipo Remoto"
     }
+  },
+  "errorResolution": {
+    "manualAria": "Instrucciones manuales",
+    "powershellTitle": "Instrucciones para PowerShell (como Administrador)",
+    "actionsAria": "Acciones de resolución",
+    "copied": "¡Copiado!",
+    "copyCommands": "Copiar comandos"
+  },
+  "device": {
+    "available": "Disponible",
+    "busy": "Ocupado",
+    "unreachable": "No accesible",
+    "incompatible": "Versión incompatible",
+    "trusted": "De confianza",
+    "known": "Conocido",
+    "favorite": "Marcar como favorito",
+    "unfavorite": "Quitar de favoritos"
+  },
+  "window": {
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restore": "Restaurar",
+    "close": "Cerrar"
   }
 }

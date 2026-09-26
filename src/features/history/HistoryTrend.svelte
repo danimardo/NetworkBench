@@ -68,7 +68,7 @@
   }
 </script>
 
-<div class="trend-container" role="region" aria-label="Evolución con este equipo">
+<div class="trend-container" role="region" aria-label={t("history.evolution_title")}>
   <Card>
     <div class="trend-header">
       <h3 class="trend-title">{t("history.evolution_title")}: {peerName}</h3>
@@ -76,7 +76,7 @@
     </div>
 
     {#if validPoints.length === 0}
-      <p class="trend-empty">No hay suficientes mediciones completadas para trazar la evolución.</p>
+      <p class="trend-empty">{t("history.trend_empty")}</p>
     {:else}
       <div class="chart-wrapper">
         <svg

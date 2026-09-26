@@ -6,6 +6,7 @@
   import TextField from "../../lib/components/TextField.svelte";
   import VerificationCode from "../../lib/components/VerificationCode.svelte";
   import Icon from "../../lib/components/Icon.svelte";
+  import Tooltip from "../../lib/components/Tooltip.svelte";
   import { t } from "../../lib/i18n";
   import type { Peer } from "../../lib/contracts/peer";
 
@@ -14,6 +15,8 @@
     isScanning?: boolean;
     onSelectPeer?: (peer: Peer) => void;
     onManualConnect?: (address: string, port: number) => void;
+    /** «Buscar de nuevo»: vuelve a preguntar a la red por equipos. */
+    onRescan?: () => void;
     onCancelPairing?: () => void;
     onConfirmPairing?: (peer: Peer, code: string) => void;
     activePairingPeer?: Peer | null;
@@ -31,6 +34,7 @@
     isScanning = false,
     onSelectPeer,
     onManualConnect,
+    onRescan,
     onCancelPairing,
     onConfirmPairing,
     activePairingPeer = null,
@@ -48,7 +52,7 @@
   let manualError = $state("");
   // Quién abrió el diálogo (§13 del correo: el retorno de foco lo gestiona quien lo
   // instancia, Dialog.svelte solo mueve el foco hacia dentro al montarse). Hay dos
-  // botones que pueden abrirlo ("Conectar manualmente" y "Conectar por IP" del estado
+  // botones que pueden abrirlo (el de la cabecera y el del estado
   // vacío): `document.activeElement` en el momento de abrir vale para cualquiera de los dos.
   let manualModalTrigger: HTMLElement | null = null;
 
@@ -77,17 +81,23 @@
     const portNum = parseInt(manualPort, 10);
 
     if (!addr) {
-      manualError = "Introduce una dirección IP o nombre de host válido";
+      manualError = t("peers.screen.errAddress");
       return;
     }
     if (isNaN(portNum) || portNum < 1024 || portNum > 65535) {
-      manualError = "El puerto debe ser un número entre 1024 y 65535";
+      manualError = t("peers.screen.errPort");
       return;
     }
 
     manualError = "";
     onManualConnect?.(addr, portNum);
     closeManualModal();
+  }
+
+  /** Sin efecto mientras ya está buscando: no se encadenan búsquedas. */
+  function handleRescan() {
+    if (isScanning) return;
+    onRescan?.();
   }
 
   function mapTrust(peer: Peer) {
@@ -106,15 +116,37 @@
 <div class="nb-peers-container">
   <header class="nb-peers-header">
     <div class="nb-peers-title-group">
-      <h1 class="nb-peers-title">Equipos disponibles</h1>
+      <h1 class="nb-peers-title">{t("peers.screen.title")}</h1>
       <p class="nb-peers-subtitle">
-        Selecciona un equipo de la red local para iniciar una medición de rendimiento de red.
+        {t("peers.screen.subtitle")}
       </p>
     </div>
-    <Button variant="secondary" onclick={handleOpenManual} data-testid="manual-connect-btn">
-      <Icon name="link" size={14} />
-      Conectar manualmente
-    </Button>
+    <div class="nb-peers-actions">
+      <!-- Siempre disponible: también con equipos en la lista puede aparecer otro nuevo. -->
+      <Tooltip text={t("peers.screen.rescan")} placement="bottom">
+        {#snippet children(tooltipId)}
+          <button
+            type="button"
+            class="nb-iconbtn"
+            class:nb-iconbtn-spinning={isScanning}
+            aria-label={t("peers.screen.rescan")}
+            aria-describedby={tooltipId}
+            disabled={isScanning}
+            onclick={handleRescan}
+            data-testid="rescan-btn"
+          >
+            <Icon name="refresh" size={16} />
+          </button>
+        {/snippet}
+      </Tooltip>
+      <!-- Con la lista vacía ya está el botón grande del centro: nunca hay dos a la vez. -->
+      {#if peers.length > 0}
+        <Button variant="secondary" onclick={handleOpenManual} data-testid="manual-connect-btn">
+          {#snippet icon()}<Icon name="link" size={14} />{/snippet}
+          {t("peers.screen.connectByIp")}
+        </Button>
+      {/if}
+    </div>
   </header>
 
   {#if errorMessage}
@@ -126,17 +158,28 @@
 
   {#if peers.length === 0}
     <div class="nb-peers-empty" role="status" aria-live="polite">
-      <div class="nb-peers-empty-icon">
+      <!-- La lupa es el botón de volver a buscar (mismo comportamiento que el de la cabecera). -->
+      <button
+        type="button"
+        class="nb-peers-empty-icon"
+        class:nb-peers-empty-icon-scanning={isScanning}
+        aria-label={t("peers.screen.rescan")}
+        disabled={isScanning}
+        onclick={handleRescan}
+        data-testid="rescan-empty-btn"
+      >
         <Icon name="search" size={28} />
-      </div>
+      </button>
       <h2 class="nb-peers-empty-title">
-        {isScanning ? "Buscando equipos en la red local..." : "No se han detectado equipos"}
+        {isScanning ? t("peers.discover") : t("peers.screen.emptyTitle")}
       </h2>
       <p class="nb-peers-empty-desc">
-        Asegúrate de que NetworkBench esté abierto en el otro equipo o utiliza la conexión manual.
+        {t("peers.screen.emptyDesc")}
       </p>
       {#if !isScanning}
-        <Button variant="primary" onclick={handleOpenManual}>Conectar por IP</Button>
+        <Button variant="primary" onclick={handleOpenManual} data-testid="manual-connect-empty-btn">
+          {t("peers.screen.connectByIp")}
+        </Button>
       {/if}
     </div>
   {:else}
@@ -160,26 +203,26 @@
 
   <!-- Diálogo de conexión manual -->
   {#if showManualModal}
-    <Dialog title="Conexión manual por IP" onClose={closeManualModal}>
+    <Dialog title={t("peers.screen.manualTitle")} onClose={closeManualModal}>
       <form onsubmit={handleManualSubmit} class="nb-manual-form">
         <p class="nb-manual-desc">
-          Introduce la dirección IP o nombre DNS y el puerto de control (por defecto 7411).
+          {t("peers.screen.manualDesc")}
         </p>
 
         <TextField
-          label="Dirección IP o Hostname"
-          placeholder="ej. 192.168.1.50 o pc-laboratorio"
+          label={t("peers.screen.addressLabel")}
+          placeholder={t("peers.screen.addressPlaceholder")}
           bind:value={manualAddress}
           error={manualError ? manualError : undefined}
         />
 
-        <TextField label="Puerto de control" placeholder="7411" bind:value={manualPort} />
+        <TextField label={t("peers.screen.portLabel")} placeholder="7411" bind:value={manualPort} />
 
         <div class="nb-dialog-actions">
           <Button variant="ghost" onclick={closeManualModal}>
             {t("common.cancel")}
           </Button>
-          <Button variant="primary" type="submit">Conectar</Button>
+          <Button variant="primary" type="submit">{t("peers.connectBtn")}</Button>
         </div>
       </form>
     </Dialog>
@@ -187,10 +230,10 @@
 
   <!-- Diálogo de emparejamiento (Pairing modal) -->
   {#if activePairingPeer}
-    <Dialog title="Emparejar equipo nuevo" onClose={() => onCancelPairing?.()}>
+    <Dialog title={t("peers.screen.pairingTitle")} onClose={() => onCancelPairing?.()}>
       <div class="nb-pairing-content">
         <p class="nb-pairing-instructions">
-          Comprueba que el siguiente código de 6 dígitos coincide exactamente en ambos equipos.
+          {t("peers.screen.pairingInstructions")}
         </p>
 
         <div class="nb-pairing-code-box">
@@ -199,7 +242,7 @@
 
         <div class="nb-pairing-timer" role="timer" aria-live="off">
           <Icon name="clock" size={14} />
-          <span>Caduca en {pairingSecondsLeft} s</span>
+          <span>{t("peers.screen.pairingExpires", { seconds: pairingSecondsLeft })}</span>
         </div>
 
         <div class="nb-dialog-actions">
@@ -216,7 +259,7 @@
             data-testid="pairing-confirm-btn"
             disabled={busy}
           >
-            Confirmar código
+            {t("peers.screen.pairingConfirm")}
           </Button>
         </div>
       </div>
@@ -240,6 +283,61 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-4);
+  }
+
+  .nb-peers-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  .nb-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+    background: var(--surface-secondary);
+    color: var(--color-text-secondary);
+    cursor: default;
+    transition:
+      background var(--duration-base) ease,
+      border-color var(--duration-base) ease,
+      color var(--duration-base) ease;
+  }
+
+  .nb-iconbtn:hover:not(:disabled) {
+    background: var(--surface-secondary-hover);
+    border-color: var(--border-hover);
+    color: var(--color-text-primary);
+  }
+
+  .nb-iconbtn:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .nb-iconbtn:disabled {
+    color: var(--color-text-disabled);
+  }
+
+  .nb-iconbtn-spinning :global(svg) {
+    animation: nb-peers-spin var(--duration-spinner) linear infinite;
+  }
+
+  @keyframes nb-peers-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nb-iconbtn-spinning :global(svg) {
+      animation: none;
+    }
   }
 
   .nb-peers-title {
@@ -273,8 +371,8 @@
     align-items: center;
     justify-content: center;
     padding: var(--space-12) var(--space-6);
-    background: var(--color-surface);
-    border: 1px dashed var(--color-border);
+    background: var(--surface-secondary);
+    border: 1px dashed var(--border-default);
     border-radius: var(--radius-lg);
     text-align: center;
     gap: var(--space-3);
@@ -283,12 +381,46 @@
   .nb-peers-empty-icon {
     width: 56px;
     height: 56px;
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-pill);
     background: var(--icon-chip-bg);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--color-accent);
+    border: none;
+    padding: 0;
+    cursor: default;
+    transition:
+      background var(--duration-base) ease,
+      box-shadow var(--duration-base) ease;
+  }
+
+  .nb-peers-empty-icon:hover:not(:disabled) {
+    box-shadow: 0 0 0 4px var(--hover-tint);
+  }
+
+  .nb-peers-empty-icon:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 3px;
+  }
+
+  .nb-peers-empty-icon-scanning {
+    animation: nb-peers-pulse var(--duration-emphasis-pulse) ease-in-out infinite alternate;
+  }
+
+  @keyframes nb-peers-pulse {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.45;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nb-peers-empty-icon-scanning {
+      animation: none;
+    }
   }
 
   .nb-peers-empty-title {

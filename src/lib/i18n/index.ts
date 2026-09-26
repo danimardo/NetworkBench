@@ -1,5 +1,6 @@
 import esCatalog from "../../../locales/es.json";
 import enCatalog from "../../../locales/en.json";
+import { localeState } from "./locale-state.svelte";
 
 export type SupportedLocale = "es" | "en";
 
@@ -12,7 +13,6 @@ const catalogs: Record<SupportedLocale, TranslationCatalogs> = {
   en: enCatalog,
 };
 
-let currentLocale: SupportedLocale = "es";
 const subscribers = new Set<(locale: SupportedLocale) => void>();
 
 function resolveKey(obj: unknown, path: string): string | undefined {
@@ -29,30 +29,32 @@ function resolveKey(obj: unknown, path: string): string | undefined {
 }
 
 export function getLocale(): SupportedLocale {
-  return currentLocale;
+  return localeState.current;
 }
 
 export function setLocale(locale: SupportedLocale): void {
   if (locale !== "es" && locale !== "en") {
     locale = "es";
   }
-  currentLocale = locale;
+  localeState.current = locale;
   for (const sub of subscribers) {
-    sub(currentLocale);
+    sub(locale);
   }
 }
 
 export function subscribeLocale(callback: (locale: SupportedLocale) => void): () => void {
   subscribers.add(callback);
-  callback(currentLocale);
+  callback(localeState.current);
   return () => {
     subscribers.delete(callback);
   };
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {
-  let template = resolveKey(catalogs[currentLocale], key);
-  if (template === undefined && currentLocale !== "es") {
+  // Se lee aquí, dentro de la función, para que quien llame a `t()` quede suscrito al idioma.
+  const locale = localeState.current;
+  let template = resolveKey(catalogs[locale], key);
+  if (template === undefined && locale !== "es") {
     template = resolveKey(catalogs.es, key);
   }
   if (template === undefined) {
@@ -69,7 +71,7 @@ export function t(key: string, params?: Record<string, string | number>): string
 export function formatNumber(
   val: number | bigint,
   decimals = 2,
-  locale: SupportedLocale = currentLocale,
+  locale: SupportedLocale = localeState.current,
 ): string {
   const num = typeof val === "bigint" ? Number(val) : val;
   return new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-US", {
@@ -81,7 +83,7 @@ export function formatNumber(
 
 export function formatThroughput(
   bps: number | bigint,
-  locale: SupportedLocale = currentLocale,
+  locale: SupportedLocale = localeState.current,
 ): string {
   const b = typeof bps === "bigint" ? Number(bps) : bps;
   if (b >= 1_000_000_000) {
@@ -101,7 +103,7 @@ export function formatThroughput(
 
 export function formatBytes(
   bytes: number | bigint,
-  locale: SupportedLocale = currentLocale,
+  locale: SupportedLocale = localeState.current,
 ): string {
   const b = typeof bytes === "bigint" ? Number(bytes) : bytes;
   if (b >= 1024 * 1024 * 1024) {
@@ -121,7 +123,7 @@ export function formatBytes(
 
 export function formatDateTime(
   date: Date | string | number,
-  locale: SupportedLocale = currentLocale,
+  locale: SupportedLocale = localeState.current,
 ): string {
   const d = typeof date === "object" ? date : new Date(date);
   return new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-US", {

@@ -45,7 +45,7 @@
       </div>
 
       {#if model.dataInfo}
-        <div class="space-y-2 rounded bg-[var(--color-surface-sunken)] p-3 text-xs">
+        <div class="space-y-2 rounded bg-[var(--surface-field)] p-3 text-xs">
           <div class="flex flex-col gap-1">
             <span class="text-[var(--color-text-secondary)]">{t("settings.databaseFile")}:</span>
             <span class="break-all font-mono font-medium">{model.dataInfo.dbPath}</span>
@@ -53,7 +53,7 @@
               {formatBytes(model.dataInfo.dbSizeBytes)}
             </span>
           </div>
-          <div class="flex flex-col gap-1 pt-2 border-t border-[var(--color-border)]">
+          <div class="flex flex-col gap-1 pt-2 border-t border-[var(--border-default)]">
             <span class="text-[var(--color-text-secondary)]">{t("settings.settingsFile")}:</span>
             <span class="break-all font-mono font-medium">{model.dataInfo.settingsPath}</span>
             <span class="text-[var(--color-text-muted)]">

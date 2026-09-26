@@ -33,7 +33,7 @@
   }
 </script>
 
-<div class="history-detail" role="region" aria-label="Detalle histórico de prueba">
+<div class="history-detail" role="region" aria-label={t("history.detail.aria")}>
   <div class="nav-bar">
     <Button variant="ghost" onclick={onBack}>
       ← {t("history.back_to_list")}
@@ -63,28 +63,34 @@
 
     <div class="metrics-grid">
       <div class="metric-box">
-        <span class="metric-label">Envío (Subida)</span>
+        <span class="metric-label">{t("history.detail.send")}</span>
         <strong class="metric-val">{formatBps(session.forwardBps)}</strong>
       </div>
       <div class="metric-box">
-        <span class="metric-label">Recepción (Bajada)</span>
+        <span class="metric-label">{t("history.detail.receive")}</span>
         <strong class="metric-val">{formatBps(session.reverseBps)}</strong>
       </div>
       <div class="metric-box">
-        <span class="metric-label">Streams</span>
+        <span class="metric-label">{t("history.detail.streams")}</span>
         <strong class="metric-val">{session.streams}</strong>
       </div>
       <div class="metric-box">
-        <span class="metric-label">Duración</span>
+        <span class="metric-label">{t("history.detail.duration")}</span>
         <strong class="metric-val">{session.durationSeconds} s</strong>
       </div>
     </div>
 
     {#if session.clientInterface || session.serverInterface}
       <div class="interfaces-box">
-        <h4>Adaptadores de red utilizados</h4>
-        <p>Cliente local: {session.clientInterface ?? "No especificado"}</p>
-        <p>Servidor remoto: {session.serverInterface ?? "No especificado"}</p>
+        <h4>{t("history.detail.adapters")}</h4>
+        <p>
+          {t("history.detail.localClient")}
+          {session.clientInterface ?? t("history.detail.unspecified")}
+        </p>
+        <p>
+          {t("history.detail.remoteServer")}
+          {session.serverInterface ?? t("history.detail.unspecified")}
+        </p>
       </div>
     {/if}
 
