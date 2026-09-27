@@ -81,12 +81,46 @@ fn direccion_util(ip: &IpAddr) -> bool {
     }
 }
 
+/// Compara los tres primeros octetos: mismo segmento /24, la señal barata de "esto se
+/// alcanza directamente, sin pasar por una puerta de enlace" que usa `equipo_desde_anuncio`
+/// para ordenar direcciones candidatas.
+fn mismo_segmento_24(a: &std::net::Ipv4Addr, b: &std::net::Ipv4Addr) -> bool {
+    a.octets()[..3] == b.octets()[..3]
+}
+
+/// La implementación real de `alcanzable_directamente`: le pregunta a la tabla de rutas del
+/// sistema qué interfaz local usaría para llegar a `ip` (la misma técnica ya probada en
+/// `netinfo::find_best_interface_for_target`, un socket UDP sin conectar de verdad) y
+/// comprueba si esa interfaz está en el mismo segmento que `ip` — si lo está, es una ruta
+/// directa; si no, hace falta una puerta de enlace (o no se puede llegar en absoluto).
+fn alcanzable_directamente(ip: &IpAddr) -> bool {
+    let IpAddr::V4(candidata) = ip else {
+        // El criterio es solo para desempatar entre IPv4: las IPv6 ya van después de
+        // cualquier IPv4 por el primer criterio de orden.
+        return false;
+    };
+    crate::netinfo::find_best_interface_for_target(*ip)
+        .ok()
+        .and_then(|iface| iface.ip_address.parse::<std::net::Ipv4Addr>().ok())
+        .is_some_and(|local| mismo_segmento_24(&local, candidata))
+}
+
 /// Convierte un anuncio en un `EquipoDescubierto`, o lo rechaza entero. Pura y estricta: un
 /// anuncio a medias o hostil no produce un equipo «casi válido».
+///
+/// `alcanzable_directamente` decide, para cada dirección candidata, si se puede llegar a
+/// ella sin pasar por una puerta de enlace (hallazgo real del propietario, 2026-09-27: un
+/// equipo con una VPN u otro adaptador virtual anunciaba también esa IP —p. ej.
+/// 10.10.10.122—, y el orden numérico simple la ponía por delante de la LAN real
+/// —192.168.1.226—, aunque solo la segunda fuera alcanzable). Se inyecta en vez de
+/// resolverse aquí dentro para que la función siga siendo pura y comprobable con entradas
+/// sintéticas, sin abrir sockets de verdad en los tests; quien la llama de verdad usa
+/// `netinfo::find_best_interface_for_target`.
 pub fn equipo_desde_anuncio(
     txt: impl Fn(&str) -> Option<String>,
     direcciones: impl IntoIterator<Item = IpAddr>,
     puerto: u16,
+    alcanzable_directamente: impl Fn(&IpAddr) -> bool,
 ) -> Result<EquipoDescubierto, String> {
     let leer = |clave: &str| -> Result<String, String> {
         let v = txt(clave).ok_or_else(|| format!("Falta el registro TXT '{clave}'"))?;
@@ -114,7 +148,11 @@ pub fn equipo_desde_anuncio(
     }
 
     let mut ips: Vec<IpAddr> = direcciones.into_iter().filter(direccion_util).collect();
-    ips.sort_by_key(|ip| (ip.is_ipv6(), *ip));
+    // IPv4 antes que IPv6 (§7.1); dentro de cada familia, la directamente alcanzable antes
+    // que una que solo se anunció porque el otro equipo tiene esa interfaz también (VPN,
+    // adaptador virtual...) — y solo como último criterio, el orden numérico, que por sí
+    // solo no dice nada sobre cuál es alcanzable.
+    ips.sort_by_key(|ip| (ip.is_ipv6(), !alcanzable_directamente(ip), *ip));
     ips.dedup();
     ips.truncate(MAX_DIRECCIONES);
     if ips.is_empty() {
@@ -223,6 +261,7 @@ impl Descubrimiento {
                                 |k| r.get_property_val_str(k).map(str::to_string),
                                 ips,
                                 r.port,
+                                alcanzable_directamente,
                             ) {
                                 // Uno mismo aparece en su propia navegación: no es un «otro equipo».
                                 Ok(e) if e.instance_id == mi_id => {}
@@ -304,10 +343,22 @@ mod tests {
         ips: &[&str],
         puerto: u16,
     ) -> Result<EquipoDescubierto, String> {
+        // Sin criterio de alcanzabilidad: estos tests comprueban el resto de la función, no
+        // el orden por alcanzabilidad directa (que tiene los suyos propios, más abajo).
+        parsear_con(txt, ips, puerto, |_| false)
+    }
+
+    fn parsear_con(
+        txt: &HashMap<&'static str, String>,
+        ips: &[&str],
+        puerto: u16,
+        alcanzable: impl Fn(&IpAddr) -> bool,
+    ) -> Result<EquipoDescubierto, String> {
         equipo_desde_anuncio(
             |k| txt.get(k).cloned(),
             ips.iter().map(|i| i.parse::<IpAddr>().unwrap()),
             puerto,
+            alcanzable,
         )
     }
 
@@ -319,6 +370,68 @@ mod tests {
         assert_eq!(e.link_mbps, 1000);
         assert!(!e.busy);
         assert_eq!(e.fingerprint_declarada, "a".repeat(64));
+    }
+
+    #[test]
+    fn mismo_segmento_24_compara_solo_los_tres_primeros_octetos() {
+        use std::net::Ipv4Addr;
+        assert!(mismo_segmento_24(
+            &Ipv4Addr::new(192, 168, 1, 226),
+            &Ipv4Addr::new(192, 168, 1, 20)
+        ));
+        assert!(!mismo_segmento_24(
+            &Ipv4Addr::new(192, 168, 1, 226),
+            &Ipv4Addr::new(10, 10, 10, 122)
+        ));
+    }
+
+    #[test]
+    fn la_direccion_alcanzable_directamente_ordena_antes_que_una_de_una_vpn_o_adaptador_virtual() {
+        // Hallazgo real del propietario, 2026-09-27: un equipo con VPN anunciaba tanto su IP
+        // de VPN (10.10.10.122) como la de su LAN real (192.168.1.226); el simple orden
+        // numérico ponía la primera delante, aunque solo la segunda fuera alcanzable.
+        let e = parsear_con(
+            &txt_valido(),
+            &["10.10.10.122", "192.168.1.226"],
+            7411,
+            |ip| *ip == "192.168.1.226".parse::<IpAddr>().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(e.addresses, vec!["192.168.1.226:7411", "10.10.10.122:7411"]);
+    }
+
+    #[test]
+    fn sin_ninguna_alcanzable_directamente_se_mantiene_el_orden_numerico_de_siempre() {
+        let e = parsear_con(
+            &txt_valido(),
+            &["10.10.10.122", "192.168.1.226"],
+            7411,
+            |_| false,
+        )
+        .unwrap();
+        assert_eq!(e.addresses, vec!["10.10.10.122:7411", "192.168.1.226:7411"]);
+    }
+
+    #[test]
+    fn el_criterio_de_alcanzabilidad_no_desplaza_el_orden_ipv4_antes_que_ipv6() {
+        // Aunque la única IPv6 fuera "alcanzable" y la IPv4 no, IPv4 sigue yendo primero
+        // (§7.1): el criterio nuevo solo desempata dentro de la misma familia.
+        let e = parsear_con(
+            &txt_valido(),
+            &["2001:db8::5", "192.168.1.20"],
+            7411,
+            |ip| ip.is_ipv6(),
+        )
+        .unwrap();
+        assert_eq!(e.addresses, vec!["192.168.1.20:7411", "[2001:db8::5]:7411"]);
+    }
+
+    #[test]
+    fn la_implementacion_real_encuentra_localhost_alcanzable_directamente() {
+        // Igual que test_find_best_interface_for_localhost en netinfo: 127.0.0.1 debe
+        // resolver a sí mismo como "mismo segmento", sin necesitar puerta de enlace.
+        let localhost = "127.0.0.1".parse::<IpAddr>().unwrap();
+        assert!(alcanzable_directamente(&localhost));
     }
 
     /// Lo anunciado no es confiable: cada campo que no encaja rechaza el anuncio entero.
