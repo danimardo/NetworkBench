@@ -94,4 +94,42 @@
       {/if}
     </div>
   </Card>
+
+  <!-- Registros: dónde escribe la aplicación de verdad, no dónde alguien podría buscarlos. -->
+  <Card variant="default" enterIndex={2}>
+    <div class="p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="pr-4">
+          <h2 class="text-base font-semibold">{t("settings.logs")}</h2>
+          <p class="text-sm text-[var(--color-text-secondary)]">{t("settings.logsDesc")}</p>
+        </div>
+        <Button
+          variant="secondary"
+          onclick={() => model.revealLogFolder()}
+          disabled={!model.diagnosticPaths}
+        >
+          {t("settings.openLogFolder")}
+        </Button>
+      </div>
+
+      {#if model.diagnosticPaths}
+        <div class="rounded bg-[var(--surface-field)] p-3 text-xs space-y-2">
+          <div>
+            <span class="text-[var(--color-text-muted)] block">{t("settings.appLogDir")}:</span>
+            <span class="font-mono break-all" data-testid="app-log-dir"
+              >{model.diagnosticPaths.appLogDir}</span
+            >
+          </div>
+          <div>
+            <span class="text-[var(--color-text-muted)] block"
+              >{t("settings.firewallHelperLogPath")}:</span
+            >
+            <span class="font-mono break-all" data-testid="firewall-helper-log-path"
+              >{model.diagnosticPaths.firewallHelperLogPath}</span
+            >
+          </div>
+        </div>
+      {/if}
+    </div>
+  </Card>
 </div>

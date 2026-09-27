@@ -4,9 +4,11 @@ import {
   PreferencesSchema,
   DataInfoSchema,
   AboutInfoSchema,
+  DiagnosticPathsSchema,
   type Preferences,
   type DataInfo,
   type AboutInfo,
+  type DiagnosticPaths,
 } from "../contracts/settings";
 
 export async function getSettings(): Promise<Preferences> {
@@ -35,4 +37,12 @@ export async function purgeData(): Promise<void> {
 
 export async function getAboutInfo(): Promise<AboutInfo> {
   return await invokeCommand("settings_about_info", {}, AboutInfoSchema);
+}
+
+export async function getDiagnosticPaths(): Promise<DiagnosticPaths> {
+  return await invokeCommand("settings_diagnostic_paths", {}, DiagnosticPathsSchema);
+}
+
+export async function openLogFolder(): Promise<void> {
+  await invokeCommand("settings_open_log_folder", {}, z.void().nullable());
 }

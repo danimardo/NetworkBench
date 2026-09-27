@@ -33,6 +33,18 @@
           <span class="font-mono font-semibold">{model.aboutInfo?.appVersion ?? "—"}</span>
         </div>
         <div>
+          <span class="text-[var(--color-text-muted)] block">{t("settings.buildHash")}:</span>
+          <span class="font-mono font-semibold" data-testid="build-hash">
+            {model.aboutInfo?.buildHash ?? "—"}
+            {#if model.aboutInfo}
+              · {model.aboutInfo.buildDate.slice(0, 10)}
+            {/if}
+            {#if model.aboutInfo?.buildDirty}
+              <span class="text-[var(--color-warning)]">({t("settings.buildDirtyNotice")})</span>
+            {/if}
+          </span>
+        </div>
+        <div>
           <span class="text-[var(--color-text-muted)] block">{t("settings.protocolVersion")}:</span>
           <span class="font-mono font-semibold">{model.aboutInfo?.protocolVersion ?? "—"}</span>
         </div>

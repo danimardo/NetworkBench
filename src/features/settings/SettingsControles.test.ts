@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/svelte";
 import SettingsScreen from "./SettingsScreen.svelte";
-import { updateSettings } from "../../lib/api/settings";
+import { updateSettings, openLogFolder } from "../../lib/api/settings";
 import { setLocale } from "../../lib/i18n";
 
 // Los controles de Ajustes tenían un aspecto inexistente: `nb-switch` no estaba definido en
@@ -38,7 +38,15 @@ vi.mock("../../lib/api/settings", () => ({
     protocolVersion: "v1",
     license: "GPL-3.0-or-later",
     copyright: "© 2026 Daniel Díez Mardomingo y colaboradores",
+    buildHash: "abc1234567",
+    buildDate: "2026-09-27T00:00:00+02:00",
+    buildDirty: false,
   }),
+  getDiagnosticPaths: vi.fn().mockResolvedValue({
+    appLogDir: "C:\\Users\\User\\AppData\\Local\\NetworkBench\\logs",
+    firewallHelperLogPath: "C:\\ProgramData\\NetworkBench\\logs\\firewall-helper.log",
+  }),
+  openLogFolder: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../lib/api/updater", () => ({
   checkUpdate: vi.fn().mockResolvedValue({ status: "upToDate" }),
@@ -172,9 +180,31 @@ describe("Ajustes: los controles existen, indican su estado y funcionan", () => 
     expect(screen.queryByText("NB")).toBeNull();
     expect(document.querySelector(".nb-appicon")).not.toBeNull();
 
+    // Hash y fecha del commit compilado: a diferencia de la versión de Cargo.toml, esto sí
+    // distingue si dos ordenadores tienen el mismo build (hallazgo real del propietario).
+    const hash = await screen.findByTestId("build-hash");
+    expect(hash.textContent).toContain("abc1234567");
+    expect(hash.textContent).toContain("2026-09-27");
+
     setLocale("en");
     await waitFor(() =>
       expect(screen.getByText("Developed by Daniel Díez Mardomingo")).toBeTruthy(),
     );
+  });
+
+  it("Diagnóstico: se ven las rutas reales de los registros y se puede abrir la carpeta", async () => {
+    render(SettingsScreen);
+    await irAPestana(/Diagnostics|Diagnóstico/i);
+    await cargados();
+
+    const rutaApp = await screen.findByTestId("app-log-dir");
+    expect(rutaApp.textContent).toBe("C:\\Users\\User\\AppData\\Local\\NetworkBench\\logs");
+    const rutaAyudante = screen.getByTestId("firewall-helper-log-path");
+    expect(rutaAyudante.textContent).toBe(
+      "C:\\ProgramData\\NetworkBench\\logs\\firewall-helper.log",
+    );
+
+    await fireEvent.click(screen.getByRole("button", { name: "Abrir carpeta de registros" }));
+    await waitFor(() => expect(openLogFolder).toHaveBeenCalledTimes(1));
   });
 });

@@ -86,6 +86,14 @@ Comprobar "Los hooks de desinstalación existen" { $null -ne $hooks }
 if ($hooks) {
     # Por grupo, no por nombre suelto: así la orden no puede alcanzar una regla ajena.
     Comprobar "Las reglas de cortafuegos se retiran por grupo" { $hooks -match 'delete rule group="NetworkBench"' }
+    # Respaldo por nombre exacto (hallazgo real, 2026-09-27, WIN11D): el grupo asignado por
+    # COM no siempre queda consultable por Windows, aunque la regla funcione.
+    Comprobar "Las reglas de cortafuegos también se retiran por nombre exacto (respaldo)" {
+        ($hooks -match 'delete rule name="NetworkBench - Control"') -and
+        ($hooks -match 'delete rule name="NetworkBench - NTTTCP TCP"') -and
+        ($hooks -match 'delete rule name="NetworkBench - NTTTCP UDP"') -and
+        ($hooks -match 'delete rule name="NetworkBench - Descubrimiento"')
+    }
     Comprobar "El autoarranque se retira" { $hooks -match 'CurrentVersion\\Run' }
     Comprobar "Los datos de usuario NO se borran al desinstalar" {
         ($hooks -notmatch 'RMDir\s+/r.*LOCALAPPDATA') -and ($hooks -match 'conservan')

@@ -119,6 +119,8 @@ pub fn run() {
             ipc::settings::settings_data_info,
             ipc::settings::settings_data_purge,
             ipc::settings::settings_about_info,
+            ipc::settings::settings_diagnostic_paths,
+            ipc::settings::settings_open_log_folder,
             ipc::cierre::app_close_apply,
             ipc::cierre::app_close_confirmed,
             ipc::updater::updater_check,

@@ -34,7 +34,15 @@ vi.mock("../../lib/api/settings", () => ({
     protocolVersion: "v1",
     license: "GPL-3.0-or-later",
     copyright: "© 2026 Daniel Díez Mardomingo",
+    buildHash: "abc1234567",
+    buildDate: "2026-09-27T00:00:00+02:00",
+    buildDirty: false,
   }),
+  getDiagnosticPaths: vi.fn().mockResolvedValue({
+    appLogDir: "C:\\Users\\User\\AppData\\Local\\NetworkBench\\logs",
+    firewallHelperLogPath: "C:\\ProgramData\\NetworkBench\\logs\\firewall-helper.log",
+  }),
+  openLogFolder: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../lib/api/updater", () => ({

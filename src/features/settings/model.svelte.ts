@@ -1,4 +1,10 @@
-import type { Preferences, DataInfo, AboutInfo, UpdateStatus } from "../../lib/contracts/settings";
+import type {
+  Preferences,
+  DataInfo,
+  AboutInfo,
+  DiagnosticPaths,
+  UpdateStatus,
+} from "../../lib/contracts/settings";
 import {
   getSettings,
   updateSettings,
@@ -7,6 +13,8 @@ import {
   getDataInfo,
   purgeData,
   getAboutInfo,
+  getDiagnosticPaths,
+  openLogFolder,
 } from "../../lib/api/settings";
 import { checkUpdate } from "../../lib/api/updater";
 import { IpcError } from "../../lib/api/transport";
@@ -32,6 +40,7 @@ export class SettingsModel {
   autostart = $state(false);
   dataInfo = $state<DataInfo | null>(null);
   aboutInfo = $state<AboutInfo | null>(null);
+  diagnosticPaths = $state<DiagnosticPaths | null>(null);
   updateStatus = $state<UpdateStatus | null>(null);
   isCheckingUpdate = $state(false);
 
@@ -61,16 +70,18 @@ export class SettingsModel {
     this.isLoading = true;
     this.saveError = null;
     try {
-      const [p, auto, data, about] = await Promise.all([
+      const [p, auto, data, about, rutas] = await Promise.all([
         getSettings(),
         getAutostart().catch(() => false),
         getDataInfo().catch(() => null),
         getAboutInfo().catch(() => null),
+        getDiagnosticPaths().catch(() => null),
       ]);
       this.prefs = p;
       this.autostart = auto;
       this.dataInfo = data;
       this.aboutInfo = about;
+      this.diagnosticPaths = rutas;
     } catch (e: unknown) {
       this.saveError = describirError(e);
     } finally {
@@ -126,6 +137,14 @@ export class SettingsModel {
     } catch (e: unknown) {
       this.saveError = describirError(e);
       return false;
+    }
+  }
+
+  async revealLogFolder(): Promise<void> {
+    try {
+      await openLogFolder();
+    } catch (e: unknown) {
+      this.saveError = describirError(e);
     }
   }
 

@@ -30,6 +30,8 @@ vi.mock("../../lib/api/settings", () => ({
   getDataInfo: vi.fn().mockResolvedValue(null),
   purgeData: vi.fn().mockResolvedValue(undefined),
   getAboutInfo: vi.fn().mockResolvedValue(null),
+  getDiagnosticPaths: vi.fn().mockResolvedValue(null),
+  openLogFolder: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../lib/api/updater", () => ({ checkUpdate: vi.fn(), evaluateUpdate: vi.fn() }));
 vi.mock("../../lib/api/firewall", () => ({ inspectFirewall: vi.fn() }));

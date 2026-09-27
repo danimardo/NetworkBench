@@ -45,9 +45,19 @@ export const AboutInfoSchema = z.object({
   protocolVersion: z.string(),
   license: z.string(),
   copyright: z.string(),
+  buildHash: z.string(),
+  buildDate: z.string(),
+  buildDirty: z.boolean(),
 });
 
 export type AboutInfo = z.infer<typeof AboutInfoSchema>;
+
+export const DiagnosticPathsSchema = z.object({
+  appLogDir: z.string(),
+  firewallHelperLogPath: z.string(),
+});
+
+export type DiagnosticPaths = z.infer<typeof DiagnosticPathsSchema>;
 
 export const UpdateStatusSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("upToDate") }),

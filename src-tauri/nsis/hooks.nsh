@@ -21,9 +21,24 @@
 
   ; 1. Reglas de cortafuegos creadas por la aplicación.
   ;
-  ; Se borran por GRUPO, no por nombre suelto: el helper elevado las crea todas bajo
-  ; el mismo grupo, de modo que esta orden no puede alcanzar una regla ajena.
+  ; Por GRUPO primero: el helper elevado las crea todas bajo el mismo grupo, de modo
+  ; que esta orden no puede alcanzar una regla ajena.
   nsExec::ExecToLog 'netsh advfirewall firewall delete rule group="NetworkBench"'
+  Pop $0
+
+  ; Y también por NOMBRE exacto, como respaldo: en una máquina real (2026-09-27,
+  ; WIN11D) se comprobó que el grupo asignado por COM (`INetFwRule.Grouping`) no
+  ; siempre queda consultable por Windows —la regla funciona, pero `Get-NetFirewallRule
+  ; -Group`/el borrado por grupo no la encuentran—. Un nombre exacto (no un patrón) es
+  ; igual de seguro que el grupo: no puede alcanzar una regla de otra aplicación. La
+  ; lista debe coincidir con NOMBRES_CONOCIDOS en src-tauri/src/firewall/reglas.rs.
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NetworkBench - Control"'
+  Pop $0
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NetworkBench - NTTTCP TCP"'
+  Pop $0
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NetworkBench - NTTTCP UDP"'
+  Pop $0
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NetworkBench - Descubrimiento"'
   Pop $0
 
   ; 2. Autoarranque opt-in, si el usuario lo activó.

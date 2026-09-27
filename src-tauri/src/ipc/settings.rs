@@ -24,6 +24,16 @@ pub struct AboutInfo {
     pub protocol_version: String,
     pub license: String,
     pub copyright: String,
+    /// Hash corto del commit con el que se compiló este ejecutable concreto (`build.rs`).
+    /// `app_version` (de `Cargo.toml`) no cambia entre sesiones de desarrollo, así que por
+    /// sí sola no basta para saber si dos ordenadores tienen el mismo build (hallazgo real
+    /// del propietario, comparando dos máquinas).
+    pub build_hash: String,
+    /// Fecha del commit compilado, en ISO 8601 (no la fecha de compilación: esa cambiaría en
+    /// cada `cargo build` aunque el código fuera idéntico, y no ayudaría a comparar builds).
+    pub build_date: String,
+    /// Había cambios sin comitear en el árbol de trabajo en el momento de compilar.
+    pub build_dirty: bool,
 }
 
 #[tauri::command]
@@ -154,6 +164,58 @@ pub fn settings_data_purge(state: tauri::State<AppState>) -> IpcResult<()> {
     IpcResult::ok(())
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosticPaths {
+    /// Carpeta de registro de la aplicación (`networkbench.log`, `tracing.log`): el perfil
+    /// del usuario que la abrió, no un directorio del proyecto (hallazgo real del
+    /// propietario: buscaba los registros dentro del repositorio, donde la app nunca
+    /// escribe).
+    pub app_log_dir: String,
+    /// El ayudante elevado de firewall escribe su propio registro aparte, en %ProgramData%
+    /// en vez de en el perfil del usuario: corre elevado, a veces con las credenciales de
+    /// OTRA cuenta (el UAC de "ejecutar como" cuando la cuenta actual no es administradora),
+    /// así que %LOCALAPPDATA% podría no ser el de quien abrió la aplicación.
+    pub firewall_helper_log_path: String,
+}
+
+#[tauri::command]
+pub fn settings_diagnostic_paths() -> IpcResult<DiagnosticPaths> {
+    let app_log_dir = crate::app::dirs_or_fallback().join("logs");
+    let firewall_helper_log_dir = std::env::var_os("ProgramData")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(r"C:\ProgramData"))
+        .join("NetworkBench")
+        .join("logs");
+    IpcResult::ok(DiagnosticPaths {
+        app_log_dir: app_log_dir.to_string_lossy().to_string(),
+        firewall_helper_log_path: firewall_helper_log_dir
+            .join("firewall-helper.log")
+            .to_string_lossy()
+            .to_string(),
+    })
+}
+
+/// Abre la carpeta de registro de la aplicación en el Explorador. La del ayudante
+/// (%ProgramData%) se abre igual desde ahí mismo: son carpetas hermanas.
+#[tauri::command]
+pub fn settings_open_log_folder() -> IpcResult<()> {
+    let dir = crate::app::dirs_or_fallback().join("logs");
+    let _ = fs::create_dir_all(&dir);
+    #[cfg(target_os = "windows")]
+    {
+        let raiz = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
+        let explorador = std::path::PathBuf::from(raiz).join("explorer.exe");
+        if let Err(e) = std::process::Command::new(explorador).arg(&dir).spawn() {
+            return IpcResult::err(
+                crate::errors::AppError::from_code(crate::errors::ErrorCode::InternalError)
+                    .with_diagnostic_id(format!("No se pudo abrir la carpeta de registro: {e}")),
+            );
+        }
+    }
+    IpcResult::ok(())
+}
+
 #[tauri::command]
 pub fn settings_about_info() -> IpcResult<AboutInfo> {
     IpcResult::ok(AboutInfo {
@@ -164,5 +226,47 @@ pub fn settings_about_info() -> IpcResult<AboutInfo> {
         protocol_version: "v1".to_string(),
         license: "GPL-3.0-or-later".to_string(),
         copyright: "© 2026 Daniel Díez Mardomingo y colaboradores".to_string(),
+        build_hash: env!("NB_GIT_HASH").to_string(),
+        build_date: env!("NB_GIT_DATE").to_string(),
+        build_dirty: env!("NB_GIT_DIRTY") == "true",
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn el_hash_de_compilacion_no_esta_vacio_ni_se_queda_fijo_como_la_version_de_cargo() {
+        let IpcResult::Success(info) = settings_about_info() else {
+            panic!("settings_about_info debe tener éxito siempre");
+        };
+        // No es una comprobación de contenido exacto (el hash cambia en cada commit): lo
+        // que importa es que build.rs de verdad rellenó algo y no dejó la variable vacía.
+        assert!(!info.build_hash.is_empty());
+        assert_ne!(
+            info.build_hash, "desconocido",
+            "debe correr dentro de un checkout git"
+        );
+        assert!(!info.build_date.is_empty());
+        assert_ne!(info.app_version, info.build_hash);
+    }
+
+    #[test]
+    fn las_rutas_de_diagnostico_apuntan_a_carpetas_distintas_para_app_y_ayudante() {
+        let IpcResult::Success(rutas) = settings_diagnostic_paths() else {
+            panic!("settings_diagnostic_paths debe tener éxito siempre");
+        };
+        assert!(rutas.app_log_dir.ends_with("logs"));
+        assert!(rutas.app_log_dir.contains("NetworkBench"));
+        assert!(rutas.firewall_helper_log_path.contains("ProgramData"));
+        assert!(
+            rutas
+                .firewall_helper_log_path
+                .contains("firewall-helper.log")
+        );
+        // No es la misma carpeta: una es del perfil de usuario, la otra de todo el equipo
+        // (hallazgo real del propietario: el ayudante puede correr con otra cuenta por UAC).
+        assert_ne!(rutas.app_log_dir, rutas.firewall_helper_log_path);
+    }
 }

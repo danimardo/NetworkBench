@@ -13,6 +13,55 @@
 use std::env;
 use std::process::exit;
 
+// ---------------------------------------------------------------------------------------
+// Registro de diagnóstico (hallazgo real del propietario, 2026-09-27): sin esto, un fallo
+// de COM al crear una regla quedaba completamente invisible — `eprintln!` escribe a un
+// stderr que nadie captura, porque `ShellExecuteExW` con "runas" no redirige la salida del
+// proceso elevado hacia el padre. El resultado era una contradicción silenciosa: el código
+// de salida decía éxito (o un error genérico sin detalle) y la regla nunca aparecía.
+//
+// Va a %ProgramData%, no al %LOCALAPPDATA% de la aplicación: este proceso corre elevado, a
+// veces con las credenciales de OTRA cuenta (el UAC de "ejecutar como" pide usuario y
+// contraseña cuando la cuenta actual no es administradora), así que %LOCALAPPDATA% podría
+// apuntar al perfil de una cuenta distinta de la que abrió la aplicación. %ProgramData% es
+// la única carpeta que ambas cuentas comparten sin ambigüedad.
+// ---------------------------------------------------------------------------------------
+
+fn carpeta_log() -> Option<std::path::PathBuf> {
+    let base = env::var_os("ProgramData")?;
+    Some(
+        std::path::PathBuf::from(base)
+            .join("NetworkBench")
+            .join("logs"),
+    )
+}
+
+/// Un fichero de texto sin rotación: el volumen es bajísimo (solo se escribe al crear o
+/// eliminar reglas, una acción manual y poco frecuente). Si no se puede escribir —permisos,
+/// disco lleno—, no aborta nada: es diagnóstico, no una dependencia del funcionamiento.
+fn registrar(linea: &str) {
+    use std::io::Write as _;
+    let Some(dir) = carpeta_log() else { return };
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let ahora = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("firewall-helper.log"))
+    {
+        // Segundos desde 1970 (UTC), no una fecha legible: este binario evita a propósito
+        // cualquier dependencia externa (superficie de ataque mínima al correr elevado), y
+        // formatear una fecha civil a mano es un sitio innecesario para introducir un bug
+        // de calendario en código que se ejecuta con privilegios.
+        let _ = writeln!(f, "[{ahora}] {linea}");
+    }
+}
+
 // La lista blanca es un solo fichero compilado en este binario y en la biblioteca, para
 // que no puedan divergir. No todo lo que contiene lo usa el helper.
 #[allow(dead_code)]
@@ -145,7 +194,40 @@ mod firewall {
                 reglas.Add(&regla)
             }
         };
-        configurar().map_err(|e| format!("No se pudo añadir la regla: {e}"))
+        configurar().map_err(|e| format!("No se pudo añadir la regla: {e}"))?;
+
+        // Releer inmediatamente lo que se acaba de escribir. `Add` puede devolver éxito y
+        // que la regla no persista de verdad —por ejemplo, si el firewall de esta máquina
+        // está bajo Directiva de grupo con "Aplicar reglas locales" desactivado, la API
+        // acepta la escritura sin avisar de que no tendrá efecto—. Sin esto, ese caso se
+        // veía exactamente como el bug real que reportó el propietario: UAC concedido,
+        // "éxito" declarado, regla ausente al comprobar después.
+        let releida = unsafe { reglas.Item(&BSTR::from(req.rule_name.as_str())) }.map_err(|e| {
+            format!(
+                "La regla se añadió sin error pero no se puede releer justo después \
+                 (posible directiva de grupo bloqueando reglas locales del firewall): {e}"
+            )
+        })?;
+
+        // Comprobación aparte, y que NO hace fallar la creación: el propietario encontró en
+        // una máquina real (2026-09-27) que `SetGrouping` no siempre deja el grupo
+        // consultable por `Get-NetFirewallRule -Group`/`Remove-NetFirewallRule -Group` ni
+        // visible en el panel de Windows, aunque la regla en sí funciona (el tráfico pasa).
+        // Solo afecta a la limpieza del desinstalador, no a que la regla proteja o no la
+        // conexión: por eso se registra como aviso, no como fallo de la operación.
+        match unsafe { releida.Grouping() } {
+            Ok(g) if g == GRUPO_REGLAS => {}
+            Ok(g) => super::registrar(&format!(
+                "AVISO: '{}' se creó pero su grupo es '{g}', no '{GRUPO_REGLAS}' \
+                 (el desinstalador podría no encontrarla)",
+                req.rule_name
+            )),
+            Err(e) => super::registrar(&format!(
+                "AVISO: no se pudo releer el grupo de '{}' tras crearla: {e}",
+                req.rule_name
+            )),
+        }
+        Ok(())
     }
 }
 
@@ -177,6 +259,7 @@ fn main() {
         Ok(p) => p,
         Err(e) => {
             eprintln!("Argumentos no válidos: {e}");
+            registrar(&format!("RECHAZADO (argumentos no válidos): {e}"));
             exit(salida::ARGUMENTOS);
         }
     };
@@ -190,6 +273,7 @@ fn main() {
         &validation::directorios_permitidos(&directorio),
     ) {
         eprintln!("Petición no autorizada: {e}");
+        registrar(&format!("RECHAZADO (lista blanca): {e}"));
         exit(salida::NO_AUTORIZADA);
     }
 
@@ -197,12 +281,24 @@ fn main() {
         exit(salida::OK);
     }
 
+    let resumen = peticiones
+        .iter()
+        .map(|p| format!("{} {}", p.operation, p.rule_name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    registrar(&format!("INICIO: {resumen}"));
+
     for req in &peticiones {
-        if let Err(e) = aplicar(req) {
-            eprintln!("Error aplicando la regla '{}': {e}", req.rule_name);
-            exit(salida::FALLO_DE_REGLA);
+        match aplicar(req) {
+            Ok(()) => registrar(&format!("OK: {} {}", req.operation, req.rule_name)),
+            Err(e) => {
+                eprintln!("Error aplicando la regla '{}': {e}", req.rule_name);
+                registrar(&format!("FALLO: {} {} → {e}", req.operation, req.rule_name));
+                exit(salida::FALLO_DE_REGLA);
+            }
         }
     }
+    registrar("FIN: todas las reglas del lote aplicadas correctamente");
     exit(salida::OK);
 }
 
