@@ -3,9 +3,11 @@
 
   interface Props {
     children: Snippet;
+    /** `center`: avisos transitorios; `end`: abajo a la derecha, para los persistentes. */
+    align?: "center" | "end";
   }
 
-  let { children }: Props = $props();
+  let { children, align = "center" }: Props = $props();
 </script>
 
 <!--
@@ -15,7 +17,7 @@
 
   La capa entera deja pasar los clics; solo los avisos los reciben.
 -->
-<div class="nb-toastlayer">
+<div class="nb-toastlayer" class:nb-toastlayer-end={align === "end"}>
   {@render children()}
 </div>
 
@@ -32,6 +34,11 @@
     gap: var(--space-2);
     padding: 0 var(--space-4);
     pointer-events: none;
+  }
+
+  .nb-toastlayer-end {
+    align-items: flex-end;
+    padding-right: var(--space-6);
   }
 
   .nb-toastlayer :global(> *) {

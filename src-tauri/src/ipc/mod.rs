@@ -1,4 +1,5 @@
-﻿pub mod consent;
+﻿pub mod cierre;
+pub mod consent;
 pub mod diagnostics;
 pub mod events;
 pub mod export;

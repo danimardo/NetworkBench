@@ -26,6 +26,9 @@
     tone?: Tone;
     icon?: IconName;
     onDismiss?: () => void;
+    /** 480px en vez de 380px: para avisos con más de una acción, que no caben en la línea
+     * a la anchura normal (p. ej. el aviso de redes públicas, con dos botones). */
+    wide?: boolean;
     children: Snippet;
   }
 
@@ -36,12 +39,13 @@
     danger: "x-circle",
   };
 
-  let { tone = "info", icon, onDismiss, children }: Props = $props();
+  let { tone = "info", icon, onDismiss, wide = false, children }: Props = $props();
   let resolvedIcon = $derived(icon ?? TONE_ICON[tone]);
 </script>
 
 <div
   class="nb-toast nb-tone-{tone}"
+  class:nb-toast-wide={wide}
   role={tone === "danger" ? "alert" : "status"}
   aria-live={tone === "danger" ? "assertive" : "polite"}
 >
@@ -80,6 +84,10 @@
     animation: nb-toast-in var(--duration-slow) var(--ease-standard);
   }
 
+  .nb-toast-wide {
+    max-width: 480px;
+  }
+
   @supports not (backdrop-filter: blur(1px)) {
     .nb-toast {
       background: var(--surface-solid-overlay);
@@ -105,6 +113,10 @@
 
   .nb-toast-text {
     flex: 1;
+    /* Sin esto, un hijo que no se parte (un botón con `nowrap`) ensancha la columna más allá
+       de `max-width` y empuja el aspa de cerrar fuera de la tarjeta. */
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--color-text-secondary);
   }
 

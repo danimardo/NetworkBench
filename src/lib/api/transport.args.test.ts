@@ -20,7 +20,7 @@ const PREFS = PreferencesSchema.parse({
   autoAcceptTrusted: false,
   customControlPort: null,
   autostart: false,
-  minimizeToTray: false,
+  closeAction: "ask",
   mdnsEnabled: true,
 });
 

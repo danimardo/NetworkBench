@@ -4,11 +4,9 @@ import {
   PreferencesSchema,
   DataInfoSchema,
   AboutInfoSchema,
-  CloseActionDecisionSchema,
   type Preferences,
   type DataInfo,
   type AboutInfo,
-  type CloseActionDecision,
 } from "../contracts/settings";
 
 export async function getSettings(): Promise<Preferences> {
@@ -37,8 +35,4 @@ export async function purgeData(): Promise<void> {
 
 export async function getAboutInfo(): Promise<AboutInfo> {
   return await invokeCommand("settings_about_info", {}, AboutInfoSchema);
-}
-
-export async function evaluateAppClose(force: boolean = false): Promise<CloseActionDecision> {
-  return await invokeCommand("app_close_evaluate", { force }, CloseActionDecisionSchema);
 }

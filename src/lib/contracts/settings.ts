@@ -21,8 +21,9 @@ export const PreferencesSchema = z.object({
     })
     .optional(),
   autostart: z.boolean().default(false),
-  minimizeToTray: z.boolean().default(false),
+  closeAction: z.enum(["ask", "minimize", "exit"]).default("ask"),
   mdnsEnabled: z.boolean().default(true),
+  firewallAllowPublic: z.boolean().default(false),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;
@@ -47,14 +48,6 @@ export const AboutInfoSchema = z.object({
 });
 
 export type AboutInfo = z.infer<typeof AboutInfoSchema>;
-
-export const CloseActionDecisionSchema = z.enum([
-  "allowExit",
-  "requireConfirmation",
-  "minimizeToTray",
-]);
-
-export type CloseActionDecision = z.infer<typeof CloseActionDecisionSchema>;
 
 export const UpdateStatusSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("upToDate") }),

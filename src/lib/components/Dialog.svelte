@@ -167,7 +167,7 @@
 <div class="nb-dialog-scrim" bind:this={scrimEl} onclick={handleScrimClick} role="presentation">
   <div
     bind:this={dialogEl}
-    class="nb-dialog nb-dialog-{size}"
+    class="nb-dialog nb-dialog-{size} nb-pop"
     role="dialog"
     aria-modal="true"
     aria-labelledby="nb-dialog-title"
@@ -223,7 +223,8 @@
     -webkit-backdrop-filter: blur(var(--blur-modal)) saturate(var(--material-saturate));
     color: var(--color-text-primary);
     font-family: var(--font-ui);
-    animation: nb-dialog-in var(--duration-slow) var(--ease-standard);
+    /* La animación de entrada es la utilidad compartida `.nb-pop` (tokens.css):
+       mismo pop con rebote que cualquier otro diálogo o aviso puntual. */
   }
 
   @supports not (backdrop-filter: blur(1px)) {
@@ -291,21 +292,12 @@
     }
   }
 
-  @keyframes nb-dialog-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px) scale(0.98);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .nb-dialog-scrim,
-    .nb-dialog {
+    .nb-dialog-scrim {
       animation: none;
     }
+    /* `.nb-dialog` ya no anima aquí: la colapsa la propia utilidad `.nb-pop`
+       (tokens.css), que también respeta el ajuste "Reducir movimiento" de
+       la app, no solo la preferencia del sistema operativo. */
   }
 </style>

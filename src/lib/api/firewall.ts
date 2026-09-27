@@ -58,17 +58,31 @@ export const firewallRuleStateSchema = z.object({
   puertos: z.string(),
   programa: z.string(),
   perfiles: z.array(z.string()),
+  /** Grupo con el que se crea; el desinstalador retira las reglas por él. */
+  grupo: z.string(),
   estado: ruleStatusSchema,
   detalle: z.string(),
   /** Sin el programa en disco el helper rechaza la petición: la regla no se puede crear. */
   programaExiste: z.boolean(),
-  /** `netsh` equivalente, para copiarlo. */
-  netshAgregar: z.string(),
+  /** Comando de PowerShell equivalente, para copiarlo (`netsh` no puede asignar el grupo). */
+  comandoAgregar: z.string(),
 });
 export type FirewallRuleState = z.infer<typeof firewallRuleStateSchema>;
 
+/** Una red a la que está conectado el equipo y cómo la clasifica Windows. */
+export const activeNetworkSchema = z.object({
+  nombre: z.string(),
+  interfaz: z.string(),
+  /** `Public`, `Private` o `DomainAuthenticated`. Una VPN suele salir como `Public`. */
+  categoria: z.string(),
+});
+export type ActiveNetwork = z.infer<typeof activeNetworkSchema>;
+
 export const firewallRulesReportSchema = z.object({
   reglas: z.array(firewallRuleStateSchema),
+  redes: z.array(activeNetworkSchema),
+  /** La persona ha permitido también las redes públicas (§14.5). */
+  permitirPublico: z.boolean(),
   puertoControl: z.number().int(),
   /** Existe el helper elevado; sin él no se pueden crear ni eliminar reglas desde la app. */
   ayudanteDisponible: z.boolean(),
@@ -88,4 +102,14 @@ export async function createMissingFirewallRules(): Promise<FirewallRulesReport>
 /** «Eliminar todas». Abre el UAC de Windows; devuelve el estado tras aplicarlo. */
 export async function removeFirewallRules(): Promise<FirewallRulesReport> {
   return invokeCommand("firewall_rules_remove", undefined, firewallRulesReportSchema);
+}
+
+/** Redes que Windows considera públicas: en ellas las reglas por defecto no se aplican. */
+export function publicNetworks(informe: FirewallRulesReport): ActiveNetwork[] {
+  return informe.redes.filter((r) => r.categoria === "Public");
+}
+
+/** Abre la página de estado de red de Configuración de Windows (§14.5). */
+export async function openNetworkSettings(): Promise<void> {
+  await invokeCommand("firewall_open_network_settings", undefined, z.void().nullable());
 }

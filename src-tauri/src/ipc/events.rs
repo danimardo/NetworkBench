@@ -72,6 +72,8 @@ impl EmisorDeEventos for AppHandle {
     }
 
     fn emitir_snapshot(&self, snapshot: &AppSnapshot) -> Result<(), String> {
+        // La bandeja muestra el estado y el idioma: se pone al día con el mismo snapshot.
+        crate::platform::tray::refrescar(self, snapshot);
         self.emit(EVENTO_SNAPSHOT, snapshot)
             .map_err(|e| format!("No se pudo emitir {EVENTO_SNAPSHOT}: {e}"))
     }

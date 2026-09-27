@@ -16,7 +16,7 @@
   <Dialog onClose={oncancel} title={t("app.closeConfirmTitle")} size="sm">
     <div class="space-y-4">
       <div
-        class="rounded-md bg-[var(--color-surface-warning)] p-3 text-xs text-[var(--color-text-warning)]"
+        class="rounded-md bg-[var(--color-warning-soft)] p-3 text-xs text-[var(--color-warning)]"
       >
         {t("app.closeConfirmWarning")}
       </div>

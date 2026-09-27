@@ -503,6 +503,26 @@
   --duration-spinner: 0.8s;
   --duration-progress-indeterminate: 1.3s;
 
+  /* --- Entrada escalonada y pop con rebote (ThrottleWatch → NetworkBench,
+     mismo propietario, mismo esquema de licencia): easing con ligero
+     overshoot para el "pop" de diálogos, y el intervalo entre elementos de
+     una lista que aparecen uno tras otro. Las duraciones reutilizan
+     --duration-slow/--duration-base de arriba a propósito: no son un motion
+     system aparte, son las mismas transiciones aplicadas a la entrada. */
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --duration-stagger: 45ms;
+  /* Cuántos elementos como máximo acumulan retraso: sin tope, el último de
+     una lista larga (historial) tardaría segundos en aparecer. */
+  --stagger-max-index: 8;
+  /* Zoom de entrada de `.nb-enter` (hallazgo real del propietario: la subida
+     `nb-rise` con --duration-slow/--ease-standard se sentía rápida y brusca).
+     Cúbica ease-in-out propia — despacio al empezar y al terminar, en vez de
+     la salida a máxima velocidad de --ease-standard — y más lenta que
+     --duration-slow porque aquí es la protagonista de la animación, no una
+     transición de hover/foco de fondo. */
+  --ease-enter: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-enter: 320ms;
+
   /* --- Marco de ventana --- */
   --titlebar-height: 32px;
   --sidebar-width: 76px;
@@ -521,4 +541,71 @@
      sitios de la maqueta; está entre --font-size-xs (12px) y ningún
      tamaño menor definido hasta ahora. */
   --font-size-2xs: 11.5px;
+}
+
+/* ================================================================
+   MOTION — utilidades de entrada (ThrottleWatch → NetworkBench)
+   ================================================================
+   El reposo está quieto; lo que se anima es la entrada y el cambio de
+   estado, nunca algo continuo. Dos utilidades:
+
+   .nb-enter  — una tarjeta/fila de una lista aparece con un zoom suave
+                (opacidad + escala, sin desplazamiento vertical: antes
+                subía desde abajo con `nb-rise`, hallazgo real del
+                propietario de que se sentía brusco). Con
+                `style:--nb-i={índice}` en el elemento, las de una misma
+                lista aparecen escalonadas en vez de todas a la vez;
+                sin ese índice, `--nb-i` vale 0 y no hay retraso.
+   .nb-pop    — un diálogo o aviso puntual aparece con un ligero rebote
+                (`--ease-spring`), para que se note más "aparición" que
+                "desvanecido".
+
+   Todo colapsa a instantáneo bajo `prefers-reduced-motion` (el sistema
+   operativo) y bajo `data-reduce-motion="true"` en <html> (el ajuste
+   propio de la app, Ajustes → Apariencia → "Reducir movimiento" —
+   `theme.svelte.ts` ya ponía el atributo; hasta ahora ningún CSS lo
+   leía). Las reglas por componente que ya existían (Button, Card,
+   Dialog, Sidebar…) solo miraban la preferencia del sistema operativo;
+   esa parte no se toca aquí — es una mejora aparte, no de esta tarea. */
+@keyframes nb-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nb-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.nb-enter {
+  animation: nb-zoom-in var(--duration-enter) var(--ease-enter) both;
+  animation-delay: calc(min(var(--nb-i, 0), var(--stagger-max-index)) * var(--duration-stagger));
+}
+
+.nb-pop {
+  animation: nb-pop var(--duration-base) var(--ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nb-enter,
+  .nb-pop {
+    animation: none !important;
+  }
+}
+
+:root[data-reduce-motion="true"] .nb-enter,
+:root[data-reduce-motion="true"] .nb-pop {
+  animation: none !important;
 }

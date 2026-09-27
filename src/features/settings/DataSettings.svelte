@@ -35,7 +35,7 @@
 
 <div class="space-y-6">
   <!-- Ubicación y tamaño de datos -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div>
         <h2 class="text-base font-semibold">{t("settings.localDataStorage")}</h2>

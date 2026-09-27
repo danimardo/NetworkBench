@@ -40,7 +40,7 @@ pub async fn firewall_apply(rules: Vec<FirewallHelperRequest>) -> IpcResult<()> 
 use crate::app::AppState;
 use crate::errors::{AppError, ErrorCode};
 use crate::firewall::RuleStatus;
-use crate::firewall::estado::{self, EstadoRegla};
+use crate::firewall::estado::{self, EstadoRegla, RedActiva};
 use crate::firewall::reglas::{self, Entorno};
 use tauri::State;
 
@@ -48,6 +48,10 @@ use tauri::State;
 #[serde(rename_all = "camelCase")]
 pub struct InformeReglas {
     pub reglas: Vec<EstadoRegla>,
+    /// Redes a las que está conectado el equipo y su clasificación en Windows (§14.5).
+    pub redes: Vec<RedActiva>,
+    /// La persona ha permitido las redes públicas: los perfiles esperados incluyen «Public».
+    pub permitir_publico: bool,
     /// Puerto de control con el que se han calculado (el personalizado o el de fábrica).
     pub puerto_control: u16,
     /// Existe el helper elevado: sin él no se pueden crear ni eliminar reglas desde la app.
@@ -63,7 +67,7 @@ fn entorno(state: &AppState) -> Result<Entorno, AppError> {
     let puerto = ajustes
         .custom_control_port
         .unwrap_or(crate::discovery::CONTROL_PORT_DEFAULT);
-    Entorno::actual(puerto, ajustes.mdns_enabled)
+    Entorno::actual(puerto, ajustes.mdns_enabled, ajustes.firewall_allow_public)
         .ok_or_else(|| error_interno("No se pudo localizar el ejecutable".into()))
 }
 
@@ -71,9 +75,11 @@ fn entorno(state: &AppState) -> Result<Entorno, AppError> {
 async fn informe(entorno: Entorno) -> Result<InformeReglas, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
         let esperadas = reglas::esperadas(&entorno);
-        let reglas = estado::consultar(&esperadas).map_err(error_interno)?;
+        let (reglas, redes) = estado::consultar(&esperadas).map_err(error_interno)?;
         Ok(InformeReglas {
             reglas,
+            redes,
+            permitir_publico: entorno.permitir_publico,
             puerto_control: entorno.puerto_control,
             ayudante_disponible: FirewallHelperClient::get_helper_path().is_some(),
         })
@@ -110,7 +116,7 @@ pub async fn firewall_rules_create(
     let entorno_para_helper = entorno.clone();
     let aplicado = tauri::async_runtime::spawn_blocking(move || -> Result<(), AppError> {
         let esperadas = reglas::esperadas(&entorno_para_helper);
-        let estados = estado::consultar(&esperadas).map_err(error_interno)?;
+        let (estados, _redes) = estado::consultar(&esperadas).map_err(error_interno)?;
         let peticiones: Vec<_> = estados
             .iter()
             .filter(|s| s.estado != RuleStatus::Present && s.programa_existe)
@@ -173,4 +179,25 @@ pub async fn firewall_rules_remove(
         Ok(i) => IpcResult::ok(i),
         Err(e) => IpcResult::err(e),
     })
+}
+
+/// «Abrir configuración de red» (§14.5): la salida limpia cuando Windows considera pública
+/// una red que la persona sabe que es privada (cambiar su tipo es mejor que abrir el
+/// cortafuegos). Solo abre la página de estado de red de Configuración; no recibe nada.
+#[tauri::command]
+pub fn firewall_open_network_settings() -> IpcResult<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let raiz = std::env::var_os("SystemRoot").unwrap_or_else(|| r"C:\Windows".into());
+        let explorador = std::path::PathBuf::from(raiz).join("explorer.exe");
+        if let Err(e) = std::process::Command::new(explorador)
+            .arg("ms-settings:network-status")
+            .spawn()
+        {
+            return IpcResult::err(error_interno(format!(
+                "No se pudo abrir la configuración de red: {e}"
+            )));
+        }
+    }
+    IpcResult::ok(())
 }

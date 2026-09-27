@@ -30,6 +30,9 @@ pub struct FirewallHelperRequest {
 }
 
 pub const PREFIJO_REGLA: &str = "NetworkBench - ";
+/// Grupo de todas las reglas de la aplicación (`Historias.md` §14.1). El desinstalador las
+/// retira por grupo, así que **toda regla debe crearse con él**; `netsh` no puede asignarlo.
+pub const GRUPO_REGLAS: &str = "NetworkBench";
 pub const MAX_PUERTOS: u32 = 64;
 pub const MAX_PETICIONES: usize = 8;
 /// Límite de la línea de órdenes que se entrega al helper (el máximo de Windows es 32 767).

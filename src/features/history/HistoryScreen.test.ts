@@ -86,6 +86,43 @@ describe("T079 - HistoryScreen UI Component Tests (US4)", () => {
     });
   });
 
+  it("las filas de un mismo grupo de fecha animan su entrada, escalonadas dentro del grupo", async () => {
+    const mismoDia = [
+      {
+        ...sampleItems[0]!,
+        id: "aaaa0000-0000-4000-8000-000000000000",
+        createdAt: "2026-09-22T06:00:00Z",
+      },
+      {
+        ...sampleItems[0]!,
+        id: "aaaa0000-0000-4000-8000-000000000001",
+        createdAt: "2026-09-22T09:00:00Z",
+      },
+    ];
+    const otroDia = { ...sampleItems[1]!, id: "bbbb0000-0000-4000-8000-000000000000" };
+    vi.mocked(historyApi.listHistory).mockResolvedValueOnce({
+      items: [...mismoDia, otroDia],
+      totalCount: 3,
+      hasMore: false,
+    });
+
+    render(HistoryScreen);
+
+    await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(3));
+    const grupos = screen.getAllByRole("list", { name: "" }).filter((el) => el.tagName === "UL");
+    // Primer grupo (mismo día, dos sesiones): 0 y 1, no continúa desde el otro grupo.
+    const filasGrupo1 = grupos[0]!.querySelectorAll("li");
+    expect(filasGrupo1).toHaveLength(2);
+    filasGrupo1.forEach((fila, i) => {
+      expect(fila.classList.contains("nb-enter")).toBe(true);
+      expect((fila as HTMLElement).style.getPropertyValue("--nb-i")).toBe(String(i));
+    });
+    // Segundo grupo (otro día, una sesión): vuelve a empezar en 0, no en 2.
+    const filasGrupo2 = grupos[1]!.querySelectorAll("li");
+    expect(filasGrupo2).toHaveLength(1);
+    expect((filasGrupo2[0] as HTMLElement).style.getPropertyValue("--nb-i")).toBe("0");
+  });
+
   it("permite abrir el detalle de una sesión al pulsar sobre ella", async () => {
     vi.mocked(historyApi.listHistory).mockResolvedValueOnce({
       items: sampleItems,

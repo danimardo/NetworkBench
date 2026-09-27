@@ -187,8 +187,8 @@
             <div class="date-group">
               <h3 class="group-heading">{groupDate}</h3>
               <ul class="session-list" role="list">
-                {#each items as item (item.id)}
-                  <li class="session-item">
+                {#each items as item, i (item.id)}
+                  <li class="session-item nb-enter" style:--nb-i={i}>
                     <button class="session-card-btn" onclick={() => model.selectSession(item.id)}>
                       <div class="item-primary">
                         <span class="peer-name">{item.peerName}</span>

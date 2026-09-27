@@ -4,11 +4,15 @@
   import Button from "../../lib/components/Button.svelte";
   import Dialog from "../../lib/components/Dialog.svelte";
   import StatusPill from "../../lib/components/StatusPill.svelte";
+  import Switch from "../../lib/components/Switch.svelte";
+  import PublicNetworkConfirm from "../firewall/PublicNetworkConfirm.svelte";
   import { t } from "../../lib/i18n";
   import {
     getFirewallRulesStatus,
     createMissingFirewallRules,
     removeFirewallRules,
+    openNetworkSettings,
+    publicNetworks,
     type FirewallRulesReport,
     type RuleStatus,
   } from "../../lib/api/firewall";
@@ -28,6 +32,8 @@
   let confirmarEliminar = $state(false);
   let verManual = $state(false);
   let copiado = $state(false);
+  /** Qué se está confirmando: dar el permiso desde el aviso o desde el interruptor. */
+  let confirmandoPublico = $state<"notice" | "switch" | null>(null);
 
   async function cargar() {
     cargando = true;
@@ -83,11 +89,11 @@
       ? [
           t("settings.fw.manualIntro"),
           "",
-          ...report.reglas.map((r) => r.netshAgregar),
+          ...report.reglas.map((r) => r.comandoAgregar),
           "",
           t("settings.fw.manualRemoveIntro"),
           "",
-          ...report.reglas.map((r) => `netsh advfirewall firewall delete rule name="${r.nombre}"`),
+          "Remove-NetFirewallRule -Group 'NetworkBench'",
         ].join("\n")
       : "",
   );
@@ -102,6 +108,30 @@
     }
   }
 
+  /** Redes que Windows considera públicas: con las reglas por defecto no se aplican en ellas. */
+  const redesPublicas = $derived(report ? publicNetworks(report) : []);
+  const avisarRedPublica = $derived(redesPublicas.length > 0 && report?.permitirPublico === false);
+
+  /** Guarda la decisión y, si se ha aceptado, recrea las reglas con el perfil público (UAC). */
+  async function permitirPublico() {
+    if (!(await model.update({ firewallAllowPublic: true }))) return;
+    // Con el permiso dado, las reglas actuales pasan a estar «desactualizadas»: se relee.
+    await cargar();
+    await crear();
+  }
+
+  async function alternarPublico(valor: boolean) {
+    if (await model.update({ firewallAllowPublic: valor })) await cargar();
+  }
+
+  async function abrirConfiguracionDeRed() {
+    try {
+      await openNetworkSettings();
+    } catch (e) {
+      model.reportError(e);
+    }
+  }
+
   function tono(estado: RuleStatus): "success" | "warning" | "danger" {
     return estado === "present" ? "success" : estado === "missing" ? "danger" : "warning";
   }
@@ -109,10 +139,24 @@
   function nombreDelPrograma(ruta: string): string {
     return ruta.split(/[\\/]/).pop() ?? ruta;
   }
+
+  /** "Dominio, Privado" o "Dominio, Privado, Público" — para ver de un vistazo si una
+   * regla vale (también) en las redes que Windows considera públicas. */
+  function etiquetasPerfiles(perfiles: string[]): string {
+    const etiqueta = (p: string) =>
+      p === "Domain"
+        ? t("settings.fw.profile.domain")
+        : p === "Private"
+          ? t("settings.fw.profile.private")
+          : p === "Public"
+            ? t("settings.fw.profile.public")
+            : p;
+    return perfiles.map(etiqueta).join(", ");
+  }
 </script>
 
 <div class="space-y-6">
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between gap-4">
         <div>
@@ -138,7 +182,8 @@
                 <span class="nb-fw-name">{regla.nombre}</span>
                 <span class="nb-fw-meta">
                   {regla.protocolo} · {regla.puertos} ·
-                  <span title={regla.programa}>{nombreDelPrograma(regla.programa)}</span>
+                  <span title={regla.programa}>{nombreDelPrograma(regla.programa)}</span> ·
+                  {etiquetasPerfiles(regla.perfiles)}
                 </span>
                 {#if !regla.programaExiste}
                   <span class="nb-fw-detail">
@@ -194,6 +239,73 @@
       {/if}
     </div>
   </Card>
+
+  {#if report && avisarRedPublica}
+    <Card variant="default" enterIndex={1}>
+      <div class="p-5 space-y-3" role="status" data-testid="fw-public-notice">
+        <p class="text-sm text-[var(--color-warning)]">
+          {t("settings.fw.public.notice", {
+            networks: redesPublicas.map((r) => `${r.nombre} (${r.interfaz})`).join(", "),
+          })}
+        </p>
+        <p class="text-xs text-[var(--color-text-muted)]">{t("settings.fw.public.hint")}</p>
+        <div class="nb-fw-actions">
+          <Button
+            variant="secondary"
+            onclick={() => (confirmandoPublico = "notice")}
+            disabled={ocupado || !report.ayudanteDisponible}
+            data-testid="fw-public-allow"
+          >
+            {t("settings.fw.public.allow")}
+          </Button>
+          <Button
+            variant="ghost"
+            onclick={abrirConfiguracionDeRed}
+            disabled={ocupado}
+            data-testid="fw-public-settings"
+          >
+            {t("settings.fw.public.openSettings")}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  {/if}
+
+  {#if report}
+    <Card variant="default" enterIndex={2}>
+      <div class="p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="pr-4">
+            <h2 class="text-base font-semibold">{t("settings.fw.public.toggleTitle")}</h2>
+            <p class="text-sm text-[var(--color-text-secondary)]">
+              {t("settings.fw.public.toggleDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={report.permitirPublico}
+            onchange={(valor) => (valor ? (confirmandoPublico = "switch") : alternarPublico(false))}
+            disabled={ocupado || !model.prefs}
+            label={t("settings.fw.public.toggleTitle")}
+          />
+        </div>
+        {#if report.permitirPublico}
+          <p class="text-xs text-[var(--color-warning)]">{t("settings.fw.public.toggleWarning")}</p>
+        {/if}
+      </div>
+    </Card>
+  {/if}
+
+  {#if confirmandoPublico}
+    <PublicNetworkConfirm
+      onCancel={() => (confirmandoPublico = null)}
+      onConfirm={() => {
+        const origen = confirmandoPublico;
+        confirmandoPublico = null;
+        if (origen === "notice") void permitirPublico();
+        else void alternarPublico(true);
+      }}
+    />
+  {/if}
 
   {#if confirmarEliminar}
     <Dialog

@@ -23,6 +23,19 @@ pub fn run() {
     let app_state = app::init().expect("fallo al inicializar el estado central de la aplicación");
 
     tauri::Builder::default()
+        // Toda vía de cierre de la ventana pasa por aquí (§5.2): se cancela el cierre nativo
+        // y decide `cierre::solicitar_cierre`. Sin esto no habría un único comportamiento.
+        .on_window_event(|ventana, evento| {
+            if ventana.label() == "main"
+                && let tauri::WindowEvent::CloseRequested { api, .. } = evento
+            {
+                api.prevent_close();
+                let app = tauri::Manager::app_handle(ventana).clone();
+                tauri::async_runtime::spawn(async move {
+                    platform::cierre::solicitar_cierre(&app).await;
+                });
+            }
+        })
         .setup(move |app| {
             // El canal de control se levanta durante el arranque, antes de que el usuario
             // abra nada: una instancia debe poder recibir un saludo aunque nadie haya
@@ -53,6 +66,14 @@ pub fn run() {
             );
             // Con el ajuste encendido (por defecto), la instancia se anuncia y busca a las demás.
             app_state.aplicar_descubrimiento(app_state.settings.get().mdns_enabled);
+            // Icono de la bandeja (§5.2). Si no se pudiera crear, «minimizar» no oculta la
+            // ventana sino que la minimiza a la barra de tareas, para no dejarla sin salida.
+            match platform::tray::crear(app.handle(), &app_state.settings.get().locale) {
+                Ok(bandeja) => {
+                    tauri::Manager::manage(app, bandeja);
+                }
+                Err(e) => tracing::warn!("No se pudo crear el icono de la bandeja: {e}"),
+            }
             tauri::Manager::manage(app, app_state);
             Ok(())
         })
@@ -81,6 +102,7 @@ pub fn run() {
             ipc::firewall::firewall_rules_status,
             ipc::firewall::firewall_rules_create,
             ipc::firewall::firewall_rules_remove,
+            ipc::firewall::firewall_open_network_settings,
             ipc::history::history_list,
             ipc::history::history_get,
             ipc::history::history_delete_preview,
@@ -97,7 +119,8 @@ pub fn run() {
             ipc::settings::settings_data_info,
             ipc::settings::settings_data_purge,
             ipc::settings::settings_about_info,
-            ipc::settings::app_close_evaluate,
+            ipc::cierre::app_close_apply,
+            ipc::cierre::app_close_confirmed,
             ipc::updater::updater_check,
             ipc::updater::updater_evaluate,
         ])

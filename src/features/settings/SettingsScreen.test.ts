@@ -13,7 +13,7 @@ vi.mock("../../lib/api/settings", () => ({
     autoAcceptTrusted: false,
     customControlPort: null,
     autostart: false,
-    minimizeToTray: false,
+    closeAction: "ask",
     mdnsEnabled: true,
   }),
   updateSettings: vi.fn().mockImplementation((prefs) => Promise.resolve(prefs)),
@@ -35,7 +35,6 @@ vi.mock("../../lib/api/settings", () => ({
     license: "GPL-3.0-or-later",
     copyright: "© 2026 Daniel Díez Mardomingo",
   }),
-  evaluateAppClose: vi.fn().mockResolvedValue("allowExit"),
 }));
 
 vi.mock("../../lib/api/updater", () => ({

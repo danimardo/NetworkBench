@@ -19,6 +19,19 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// Qué hace el botón de cerrar de la ventana (`Historias.md` §5.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CloseAction {
+    /// Pregunta cada vez: minimizar a la bandeja o cerrar.
+    #[default]
+    Ask,
+    /// Oculta la ventana; la aplicación sigue escuchando desde la bandeja.
+    Minimize,
+    /// Sale del todo.
+    Exit,
+}
+
 fn default_mdns_enabled() -> bool {
     true
 }
@@ -38,9 +51,13 @@ pub struct Preferences {
     #[serde(default)]
     pub autostart: bool,
     #[serde(default)]
-    pub minimize_to_tray: bool,
+    pub close_action: CloseAction,
     #[serde(default = "default_mdns_enabled")]
     pub mdns_enabled: bool,
+    /// Las reglas de firewall también valen en redes que Windows considera públicas
+    /// (`Historias.md` §14.5). Apagado por defecto: la exposición mayor la decide la persona.
+    #[serde(default)]
+    pub firewall_allow_public: bool,
 }
 
 impl Default for Preferences {
@@ -55,10 +72,28 @@ impl Default for Preferences {
             custom_control_port: None,
             window_geometry: None,
             autostart: false,
-            minimize_to_tray: false,
+            close_action: CloseAction::Ask,
             mdns_enabled: true,
+            firewall_allow_public: false,
         }
     }
+}
+
+/// Los ajustes guardados antes de `closeAction` tenían un interruptor `minimizeToTray` que
+/// no llegó a hacer nada (no había bandeja). Quien lo dejó encendido pidió minimizar al
+/// cerrar: se conserva esa intención. Con `closeAction` ya presente no se toca nada.
+fn migrar_ajustes_antiguos(contenido: &str) -> String {
+    let Ok(mut valor) = serde_json::from_str::<serde_json::Value>(contenido) else {
+        return contenido.to_string();
+    };
+    let Some(objeto) = valor.as_object_mut() else {
+        return contenido.to_string();
+    };
+    let quiere_bandeja = objeto.get("minimizeToTray").and_then(|v| v.as_bool()) == Some(true);
+    if quiere_bandeja && !objeto.contains_key("closeAction") {
+        objeto.insert("closeAction".into(), "minimize".into());
+    }
+    valor.to_string()
 }
 
 pub struct SettingsStore {
@@ -153,7 +188,7 @@ impl SettingsStore {
             return Preferences::default();
         }
 
-        match serde_json::from_str::<Preferences>(&content) {
+        match serde_json::from_str::<Preferences>(&migrar_ajustes_antiguos(&content)) {
             Ok(prefs) => prefs,
             Err(_) => {
                 // Archivo corrupto o malformado: poner en cuarentena explícita y regenerar defaults
@@ -273,7 +308,7 @@ mod tests {
     const DEL_FRONTEND: &str = r#"{
         "schemaVersion": 1, "theme": "dark", "locale": "en", "reduceMotion": false,
         "logLevel": "info", "autoAcceptTrusted": true, "customControlPort": null,
-        "autostart": false, "minimizeToTray": true, "mdnsEnabled": false
+        "autostart": false, "closeAction": "minimize", "mdnsEnabled": false
     }"#;
 
     #[test]
@@ -281,7 +316,8 @@ mod tests {
         let p: Preferences = serde_json::from_str(DEL_FRONTEND).expect("deserializar");
         assert_eq!(p.locale, "en");
         assert_eq!(p.log_level, LogLevel::Info);
-        assert!(p.auto_accept_trusted && p.minimize_to_tray && !p.mdns_enabled);
+        assert!(p.auto_accept_trusted && !p.mdns_enabled);
+        assert_eq!(p.close_action, CloseAction::Minimize);
         assert_eq!(p.custom_control_port, None);
         assert_eq!(p.window_geometry, None);
     }
@@ -311,8 +347,62 @@ mod tests {
 
         // Un almacén nuevo sobre el mismo fichero (= reabrir la app) ve lo guardado.
         let releidas = SettingsStore::new(ruta).get();
-        assert!(releidas.auto_accept_trusted && releidas.minimize_to_tray);
+        assert!(releidas.auto_accept_trusted);
+        assert_eq!(releidas.close_action, CloseAction::Minimize);
         assert_eq!(releidas.locale, "en");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn por_defecto_al_cerrar_pregunta() {
+        assert_eq!(Preferences::default().close_action, CloseAction::Ask);
+    }
+
+    #[test]
+    fn el_interruptor_antiguo_de_bandeja_se_convierte_en_minimizar() {
+        let antiguo = r#"{"schemaVersion":1,"theme":"dark","locale":"es","reduceMotion":false,
+            "logLevel":"warn","autoAcceptTrusted":false,"customControlPort":null,
+            "autostart":false,"minimizeToTray":true,"mdnsEnabled":true}"#;
+        let p: Preferences = serde_json::from_str(&migrar_ajustes_antiguos(antiguo)).unwrap();
+        assert_eq!(p.close_action, CloseAction::Minimize);
+
+        // Apagado (lo normal: nunca hizo nada), sigue preguntando.
+        let apagado = antiguo.replace("\"minimizeToTray\":true", "\"minimizeToTray\":false");
+        let p: Preferences = serde_json::from_str(&migrar_ajustes_antiguos(&apagado)).unwrap();
+        assert_eq!(p.close_action, CloseAction::Ask);
+
+        // Con closeAction ya presente manda ese: la migración no pisa una elección nueva.
+        let nuevo = antiguo.replace(
+            "\"minimizeToTray\":true",
+            "\"minimizeToTray\":true,\"closeAction\":\"exit\"",
+        );
+        let p: Preferences = serde_json::from_str(&migrar_ajustes_antiguos(&nuevo)).unwrap();
+        assert_eq!(p.close_action, CloseAction::Exit);
+    }
+
+    #[test]
+    fn un_fichero_antiguo_con_el_interruptor_encendido_arranca_en_minimizar() {
+        let dir = std::env::temp_dir().join(format!("nb_settings_mig_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let ruta = dir.join("settings.json");
+        std::fs::write(
+            &ruta,
+            r#"{"schemaVersion":1,"theme":"dark","locale":"es","reduceMotion":false,
+                "logLevel":"warn","autoAcceptTrusted":false,"customControlPort":null,
+                "autostart":false,"minimizeToTray":true,"mdnsEnabled":true}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            SettingsStore::new(ruta).get().close_action,
+            CloseAction::Minimize
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn el_nombre_en_el_json_es_el_que_espera_el_frontend() {
+        let json = serde_json::to_value(Preferences::default()).unwrap();
+        assert_eq!(json["closeAction"], "ask");
+        assert!(json.get("minimizeToTray").is_none());
     }
 }

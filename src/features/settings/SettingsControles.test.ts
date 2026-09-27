@@ -19,7 +19,7 @@ const PREFS = {
   autoAcceptTrusted: false,
   customControlPort: null,
   autostart: false,
-  minimizeToTray: false,
+  closeAction: "ask",
   mdnsEnabled: true,
 };
 
@@ -39,7 +39,6 @@ vi.mock("../../lib/api/settings", () => ({
     license: "GPL-3.0-or-later",
     copyright: "© 2026 Daniel Díez Mardomingo y colaboradores",
   }),
-  evaluateAppClose: vi.fn().mockResolvedValue("allowExit"),
 }));
 vi.mock("../../lib/api/updater", () => ({
   checkUpdate: vi.fn().mockResolvedValue({ status: "upToDate" }),
@@ -80,21 +79,35 @@ describe("Ajustes: los controles existen, indican su estado y funcionan", () => 
     expect(screen.getByText("Activado")).toBeTruthy();
   });
 
-  it("Ciclo de vida: bandeja e inicio con Windows son interruptores", async () => {
+  it("Ciclo de vida: inicio con Windows es un interruptor y «Al cerrar la ventana» un selector", async () => {
     render(SettingsScreen);
     await irAPestana(/Lifecycle|Ciclo/i);
     await cargados();
 
-    const bandeja = await screen.findByRole("switch", {
-      name: "Minimizar a la bandeja del sistema",
-    });
-    await fireEvent.click(bandeja);
+    expect(await screen.findByRole("switch", { name: "Iniciar con Windows" })).toBeTruthy();
+    // Ya no hay un interruptor de bandeja que no hacía nada: es el ajuste de cierre de §5.2.
+    expect(screen.queryByRole("switch", { name: /bandeja/i })).toBeNull();
+
+    const preguntar = await screen.findByRole("radio", { name: "Preguntar" });
+    await waitFor(() => expect(preguntar.getAttribute("aria-checked")).toBe("true"));
+    expect(
+      screen.getByRole("radio", { name: "Minimizar a la bandeja" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen.getByRole("radio", { name: "Cerrar NetworkBench" }).getAttribute("aria-checked"),
+    ).toBe("false");
+
+    await fireEvent.click(screen.getByRole("radio", { name: "Minimizar a la bandeja" }));
     await waitFor(() =>
       expect(updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({ minimizeToTray: true }),
+        expect.objectContaining({ closeAction: "minimize" }),
       ),
     );
-    expect(screen.getByRole("switch", { name: "Iniciar con Windows" })).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("radio", { name: "Minimizar a la bandeja" }).getAttribute("aria-checked"),
+      ).toBe("true"),
+    );
   });
 
   it("Red: el descubrimiento mDNS se puede apagar y el campo del puerto existe", async () => {

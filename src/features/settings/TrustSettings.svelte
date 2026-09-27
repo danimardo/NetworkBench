@@ -17,7 +17,7 @@
 
 <div class="space-y-6">
   <!-- Auto-aceptación de equipos de confianza -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div class="pr-4">

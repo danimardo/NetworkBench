@@ -2,11 +2,12 @@
 //!
 //! Aquí solo hay lógica pura y testeable: qué reglas se esperan para un puerto de control y
 //! un programa dados, y cómo se compara una regla leída del sistema con la esperada. Leer el
-//! firewall (`inspect`) y cambiarlo (`helper_client`, con UAC) están en sus módulos.
+//! firewall (`estado`) y cambiarlo (`helper_client`, con UAC) están en sus módulos.
 
 use super::inspect::RuleStatus;
-use super::validation::FirewallHelperRequest;
+use super::validation::{FirewallHelperRequest, GRUPO_REGLAS};
 use serde::Serialize;
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 pub const NOMBRE_CONTROL: &str = "NetworkBench - Control";
@@ -20,8 +21,9 @@ pub const PUERTO_BASE_MOTOR: u16 = 5001;
 /// Puertos que reserva cada protocolo del motor: `base..base+63` (§14.1).
 pub const PUERTOS_MOTOR: u16 = 64;
 pub const PUERTO_MDNS: u16 = 5353;
-/// Perfiles por defecto (§14.5): Dominio y Privado. Público solo si la persona lo acepta.
+/// Perfiles por defecto (§14.5): Dominio y Privado.
 pub const PERFILES_POR_DEFECTO: [&str; 2] = ["Domain", "Private"];
+pub const PERFIL_PUBLICO: &str = "Public";
 
 /// Una regla tal y como debe existir.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -33,6 +35,8 @@ pub struct ReglaEsperada {
     pub puertos: String,
     pub programa: String,
     pub perfiles: Vec<String>,
+    /// Grupo con el que se crea; el desinstalador retira las reglas por él.
+    pub grupo: String,
 }
 
 /// De qué depende el conjunto de reglas: los puertos configurados y dónde está cada programa.
@@ -41,6 +45,8 @@ pub struct Entorno {
     pub puerto_control: u16,
     pub puerto_base_motor: u16,
     pub mdns_activo: bool,
+    /// La persona ha aceptado permitir también las redes que Windows llama públicas (§14.5).
+    pub permitir_publico: bool,
     pub ejecutable: PathBuf,
     pub motor: PathBuf,
 }
@@ -48,21 +54,26 @@ pub struct Entorno {
 impl Entorno {
     /// Junto al ejecutable están el motor y el helper, tanto en desarrollo como instalado
     /// (mismo criterio que `app::init` para localizar `ntttcp.exe`).
-    pub fn actual(puerto_control: u16, mdns_activo: bool) -> Option<Self> {
+    pub fn actual(puerto_control: u16, mdns_activo: bool, permitir_publico: bool) -> Option<Self> {
         let ejecutable = std::env::current_exe().ok()?;
         let motor = ejecutable.parent()?.join("ntttcp.exe");
         Some(Self {
             puerto_control,
             puerto_base_motor: PUERTO_BASE_MOTOR,
             mdns_activo,
+            permitir_publico,
             ejecutable,
             motor,
         })
     }
-}
 
-fn perfiles() -> Vec<String> {
-    PERFILES_POR_DEFECTO.iter().map(|p| p.to_string()).collect()
+    fn perfiles(&self) -> Vec<String> {
+        let mut v: Vec<String> = PERFILES_POR_DEFECTO.iter().map(|p| p.to_string()).collect();
+        if self.permitir_publico {
+            v.push(PERFIL_PUBLICO.to_string());
+        }
+        v
+    }
 }
 
 /// Las reglas que deben existir. La de descubrimiento solo cuenta con mDNS encendido.
@@ -79,7 +90,8 @@ pub fn esperadas(e: &Entorno) -> Vec<ReglaEsperada> {
         protocolo: protocolo.to_string(),
         puertos,
         programa: programa.to_string(),
-        perfiles: perfiles(),
+        perfiles: e.perfiles(),
+        grupo: GRUPO_REGLAS.to_string(),
     };
 
     let mut v = vec![
@@ -119,21 +131,30 @@ pub fn a_peticion(r: &ReglaEsperada, operacion: &str) -> FirewallHelperRequest {
     }
 }
 
-/// `netsh` equivalente, para quien prefiera (o necesite, con una directiva corporativa)
-/// crear la regla a mano. Solo texto para copiar: la aplicación no lo ejecuta.
-pub fn netsh_agregar(r: &ReglaEsperada) -> String {
+/// Comando de PowerShell equivalente, para quien prefiera (o necesite, con una directiva
+/// corporativa) crear la regla a mano. Solo texto para copiar: la aplicación no lo ejecuta.
+///
+/// Es PowerShell y no `netsh` porque `netsh advfirewall firewall add rule` no puede asignar
+/// el grupo, y sin grupo el desinstalador no encuentra la regla.
+pub fn comando_agregar(r: &ReglaEsperada) -> String {
+    // En una cadena entre comillas simples de PowerShell solo hay que doblar la comilla simple.
+    let entre_comillas = |s: &str| format!("'{}'", s.replace('\'', "''"));
     format!(
-        "netsh advfirewall firewall add rule name=\"{}\" dir=in action=allow protocol={} localport={} program=\"{}\" profile={}",
-        r.nombre,
-        r.protocolo.to_lowercase(),
+        "New-NetFirewallRule -DisplayName {} -Group {} -Direction Inbound -Action Allow -Protocol {} -LocalPort {} -Program {} -Profile {}",
+        entre_comillas(&r.nombre),
+        entre_comillas(&r.grupo),
+        r.protocolo,
         r.puertos,
-        r.programa,
-        r.perfiles.join(",").to_lowercase()
+        entre_comillas(&r.programa),
+        r.perfiles.join(",")
     )
 }
 
-pub fn netsh_eliminar(nombre: &str) -> String {
-    format!("netsh advfirewall firewall delete rule name=\"{nombre}\"")
+pub fn comando_eliminar(nombre: &str) -> String {
+    format!(
+        "Remove-NetFirewallRule -DisplayName '{}'",
+        nombre.replace('\'', "''")
+    )
 }
 
 /// Una regla tal y como la devuelve el sistema (`Get-NetFirewallRule` y sus filtros).
@@ -143,6 +164,7 @@ pub struct ReglaLeida {
     pub accion: String,
     pub direccion: String,
     pub perfil: String,
+    pub grupo: String,
     pub protocolo: String,
     pub puertos_locales: String,
     pub programa: String,
@@ -150,9 +172,10 @@ pub struct ReglaLeida {
 
 /// Compara la regla leída con la esperada.
 ///
-/// «Modificada» es cualquier campo que ya no casa (acción, sentido, protocolo, puertos,
-/// programa o perfiles). Que la regla tenga **además** otros perfiles no la modifica: quien
-/// permite también la red pública no la ha roto.
+/// «Modificada» es cualquier campo que ya no casa: acción, sentido, protocolo, puertos,
+/// programa, grupo o perfiles. Los perfiles se comparan **exactos**: que la regla valga
+/// además para la red pública es tan distinto de lo esperado como que le falte uno, porque
+/// abrir la red pública es una decisión explícita de la persona (§14.5).
 pub fn evaluar(esperada: &ReglaEsperada, leida: Option<&ReglaLeida>) -> (RuleStatus, String) {
     let Some(l) = leida else {
         return (RuleStatus::Missing, "Regla ausente en el firewall".into());
@@ -180,7 +203,18 @@ pub fn evaluar(esperada: &ReglaEsperada, leida: Option<&ReglaLeida>) -> (RuleSta
     if !misma_ruta(&l.programa, &esperada.programa) {
         diferencias.push(format!("programa {}", l.programa));
     }
-    if !cubre_perfiles(&l.perfil, &esperada.perfiles) {
+    if !l.grupo.eq_ignore_ascii_case(&esperada.grupo) {
+        // Las creadas antes de que el helper asignara grupo: el desinstalador no las vería.
+        diferencias.push(format!(
+            "sin el grupo {}",
+            if l.grupo.is_empty() {
+                &esperada.grupo
+            } else {
+                &l.grupo
+            }
+        ));
+    }
+    if perfiles_de(&l.perfil) != perfiles_esperados(&esperada.perfiles) {
         diferencias.push(format!("perfiles {}", l.perfil));
     }
 
@@ -205,13 +239,23 @@ fn misma_ruta(a: &str, b: &str) -> bool {
     !a.trim().is_empty() && Path::new(&limpia(a)) == Path::new(&limpia(b))
 }
 
-/// La regla cubre los perfiles esperados si los incluye todos, o si vale para cualquiera.
-fn cubre_perfiles(leido: &str, esperados: &[String]) -> bool {
-    let leido = leido.to_lowercase();
-    if leido.contains("any") || leido.contains("all") {
-        return true;
+const TODOS: [&str; 3] = ["domain", "private", "public"];
+
+/// Perfiles de una regla tal y como los da PowerShell: `Domain, Private`, `Any`…
+fn perfiles_de(leido: &str) -> BTreeSet<String> {
+    let minusculas = leido.to_lowercase();
+    if minusculas.contains("any") || minusculas.contains("all") {
+        return TODOS.iter().map(|p| p.to_string()).collect();
     }
-    esperados.iter().all(|p| leido.contains(&p.to_lowercase()))
+    TODOS
+        .iter()
+        .filter(|p| minusculas.contains(**p))
+        .map(|p| p.to_string())
+        .collect()
+}
+
+fn perfiles_esperados(esperados: &[String]) -> BTreeSet<String> {
+    esperados.iter().map(|p| p.to_lowercase()).collect()
 }
 
 #[cfg(test)]
@@ -223,6 +267,7 @@ mod tests {
             puerto_control: 7411,
             puerto_base_motor: 5001,
             mdns_activo: true,
+            permitir_publico: false,
             ejecutable: PathBuf::from(r"C:\Apps\NetworkBench\NetworkBench.exe"),
             motor: PathBuf::from(r"C:\Apps\NetworkBench\ntttcp.exe"),
         }
@@ -234,6 +279,7 @@ mod tests {
             accion: "Allow".into(),
             direccion: "Inbound".into(),
             perfil: "Domain, Private".into(),
+            grupo: "NetworkBench".into(),
             protocolo: r.protocolo.clone(),
             puertos_locales: r.puertos.clone(),
             programa: r.programa.clone(),
@@ -258,6 +304,7 @@ mod tests {
         );
         assert!(r[0].programa.ends_with("NetworkBench.exe"));
         assert!(r[1].programa.ends_with("ntttcp.exe"));
+        assert!(r.iter().all(|x| x.grupo == "NetworkBench"));
     }
 
     #[test]
@@ -272,6 +319,18 @@ mod tests {
         let mut e = entorno();
         e.puerto_control = 9000;
         assert_eq!(esperadas(&e)[0].puertos, "9000");
+    }
+
+    #[test]
+    fn por_defecto_dominio_y_privado_y_con_el_permiso_tambien_publico() {
+        let mut e = entorno();
+        assert_eq!(esperadas(&e)[0].perfiles, vec!["Domain", "Private"]);
+        e.permitir_publico = true;
+        assert!(
+            esperadas(&e)
+                .iter()
+                .all(|r| r.perfiles == vec!["Domain", "Private", "Public"])
+        );
     }
 
     #[test]
@@ -295,15 +354,19 @@ mod tests {
     }
 
     #[test]
-    fn el_netsh_para_copiar_es_el_equivalente_de_la_regla() {
-        let r = &esperadas(&entorno())[0];
-        let n = netsh_agregar(r);
-        assert!(n.contains("name=\"NetworkBench - Control\""));
-        assert!(n.contains("localport=7411") && n.contains("protocol=tcp"));
-        assert!(n.contains("profile=domain,private"));
+    fn el_comando_manual_es_powershell_con_grupo_y_escapa_las_comillas() {
+        let mut r = esperadas(&entorno())[0].clone();
+        let c = comando_agregar(&r);
+        assert!(c.starts_with("New-NetFirewallRule -DisplayName 'NetworkBench - Control'"));
+        assert!(c.contains("-Group 'NetworkBench'"));
+        assert!(c.contains("-LocalPort 7411") && c.contains("-Protocol TCP"));
+        assert!(c.contains("-Profile Domain,Private"));
+
+        r.programa = r"C:\Users\O'Brien\NetworkBench.exe".into();
+        assert!(comando_agregar(&r).contains(r"-Program 'C:\Users\O''Brien\NetworkBench.exe'"));
         assert_eq!(
-            netsh_eliminar("NetworkBench - Control"),
-            "netsh advfirewall firewall delete rule name=\"NetworkBench - Control\""
+            comando_eliminar("NetworkBench - Control"),
+            "Remove-NetFirewallRule -DisplayName 'NetworkBench - Control'"
         );
     }
 
@@ -317,7 +380,7 @@ mod tests {
     fn presente_si_coincide_todo_y_sin_importar_mayusculas_ni_prefijo_de_ruta() {
         let r = &esperadas(&entorno())[0];
         let mut l = correcta(r);
-        l.programa = r#"\\?\c:\apps\networkbench\NETWORKBENCH.EXE"#.into();
+        l.programa = r"\\?\c:\apps\networkbench\NETWORKBENCH.EXE".into();
         assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Present);
     }
 
@@ -357,14 +420,39 @@ mod tests {
     }
 
     #[test]
-    fn permitir_ademas_la_red_publica_no_la_modifica_pero_quitar_un_perfil_si() {
+    fn una_regla_sin_grupo_esta_desactualizada_porque_el_desinstalador_no_la_veria() {
         let r = &esperadas(&entorno())[0];
         let mut l = correcta(r);
-        l.perfil = "Domain, Private, Public".into();
-        assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Present);
+        l.grupo = String::new();
+        let (estado, detalle) = evaluar(r, Some(&l));
+        assert_eq!(estado, RuleStatus::Modified);
+        assert!(detalle.contains("sin el grupo NetworkBench"), "{detalle}");
+    }
+
+    #[test]
+    fn los_perfiles_se_comparan_exactos_en_los_dos_sentidos() {
+        let mut e = entorno();
+        let r = &esperadas(&e)[0];
+        let mut l = correcta(r);
+
+        // De menos: falta uno.
         l.perfil = "Private".into();
         assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Modified);
+        // De más: abre la red pública sin que la persona lo haya aceptado.
+        l.perfil = "Domain, Private, Public".into();
+        assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Modified);
+        // «Any» incluye la pública.
+        l.perfil = "Any".into();
+        assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Modified);
+
+        // Con el permiso, lo esperado es justo lo contrario.
+        e.permitir_publico = true;
+        let r = &esperadas(&e)[0];
+        l.perfil = "Domain, Private, Public".into();
+        assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Present);
         l.perfil = "Any".into();
         assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Present);
+        l.perfil = "Domain, Private".into();
+        assert_eq!(evaluar(r, Some(&l)).0, RuleStatus::Modified);
     }
 }

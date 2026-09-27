@@ -11,6 +11,7 @@
   import DiagnosticSettings from "./DiagnosticSettings.svelte";
   import AboutScreen from "./AboutScreen.svelte";
   import Toast from "../../lib/components/Toast.svelte";
+  import { settingsNav } from "./nav.svelte";
   import ToastLayer from "../../lib/components/ToastLayer.svelte";
 
   const model = new SettingsModel();
@@ -63,6 +64,16 @@
 
   onMount(() => {
     model.load();
+  });
+
+  // Otra parte de la aplicación puede pedir una pestaña (el aviso de cortafuegos del
+  // arranque, por ejemplo). Se atiende esté Ajustes recién abierto o ya a la vista.
+  $effect(() => {
+    const pedida = settingsNav.requestedTab;
+    if (pedida && TABS.some((tab) => tab.id === pedida)) {
+      activeTab = pedida as TabId;
+      settingsNav.requestedTab = null;
+    }
   });
 </script>
 

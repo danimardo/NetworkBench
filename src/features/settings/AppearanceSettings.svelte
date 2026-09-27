@@ -34,7 +34,7 @@
 
 <div class="space-y-6">
   <!-- Tarjeta de Tema de Interfaz -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div>
@@ -54,7 +54,7 @@
   </Card>
 
   <!-- Tarjeta de Idioma -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={1}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div>
@@ -72,7 +72,7 @@
   </Card>
 
   <!-- Tarjeta de Reducción de Movimiento -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={2}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div class="pr-4">

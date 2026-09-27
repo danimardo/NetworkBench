@@ -96,7 +96,7 @@
 
 <div class="space-y-6">
   <!-- Puerto de Control Personalizado -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div>
         <h2 class="text-base font-semibold">{t("settings.networkControlPort")}</h2>
@@ -127,7 +127,7 @@
   </Card>
 
   {#if avisoRegla}
-    <Card variant="default">
+    <Card variant="default" enterIndex={1}>
       <div
         class="p-5 flex items-center justify-between gap-4"
         role="status"
@@ -154,7 +154,7 @@
   {/if}
 
   <!-- Descubrimiento de Red Local mDNS -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={2}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div class="pr-4">

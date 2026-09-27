@@ -8,7 +8,14 @@
     "closeConfirmWarning": "A benchmark session is currently running.",
     "closeConfirmDescription": "If you exit now, the benchmark in progress will be immediately cancelled and no official results will be recorded.",
     "closeKeepRunning": "Keep benchmark running",
-    "closeConfirmExit": "Exit and cancel"
+    "closeConfirmExit": "Exit and cancel",
+    "closeChoice": {
+      "title": "What do you want to do?",
+      "body": "NetworkBench can stay available in the background so other devices can run tests with this one.",
+      "remember": "Remember my choice",
+      "minimize": "Minimize to tray",
+      "exit": "Close NetworkBench"
+    }
   },
   "nav": {
     "peers": "Peers",
@@ -198,8 +205,6 @@
     "autoAcceptSecurityNotice": "For security reasons, auto-accept is disabled by default. Enable it only in trusted, secure networks.",
     "autostart": "Start with Windows",
     "autostartDesc": "Start NetworkBench minimized in the background when turning on the computer.",
-    "minimizeToTray": "Minimize to system tray",
-    "minimizeToTrayDesc": "Keep application in system tray when closing main window.",
     "firewallRules": "Windows Firewall rules",
     "firewallRulesDesc": "Inspection of required rules for control and NTTTCP data traffic.",
     "checkFirewallNow": "Inspect now",
@@ -242,6 +247,11 @@
         "modified": "Out of date",
         "disabled": "Disabled"
       },
+      "profile": {
+        "domain": "Domain",
+        "private": "Private",
+        "public": "Public"
+      },
       "create": "Create the missing ones",
       "remove": "Remove all",
       "manual": "View manual instructions",
@@ -257,13 +267,31 @@
       "removeWarning": "Other devices will not be able to connect to this one until you create them again. Windows will ask for administrator permission.",
       "removeConfirm": "Remove",
       "manualTitle": "Manual instructions",
-      "manualIntro": "Open PowerShell or Command Prompt as administrator and run these commands to create the rules:",
-      "manualRemoveIntro": "To remove them later:",
+      "manualIntro": "Open PowerShell as administrator and run these commands to create the rules:",
+      "manualRemoveIntro": "To remove them later (deletes every rule in the NetworkBench group):",
       "loadError": "The firewall status could not be checked",
       "portNoRule": "The control port is now {port}, but the firewall has no rule allowing it. Other devices will not be able to connect to this one.",
       "portOutdated": "The control port is now {port}, but the firewall rule does not allow it (it is for another port or is disabled). Other devices will not be able to connect to this one.",
-      "recreate": "Recreate rule"
-    }
+      "recreate": "Recreate rule",
+      "public": {
+        "notice": "Windows treats the network “{networks}” as public. The current rules only apply on domain and private networks, so other devices will not be able to connect to this one through it.",
+        "hint": "If it is a network you trust (your own VPN, for example), the cleanest fix is to change its type to “Private” in Windows settings. Allowing public networks opens these ports on networks you do not control too (cafés, hotels).",
+        "allow": "Allow on public networks",
+        "openSettings": "Open network settings",
+        "toggleTitle": "Also allow on public networks",
+        "toggleDesc": "Adds the “Public” profile to the rules. Needed to connect over a network or VPN that Windows classifies as public.",
+        "toggleWarning": "With this on, devices on networks you do not control can reach NetworkBench's ports. The control channel is encrypted and requires pairing, but you should turn this off when you do not need it.",
+        "confirmTitle": "Allow NetworkBench on public networks?",
+        "confirmBody": "The firewall rules will also apply on networks Windows marks as public, such as a café or hotel network. Other devices on those networks will be able to reach NetworkBench's ports. The control channel is encrypted and requires pairing, but you should turn this off when you do not need it.",
+        "confirmUac": "Windows will ask for administrator permission to update the rules.",
+        "confirmAllow": "Allow"
+      }
+    },
+    "closeAction": "When closing the window",
+    "closeActionDesc": "What the close (X) button does. Minimizing to the tray keeps NetworkBench available in the background.",
+    "closeActionAsk": "Ask",
+    "closeActionMinimize": "Minimize to tray",
+    "closeActionExit": "Close NetworkBench"
   },
   "plan": {
     "protocol": "Protocol",
@@ -648,5 +676,14 @@
     "maximize": "Maximize",
     "restore": "Restore",
     "close": "Close"
+  },
+  "startup": {
+    "fw": {
+      "missing": "Some Windows firewall rules are missing. Without them, other devices may not be able to connect to this one.",
+      "create": "Create now",
+      "public": "Windows treats your network “{networks}” as public: the firewall rules do not apply on it and other devices will not be able to connect to this one.",
+      "review": "Review",
+      "creating": "Waiting for UAC…"
+    }
   }
 }

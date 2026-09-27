@@ -184,8 +184,8 @@
     </div>
   {:else}
     <div class="nb-peers-grid" role="list">
-      {#each peers as peer (peer.fingerprint)}
-        <div role="listitem">
+      {#each peers as peer, i (peer.fingerprint)}
+        <div role="listitem" class="nb-enter" style:--nb-i={i}>
           <DeviceCard
             name={peer.displayName}
             alias={peer.alias ?? ""}

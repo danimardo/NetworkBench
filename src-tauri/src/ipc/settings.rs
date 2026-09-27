@@ -1,7 +1,6 @@
 use crate::app::AppState;
 use crate::ipc::response::IpcResult;
 use crate::platform::autostart;
-use crate::platform::lifecycle::{CloseActionDecision, evaluate_close_request};
 use crate::settings::Preferences;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -166,16 +165,4 @@ pub fn settings_about_info() -> IpcResult<AboutInfo> {
         license: "GPL-3.0-or-later".to_string(),
         copyright: "© 2026 Daniel Díez Mardomingo y colaboradores".to_string(),
     })
-}
-
-#[tauri::command]
-pub async fn app_close_evaluate(
-    state: tauri::State<'_, AppState>,
-    force: bool,
-) -> Result<IpcResult<CloseActionDecision>, String> {
-    let is_session_active = state.session_service.current_state().await.is_active();
-    let minimize_to_tray = state.settings.get().minimize_to_tray;
-
-    let decision = evaluate_close_request(is_session_active, minimize_to_tray, force);
-    Ok(IpcResult::ok(decision))
 }

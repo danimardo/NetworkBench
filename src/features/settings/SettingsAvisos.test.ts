@@ -18,7 +18,7 @@ const PREFS = {
   autoAcceptTrusted: false,
   customControlPort: null,
   autostart: false,
-  minimizeToTray: false,
+  closeAction: "ask",
   mdnsEnabled: true,
 };
 
@@ -30,7 +30,6 @@ vi.mock("../../lib/api/settings", () => ({
   getDataInfo: vi.fn().mockResolvedValue(null),
   purgeData: vi.fn().mockResolvedValue(undefined),
   getAboutInfo: vi.fn().mockResolvedValue(null),
-  evaluateAppClose: vi.fn().mockResolvedValue("allowExit"),
 }));
 vi.mock("../../lib/api/updater", () => ({ checkUpdate: vi.fn(), evaluateUpdate: vi.fn() }));
 vi.mock("../../lib/api/firewall", () => ({ inspectFirewall: vi.fn() }));
@@ -45,11 +44,12 @@ function errorInterno(): IpcError {
   });
 }
 
-async function alternarBandeja() {
+/** Provoca un guardado cambiando «Al cerrar la ventana» (espera a que carguen los ajustes). */
+async function cambiarCierre(opcion = "Cerrar NetworkBench") {
   await fireEvent.click(await screen.findByRole("tab", { name: /Ciclo de vida/ }));
-  const sw = await screen.findByRole("switch", { name: "Minimizar a la bandeja del sistema" });
-  await waitFor(() => expect((sw as HTMLButtonElement).disabled).toBe(false));
-  await fireEvent.click(sw);
+  const inicial = await screen.findByRole("radio", { name: "Preguntar" });
+  await waitFor(() => expect(inicial.getAttribute("aria-checked")).toBe("true"));
+  await fireEvent.click(screen.getByRole("radio", { name: opcion }));
 }
 
 describe("Ajustes: avisos flotantes que no desplazan los controles", () => {
@@ -64,7 +64,7 @@ describe("Ajustes: avisos flotantes que no desplazan los controles", () => {
   it("«guardado» aparece en la capa flotante y no entre el título y las pestañas", async () => {
     vi.mocked(updateSettings).mockImplementation((p) => Promise.resolve(p));
     const { container } = render(SettingsScreen);
-    await alternarBandeja();
+    await cambiarCierre();
 
     const aviso = await screen.findByText("Ajustes guardados correctamente");
     expect(aviso.closest(".nb-toastlayer")).not.toBeNull();
@@ -79,7 +79,7 @@ describe("Ajustes: avisos flotantes que no desplazan los controles", () => {
     vi.mocked(updateSettings).mockImplementation((p) => Promise.resolve(p));
     render(SettingsScreen);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    await alternarBandeja();
+    await cambiarCierre();
 
     await vi.waitFor(() =>
       expect(screen.queryByText("Ajustes guardados correctamente")).not.toBeNull(),
@@ -91,7 +91,7 @@ describe("Ajustes: avisos flotantes que no desplazan los controles", () => {
   it("un error sale traducido, como alerta, y se queda hasta que se cierra", async () => {
     vi.mocked(updateSettings).mockRejectedValue(errorInterno());
     render(SettingsScreen);
-    await alternarBandeja();
+    await cambiarCierre();
 
     const alerta = await screen.findByRole("alert");
     // El texto del error, no «[NB-INTERNAL-001] errors.NB-INTERNAL-001».
@@ -110,14 +110,13 @@ describe("Ajustes: avisos flotantes que no desplazan los controles", () => {
     vi.mocked(updateSettings).mockImplementation((p) => Promise.resolve(p));
     render(SettingsScreen);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    await alternarBandeja();
+    await cambiarCierre();
     await vi.waitFor(() =>
       expect(screen.queryByText("Ajustes guardados correctamente")).not.toBeNull(),
     );
 
     await vi.advanceTimersByTimeAsync(2000);
-    const sw = screen.getByRole("switch", { name: "Minimizar a la bandeja del sistema" });
-    await fireEvent.click(sw);
+    await fireEvent.click(screen.getByRole("radio", { name: "Minimizar a la bandeja" }));
     await vi.advanceTimersByTimeAsync(2000);
 
     // Han pasado 4 s desde el primero, pero solo 2 desde el segundo: sigue a la vista.

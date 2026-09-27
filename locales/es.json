@@ -8,7 +8,14 @@
     "closeConfirmWarning": "Hay una sesión de medición activa en ejecución.",
     "closeConfirmDescription": "Si sales ahora, la prueba en curso se cancelará inmediatamente y no se registrarán resultados oficiales.",
     "closeKeepRunning": "Seguir con la prueba",
-    "closeConfirmExit": "Salir y cancelar"
+    "closeConfirmExit": "Salir y cancelar",
+    "closeChoice": {
+      "title": "¿Qué quieres hacer?",
+      "body": "NetworkBench puede seguir disponible en segundo plano para que otros equipos puedan hacer pruebas con este.",
+      "remember": "Recordar mi decisión",
+      "minimize": "Minimizar a la bandeja",
+      "exit": "Cerrar NetworkBench"
+    }
   },
   "nav": {
     "peers": "Equipos",
@@ -198,8 +205,6 @@
     "autoAcceptSecurityNotice": "Por seguridad, la auto-aceptación está desactivada de forma predeterminada. Actívala solo en entornos de red seguros y controlados.",
     "autostart": "Iniciar con Windows",
     "autostartDesc": "Inicia NetworkBench minimizado en segundo plano al encender el equipo.",
-    "minimizeToTray": "Minimizar a la bandeja del sistema",
-    "minimizeToTrayDesc": "Mantiene la aplicación en la bandeja del sistema al cerrar la ventana principal.",
     "firewallRules": "Reglas de Firewall de Windows",
     "firewallRulesDesc": "Inspección de las reglas requeridas para el tráfico de control y datos de NTTTCP.",
     "checkFirewallNow": "Inspeccionar ahora",
@@ -242,6 +247,11 @@
         "modified": "Desactualizada",
         "disabled": "Deshabilitada"
       },
+      "profile": {
+        "domain": "Dominio",
+        "private": "Privado",
+        "public": "Público"
+      },
       "create": "Crear las que faltan",
       "remove": "Eliminar todas",
       "manual": "Ver instrucciones manuales",
@@ -257,13 +267,31 @@
       "removeWarning": "Otros equipos dejarán de poder conectar con este hasta que vuelvas a crearlas. Windows pedirá permiso de administrador.",
       "removeConfirm": "Eliminar",
       "manualTitle": "Instrucciones manuales",
-      "manualIntro": "Abre PowerShell o el Símbolo del sistema como administrador y ejecuta estos comandos para crear las reglas:",
-      "manualRemoveIntro": "Para eliminarlas más adelante:",
+      "manualIntro": "Abre PowerShell como administrador y ejecuta estos comandos para crear las reglas:",
+      "manualRemoveIntro": "Para eliminarlas más adelante (borra todas las reglas del grupo NetworkBench):",
       "loadError": "No se pudo comprobar el estado del cortafuegos",
       "portNoRule": "El puerto de control ahora es {port}, pero el cortafuegos no tiene ninguna regla que lo permita. Otros equipos no podrán conectar con este.",
       "portOutdated": "El puerto de control ahora es {port}, pero la regla del cortafuegos no lo permite (sigue siendo de otro puerto o está deshabilitada). Otros equipos no podrán conectar con este.",
-      "recreate": "Recrear regla"
-    }
+      "recreate": "Recrear regla",
+      "public": {
+        "notice": "Windows considera pública la red «{networks}». Las reglas actuales solo valen en redes de dominio y privadas, así que otros equipos no podrán conectar con este por ella.",
+        "hint": "Si es una red de confianza (una VPN tuya, por ejemplo), lo más limpio es cambiar su tipo a «Privada» en la configuración de Windows. Permitir redes públicas abre estos puertos también en redes que no controlas (cafeterías, hoteles).",
+        "allow": "Permitir en redes públicas",
+        "openSettings": "Abrir configuración de red",
+        "toggleTitle": "Permitir también en redes públicas",
+        "toggleDesc": "Añade el perfil «Público» a las reglas. Necesario para conectar por una red o VPN que Windows clasifica como pública.",
+        "toggleWarning": "Con esto activado, otros equipos de redes que no controlas podrán llegar a los puertos de NetworkBench. El canal de control va cifrado y exige emparejamiento, pero conviene apagarlo cuando no lo necesites.",
+        "confirmTitle": "¿Permitir NetworkBench en redes públicas?",
+        "confirmBody": "Las reglas del cortafuegos valdrán también en las redes que Windows marca como públicas, como las de una cafetería o un hotel. Otros equipos de esas redes podrán llegar a los puertos de NetworkBench. El canal de control va cifrado y exige emparejamiento, pero conviene desactivarlo cuando no lo necesites.",
+        "confirmUac": "Windows pedirá permiso de administrador para actualizar las reglas.",
+        "confirmAllow": "Permitir"
+      }
+    },
+    "closeAction": "Al cerrar la ventana",
+    "closeActionDesc": "Qué hace el botón de cerrar (X). Minimizar a la bandeja deja NetworkBench disponible en segundo plano.",
+    "closeActionAsk": "Preguntar",
+    "closeActionMinimize": "Minimizar a la bandeja",
+    "closeActionExit": "Cerrar NetworkBench"
   },
   "plan": {
     "protocol": "Protocolo",
@@ -648,5 +676,14 @@
     "maximize": "Maximizar",
     "restore": "Restaurar",
     "close": "Cerrar"
+  },
+  "startup": {
+    "fw": {
+      "missing": "Faltan reglas del cortafuegos de Windows. Sin ellas, otros equipos podrían no conectar con este.",
+      "create": "Crear ahora",
+      "public": "Windows considera pública tu red «{networks}»: las reglas del cortafuegos no se aplican en ella y otros equipos no podrán conectar con este.",
+      "review": "Revisar",
+      "creating": "Esperando el UAC…"
+    }
   }
 }

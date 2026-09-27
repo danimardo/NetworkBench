@@ -6,6 +6,7 @@ import {
   getFirewallRulesStatus,
   createMissingFirewallRules,
   removeFirewallRules,
+  openNetworkSettings,
   type FirewallRulesReport,
   type FirewallRuleState,
 } from "../../lib/api/firewall";
@@ -24,7 +25,7 @@ const PREFS = {
   autoAcceptTrusted: false,
   customControlPort: null as number | null,
   autostart: false,
-  minimizeToTray: false,
+  closeAction: "ask",
   mdnsEnabled: true,
 };
 
@@ -36,7 +37,6 @@ vi.mock("../../lib/api/settings", () => ({
   getDataInfo: vi.fn().mockResolvedValue(null),
   purgeData: vi.fn().mockResolvedValue(undefined),
   getAboutInfo: vi.fn().mockResolvedValue(null),
-  evaluateAppClose: vi.fn().mockResolvedValue("allowExit"),
 }));
 vi.mock("../../lib/api/updater", () => ({ checkUpdate: vi.fn(), evaluateUpdate: vi.fn() }));
 vi.mock("../../lib/api/firewall", async (original) => ({
@@ -44,6 +44,7 @@ vi.mock("../../lib/api/firewall", async (original) => ({
   getFirewallRulesStatus: vi.fn(),
   createMissingFirewallRules: vi.fn(),
   removeFirewallRules: vi.fn(),
+  openNetworkSettings: vi.fn(),
 }));
 
 function regla(nombre: string, extra: Partial<FirewallRuleState> = {}): FirewallRuleState {
@@ -53,10 +54,11 @@ function regla(nombre: string, extra: Partial<FirewallRuleState> = {}): Firewall
     puertos: "7411",
     programa: "C:\\Apps\\NetworkBench\\NetworkBench.exe",
     perfiles: ["Domain", "Private"],
+    grupo: "NetworkBench",
     estado: "present",
     detalle: "Regla presente y activa",
     programaExiste: true,
-    netshAgregar: `netsh advfirewall firewall add rule name="${nombre}" dir=in action=allow`,
+    comandoAgregar: `New-NetFirewallRule -DisplayName '${nombre}' -Group 'NetworkBench'`,
     ...extra,
   };
 }
@@ -76,7 +78,14 @@ function informe(
     if (estados === "ninguna") return regla(n, { estado: "missing", detalle: "Regla ausente" });
     return regla(n, estados[i] ?? {});
   });
-  return { reglas, puertoControl: 7411, ayudanteDisponible: true, ...extra };
+  return {
+    reglas,
+    redes: [{ nombre: "Red", interfaz: "Ethernet", categoria: "Private" }],
+    permitirPublico: false,
+    puertoControl: 7411,
+    ayudanteDisponible: true,
+    ...extra,
+  };
 }
 
 function errorDe(codigo: string, clave: string): IpcError {
@@ -120,6 +129,19 @@ describe("Ajustes → Cortafuegos", () => {
     expect(filas[1]!.textContent).toContain("Ausente");
     expect(filas[2]!.textContent).toContain("Desactualizada");
     expect(filas[3]!.textContent).toContain("Deshabilitada");
+  });
+
+  it("cada regla muestra sus perfiles, para ver de un vistazo si vale en redes públicas", async () => {
+    vi.mocked(getFirewallRulesStatus).mockResolvedValue(
+      informe([{ perfiles: ["Domain", "Private"] }, { perfiles: ["Domain", "Private", "Public"] }]),
+    );
+    render(SettingsScreen);
+    await abrirPestana(/Cortafuegos/);
+
+    const filas = await screen.findAllByTestId("fw-rule");
+    expect(filas[0]!.textContent).toContain("Dominio, Privado");
+    expect(filas[0]!.textContent).not.toContain("Público");
+    expect(filas[1]!.textContent).toContain("Dominio, Privado, Público");
   });
 
   it("«Crear las que faltan» abre el UAC, actualiza la lista y avisa", async () => {
@@ -186,15 +208,17 @@ describe("Ajustes → Cortafuegos", () => {
     expect((screen.getByTestId("fw-remove") as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("las instrucciones manuales traen un netsh por regla y otro para eliminarla", async () => {
+  it("las instrucciones manuales son PowerShell, con grupo, y eliminan por grupo", async () => {
     vi.mocked(getFirewallRulesStatus).mockResolvedValue(informe("ninguna"));
     render(SettingsScreen);
     await abrirPestana(/Cortafuegos/);
 
     await fireEvent.click(await screen.findByTestId("fw-manual"));
     const texto = (await screen.findByTestId("fw-instructions")).textContent ?? "";
-    expect(texto.match(/add rule name=/g)).toHaveLength(4);
-    expect(texto).toContain('delete rule name="NetworkBench - Control"');
+    expect(texto.match(/New-NetFirewallRule/g)).toHaveLength(4);
+    expect(texto).toContain("-Group 'NetworkBench'");
+    expect(texto).toContain("Remove-NetFirewallRule -Group 'NetworkBench'");
+    expect(texto).not.toContain("netsh");
   });
 
   it("una regla cuyo programa no existe se avisa y no cuenta como «por crear»", async () => {
@@ -227,6 +251,135 @@ describe("Ajustes → Cortafuegos", () => {
     expect((screen.getByTestId("fw-create") as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByTestId("fw-remove") as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByTestId("fw-manual") as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("Ajustes → Cortafuegos: redes públicas (§14.5)", () => {
+  const publica = { nombre: "Red", interfaz: "Ethernet", categoria: "Public" };
+
+  beforeEach(() => {
+    vi.mocked(getFirewallRulesStatus).mockReset();
+    vi.mocked(createMissingFirewallRules).mockReset();
+    vi.mocked(openNetworkSettings).mockReset();
+    vi.mocked(updateSettings).mockReset();
+    vi.mocked(updateSettings).mockImplementation((p) => Promise.resolve(p));
+  });
+
+  async function abrir(inf: FirewallRulesReport) {
+    vi.mocked(getFirewallRulesStatus).mockResolvedValue(inf);
+    render(SettingsScreen);
+    await abrirPestana(/Cortafuegos/);
+    await screen.findAllByTestId("fw-rule");
+  }
+
+  it("con una red pública y sin permiso, avisa y nombra la red", async () => {
+    await abrir(informe("todas", { redes: [publica] }));
+    const aviso = await screen.findByTestId("fw-public-notice");
+    expect(aviso.textContent).toContain("Windows considera pública la red «Red (Ethernet)»");
+    expect(aviso.textContent).toContain("cambiar su tipo a «Privada»");
+  });
+
+  it("con las redes privadas, o si ya se permitió, no avisa", async () => {
+    await abrir(informe("todas", { redes: [{ ...publica, categoria: "Private" }] }));
+    expect(screen.queryByTestId("fw-public-notice")).toBeNull();
+  });
+
+  it("«Abrir configuración de red» abre Configuración de Windows", async () => {
+    vi.mocked(openNetworkSettings).mockResolvedValue(undefined);
+    await abrir(informe("todas", { redes: [publica] }));
+    await fireEvent.click(await screen.findByTestId("fw-public-settings"));
+    expect(openNetworkSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("«Permitir en redes públicas» guarda el permiso, relee y recrea las reglas (UAC)", async () => {
+    vi.mocked(getFirewallRulesStatus)
+      .mockResolvedValueOnce(informe("todas", { redes: [publica] }))
+      // Tras dar el permiso, las reglas actuales no lo incluyen: quedan desactualizadas.
+      .mockResolvedValueOnce(
+        informe(
+          [
+            { estado: "modified" },
+            { estado: "modified" },
+            { estado: "modified" },
+            { estado: "modified" },
+          ],
+          {
+            redes: [publica],
+            permitirPublico: true,
+          },
+        ),
+      );
+    vi.mocked(createMissingFirewallRules).mockResolvedValue(
+      informe("todas", { redes: [publica], permitirPublico: true }),
+    );
+    render(SettingsScreen);
+    await abrirPestana(/Cortafuegos/);
+    await screen.findAllByTestId("fw-rule");
+
+    await fireEvent.click(await screen.findByTestId("fw-public-allow"));
+    // Da el permiso solo tras explicar la exposición y confirmar.
+    await fireEvent.click(await screen.findByTestId("fw-public-confirm-accept"));
+
+    await waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ firewallAllowPublic: true }),
+      ),
+    );
+    await waitFor(() => expect(createMissingFirewallRules).toHaveBeenCalledTimes(1));
+    // Ya permitido: el aviso desaparece y el interruptor queda activado con su advertencia.
+    await waitFor(() => expect(screen.queryByTestId("fw-public-notice")).toBeNull());
+    const sw = screen.getByRole("switch", { name: "Permitir también en redes públicas" });
+    expect(sw.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText(/podrán llegar a los puertos de NetworkBench/)).toBeTruthy();
+  });
+
+  it("encender el interruptor pide confirmación; cancelar no guarda nada", async () => {
+    await abrir(informe("todas"));
+    const sw = screen.getByRole("switch", { name: "Permitir también en redes públicas" });
+    await waitFor(() => expect((sw as HTMLButtonElement).disabled).toBe(false));
+
+    await fireEvent.click(sw);
+    expect(await screen.findByText("¿Permitir NetworkBench en redes públicas?")).toBeTruthy();
+    await fireEvent.click(screen.getByTestId("fw-public-confirm-cancel"));
+
+    expect(updateSettings).not.toHaveBeenCalled();
+    expect(sw.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("encender el interruptor y confirmar guarda el permiso sin pedir UAC todavía", async () => {
+    await abrir(informe("todas"));
+    const sw = screen.getByRole("switch", { name: "Permitir también en redes públicas" });
+    await waitFor(() => expect((sw as HTMLButtonElement).disabled).toBe(false));
+
+    await fireEvent.click(sw);
+    await fireEvent.click(await screen.findByTestId("fw-public-confirm-accept"));
+
+    await waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ firewallAllowPublic: true }),
+      ),
+    );
+    // Las reglas se recrean después, con «Crear las que faltan» (UAC): aquí no.
+    expect(createMissingFirewallRules).not.toHaveBeenCalled();
+  });
+
+  it("el interruptor lo apaga: guarda la preferencia y vuelve a leer las reglas", async () => {
+    vi.mocked(getFirewallRulesStatus).mockResolvedValue(
+      informe("todas", { permitirPublico: true }),
+    );
+    await abrir(informe("todas", { permitirPublico: true }));
+
+    const sw = screen.getByRole("switch", { name: "Permitir también en redes públicas" });
+    await waitFor(() => expect((sw as HTMLButtonElement).disabled).toBe(false));
+    vi.mocked(getFirewallRulesStatus).mockClear();
+    await fireEvent.click(sw);
+
+    await waitFor(() =>
+      expect(updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ firewallAllowPublic: false }),
+      ),
+    );
+    await waitFor(() => expect(getFirewallRulesStatus).toHaveBeenCalledTimes(1));
   });
 });
 

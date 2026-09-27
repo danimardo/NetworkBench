@@ -1,6 +1,6 @@
 use networkbench_lib::errors::ErrorCode;
 use networkbench_lib::logging::LogLevel;
-use networkbench_lib::settings::{SettingsStore, ThemeMode};
+use networkbench_lib::settings::{CloseAction, SettingsStore, ThemeMode};
 use std::fs;
 
 #[test]
@@ -18,7 +18,7 @@ fn test_settings_lifecycle_missing_file_creates_clean_default() {
     assert_eq!(prefs.log_level, LogLevel::Warn);
     assert!(!prefs.auto_accept_trusted);
     assert!(!prefs.autostart);
-    assert!(!prefs.minimize_to_tray);
+    assert_eq!(prefs.close_action, CloseAction::Ask);
     assert!(prefs.mdns_enabled);
     assert!(prefs_file.exists());
 
@@ -56,7 +56,7 @@ fn test_settings_lifecycle_schema_migration_preserves_existing() {
     let prefs_file = tmp_dir.join("settings.json");
     let _ = fs::create_dir_all(&tmp_dir);
 
-    // JSON heredado de versión anterior sin campos de Fase 9 (autostart, minimizeToTray, mdnsEnabled)
+    // JSON heredado de versión anterior sin campos de Fase 9 (autostart, closeAction, mdnsEnabled)
     let legacy_json = r#"{
         "schemaVersion": 1,
         "theme": "light",
@@ -79,7 +79,7 @@ fn test_settings_lifecycle_schema_migration_preserves_existing() {
     assert_eq!(prefs.custom_control_port, Some(5202));
     // Defaults para campos nuevos
     assert!(!prefs.autostart);
-    assert!(!prefs.minimize_to_tray);
+    assert_eq!(prefs.close_action, CloseAction::Ask);
     assert!(prefs.mdns_enabled);
 
     let _ = fs::remove_dir_all(&tmp_dir);
@@ -165,7 +165,7 @@ fn test_settings_lifecycle_session_active_allows_presentation_changes() {
         p.theme = ThemeMode::Light;
         p.locale = "en".to_string();
         p.reduce_motion = true;
-        p.minimize_to_tray = true;
+        p.close_action = CloseAction::Minimize;
     });
 
     assert!(
@@ -176,7 +176,7 @@ fn test_settings_lifecycle_session_active_allows_presentation_changes() {
     assert_eq!(current.theme, ThemeMode::Light);
     assert_eq!(current.locale, "en");
     assert!(current.reduce_motion);
-    assert!(current.minimize_to_tray);
+    assert_eq!(current.close_action, CloseAction::Minimize);
 
     let _ = fs::remove_dir_all(&tmp_dir);
 }

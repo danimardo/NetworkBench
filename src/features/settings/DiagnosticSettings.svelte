@@ -28,7 +28,7 @@
 
 <div class="space-y-6">
   <!-- Nivel de Registro Temporal -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={0}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div class="pr-4">
@@ -55,7 +55,7 @@
   </Card>
 
   <!-- Actualizaciones del Sistema -->
-  <Card variant="default">
+  <Card variant="default" enterIndex={1}>
     <div class="p-5 space-y-4">
       <div class="flex items-center justify-between">
         <div class="pr-4">

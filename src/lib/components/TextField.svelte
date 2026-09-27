@@ -135,6 +135,12 @@
     /* §16.14: cursor de texto solo en campos editables. */
     cursor: text;
     user-select: text;
+    /* Sin esto, el contorno de foco nativo del navegador/WebView2 (un
+       rectángulo negro de esquinas rectas) se dibuja encima del halo morado
+       de `.nb-field-control:focus-within` (hallazgo real del propietario,
+       captura .logs/11.png). El halo ya es un indicador de foco visible por
+       sí mismo: no hace falta duplicarlo. */
+    outline: none;
   }
 
   .nb-field-control input::placeholder {

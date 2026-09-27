@@ -46,6 +46,17 @@ describe("T034 - PeersScreen UI & Accessibility", () => {
     expect(screen.getByText("192.168.1.10:7411")).toBeTruthy();
   });
 
+  it("cada tarjeta de la cuadrícula anima su entrada, escalonada por su posición", () => {
+    render(PeersScreen, { peers: samplePeers, isScanning: false });
+
+    const filas = screen.getAllByRole("listitem");
+    expect(filas).toHaveLength(2);
+    filas.forEach((fila, i) => {
+      expect(fila.classList.contains("nb-enter")).toBe(true);
+      expect((fila as HTMLElement).style.getPropertyValue("--nb-i")).toBe(String(i));
+    });
+  });
+
   it("permite abrir el diálogo de conexión manual y valida el puerto", async () => {
     const onManualConnect = vi.fn();
     render(PeersScreen, {

@@ -8,10 +8,13 @@
     /** Si se da, la card entera es un <button> (tarjetas de equipo clicables). */
     onclick?: (e: MouseEvent) => void;
     disabled?: boolean;
+    /** Posición en una secuencia, para la entrada escalonada (`.nb-enter` en
+     * tokens.css). Sin ella, la tarjeta no anima su entrada. */
+    enterIndex?: number;
     children: Snippet;
   }
 
-  let { variant = "default", onclick, disabled = false, children }: Props = $props();
+  let { variant = "default", onclick, disabled = false, enterIndex, children }: Props = $props();
 
   let isInteractive = $derived(!!onclick);
 
@@ -37,6 +40,8 @@
   <div
     class="nb-card nb-card-{variant}"
     class:nb-card-disabled={disabled}
+    class:nb-enter={enterIndex !== undefined}
+    style:--nb-i={enterIndex}
     role="button"
     tabindex={disabled ? -1 : 0}
     aria-disabled={disabled || undefined}
@@ -52,6 +57,8 @@
   <div
     class="nb-card nb-card-{variant}"
     class:nb-card-disabled={disabled}
+    class:nb-enter={enterIndex !== undefined}
+    style:--nb-i={enterIndex}
     aria-disabled={disabled || undefined}
   >
     {@render children()}
