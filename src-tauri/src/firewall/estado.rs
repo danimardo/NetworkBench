@@ -11,6 +11,14 @@ use super::reglas::{self, ReglaEsperada, ReglaLeida};
 use serde::Serialize;
 use std::collections::HashMap;
 
+/// Prefijo estable del error cuando `Get-NetFirewallRule` falla por algo distinto de "no
+/// existe" — sobre todo, permiso denegado (hallazgo real en una máquina gestionada,
+/// 2026-09-27, `Historias.md §14.3`: la directiva puede bloquear hasta la lectura, no solo
+/// los cambios). `ipc::firewall` lo detecta para mostrar `NB-FW-003` en vez del genérico
+/// "error interno", sin tener que analizar el texto (variable según idioma/versión de
+/// Windows) del error de PowerShell.
+pub const MARCADOR_SIN_PERMISO: &str = "SIN_PERMISO_CORTAFUEGOS: ";
+
 /// Una regla esperada junto con lo que hay de verdad en el sistema.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -111,6 +119,18 @@ pub fn interpretar(json: &str) -> Result<Lectura, String> {
     let valor: serde_json::Value =
         serde_json::from_str(json).map_err(|e| format!("Salida de PowerShell no válida: {e}"))?;
 
+    // Un error real (típicamente "acceso denegado" leyendo el cortafuegos sin privilegios,
+    // ver comentario en `leer_del_sistema`) se propaga como fallo, no como "ninguna regla
+    // encontrada": decir "Ausente" cuando en realidad no se pudo comprobar es peor que no
+    // decir nada, porque parece una certeza que no se tiene. El prefijo estable deja que
+    // `ipc::firewall` lo traduzca a `NB-FW-003` (gestionado por directiva) en vez del
+    // genérico "error interno", sin acoplar ese módulo al texto exacto de PowerShell.
+    if let Some(err) = valor["Error"].as_str()
+        && !err.is_empty()
+    {
+        return Err(format!("{MARCADOR_SIN_PERMISO}{err}"));
+    }
+
     let como_lista = |v: &serde_json::Value| -> Vec<serde_json::Value> {
         match v {
             serde_json::Value::Array(a) => a.clone(),
@@ -160,16 +180,29 @@ fn leer_del_sistema() -> Result<Lectura, String> {
         .map(|n| format!("'{n}'"))
         .collect::<Vec<_>>()
         .join(",");
+    // "ObjectNotFound" (nada coincide con ese DisplayName) es el caso normal de una regla
+    // que todavía no existe: no es un error, Rules queda vacío como siempre. Cualquier OTRO
+    // fallo —sobre todo "PermissionDenied"— se recoge aparte en $err: en una máquina real
+    // (WIN11D, 2026-09-27, cuenta sin privilegios de administrador local) Get-NetFirewallRule
+    // devuelve «Acceso denegado» (Windows System Error 5) para un usuario normal, y con
+    // $ErrorActionPreference='SilentlyContinue' eso se tragaba en silencio: la app decía
+    // "Ausente" con total confianza cuando la verdad era "no tengo permiso para comprobarlo".
     let script = format!(
-        "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $ErrorActionPreference='SilentlyContinue'; \
-         $r=@(Get-NetFirewallRule -DisplayName @({nombres}) | ForEach-Object {{ \
-           $p=$_|Get-NetFirewallPortFilter; $a=$_|Get-NetFirewallApplicationFilter; \
-           [pscustomobject]@{{Name=$_.DisplayName;Enabled=[string]$_.Enabled;Action=[string]$_.Action;\
-           Direction=[string]$_.Direction;Profile=[string]$_.Profile;Group=[string]$_.Group;\
-           Protocol=[string]$p.Protocol;LocalPort=(@($p.LocalPort) -join ',');Program=[string]$a.Program}} }}); \
-         $n=@(Get-NetConnectionProfile | ForEach-Object {{ \
+        "[Console]::OutputEncoding=[Text.Encoding]::UTF8; \
+         $err=$null; \
+         try {{ \
+           $r=@(Get-NetFirewallRule -DisplayName @({nombres}) -ErrorAction Stop | ForEach-Object {{ \
+             $p=$_|Get-NetFirewallPortFilter; $a=$_|Get-NetFirewallApplicationFilter; \
+             [pscustomobject]@{{Name=$_.DisplayName;Enabled=[string]$_.Enabled;Action=[string]$_.Action;\
+             Direction=[string]$_.Direction;Profile=[string]$_.Profile;Group=[string]$_.Group;\
+             Protocol=[string]$p.Protocol;LocalPort=(@($p.LocalPort) -join ',');Program=[string]$a.Program}} }}) \
+         }} catch {{ \
+           $r=@(); \
+           if ($_.CategoryInfo.Category -ne 'ObjectNotFound') {{ $err=$_.Exception.Message }} \
+         }}; \
+         $n=@(Get-NetConnectionProfile -ErrorAction SilentlyContinue | ForEach-Object {{ \
            [pscustomobject]@{{Name=[string]$_.Name;Interface=[string]$_.InterfaceAlias;Category=[string]$_.NetworkCategory}} }}); \
-         ConvertTo-Json -InputObject ([pscustomobject]@{{Rules=$r;Networks=$n}}) -Compress -Depth 4"
+         ConvertTo-Json -InputObject ([pscustomobject]@{{Rules=$r;Networks=$n;Error=$err}}) -Compress -Depth 4"
     );
 
     let raiz = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
@@ -229,6 +262,27 @@ mod tests {
     #[test]
     fn una_salida_que_no_es_json_es_un_error_y_no_un_falso_ausente() {
         assert!(interpretar("Get-NetFirewallRule : algo salió mal").is_err());
+    }
+
+    #[test]
+    fn un_error_de_permiso_es_un_fallo_marcado_no_una_lista_vacia() {
+        // Hallazgo real (WIN11D, 2026-09-27): un usuario sin privilegios de administrador
+        // local puede no tener permiso para LEER el cortafuegos; el script ahora distingue
+        // eso ("Error" en el JSON) de que las reglas simplemente no existan todavía.
+        let r = interpretar(r#"{"Rules":[],"Networks":[],"Error":"Acceso denegado"}"#);
+        let e = r.expect_err("un error de permiso debe propagarse, no leerse como Ausente");
+        assert!(
+            e.starts_with(MARCADOR_SIN_PERMISO),
+            "el error debe llevar el marcador: {e}"
+        );
+        assert!(e.contains("Acceso denegado"));
+    }
+
+    #[test]
+    fn sin_campo_error_o_con_error_vacio_no_hay_fallo() {
+        assert!(interpretar(r#"{"Rules":[],"Networks":[],"Error":null}"#).is_ok());
+        assert!(interpretar(r#"{"Rules":[],"Networks":[],"Error":""}"#).is_ok());
+        assert!(interpretar(r#"{"Rules":[],"Networks":[]}"#).is_ok());
     }
 
     #[test]

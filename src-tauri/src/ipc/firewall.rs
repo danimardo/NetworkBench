@@ -62,6 +62,19 @@ fn error_interno(detalle: String) -> AppError {
     AppError::from_code(ErrorCode::InternalError).with_diagnostic_id(detalle)
 }
 
+/// Igual que `error_interno`, pero para errores de `estado::consultar`/`estado::existentes`:
+/// si vienen marcados como "sin permiso para leer el cortafuegos" (hallazgo real en una
+/// máquina gestionada, 2026-09-27), se muestran como `NB-FW-003` — un mensaje honesto y
+/// accionable— en vez del genérico "error interno".
+fn error_lectura(detalle: String) -> AppError {
+    match detalle.strip_prefix(estado::MARCADOR_SIN_PERMISO) {
+        Some(resto) => {
+            AppError::from_code(ErrorCode::FirewallPolicyManaged).with_diagnostic_id(resto)
+        }
+        None => error_interno(detalle),
+    }
+}
+
 fn entorno(state: &AppState) -> Result<Entorno, AppError> {
     let ajustes = state.settings.get();
     let puerto = ajustes
@@ -75,7 +88,7 @@ fn entorno(state: &AppState) -> Result<Entorno, AppError> {
 async fn informe(entorno: Entorno) -> Result<InformeReglas, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
         let esperadas = reglas::esperadas(&entorno);
-        let (reglas, redes) = estado::consultar(&esperadas).map_err(error_interno)?;
+        let (reglas, redes) = estado::consultar(&esperadas).map_err(error_lectura)?;
         Ok(InformeReglas {
             reglas,
             redes,
@@ -116,7 +129,7 @@ pub async fn firewall_rules_create(
     let entorno_para_helper = entorno.clone();
     let aplicado = tauri::async_runtime::spawn_blocking(move || -> Result<(), AppError> {
         let esperadas = reglas::esperadas(&entorno_para_helper);
-        let (estados, _redes) = estado::consultar(&esperadas).map_err(error_interno)?;
+        let (estados, _redes) = estado::consultar(&esperadas).map_err(error_lectura)?;
         let peticiones: Vec<_> = estados
             .iter()
             .filter(|s| s.estado != RuleStatus::Present && s.programa_existe)
@@ -151,7 +164,7 @@ pub async fn firewall_rules_remove(
     };
 
     let aplicado = tauri::async_runtime::spawn_blocking(move || -> Result<(), AppError> {
-        let presentes = estado::existentes().map_err(error_interno)?;
+        let presentes = estado::existentes().map_err(error_lectura)?;
         let peticiones: Vec<_> = reglas::NOMBRES_CONOCIDOS
             .iter()
             .filter(|n| presentes.iter().any(|p| p == *n))
@@ -200,4 +213,24 @@ pub fn firewall_open_network_settings() -> IpcResult<()> {
         }
     }
     IpcResult::ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn un_error_sin_permiso_para_leer_se_muestra_como_directiva_gestionada_no_como_interno() {
+        let detalle = format!("{}Acceso denegado", estado::MARCADOR_SIN_PERMISO);
+        let e = error_lectura(detalle);
+        assert_eq!(e.code, crate::errors::ErrorCode::FirewallPolicyManaged);
+        // Al usuario no le sirve ver el marcador interno, solo el motivo real.
+        assert_eq!(e.diagnostic_id.as_deref(), Some("Acceso denegado"));
+    }
+
+    #[test]
+    fn cualquier_otro_error_de_lectura_sigue_siendo_el_generico() {
+        let e = error_lectura("PowerShell terminó con error: algo salió mal".into());
+        assert_eq!(e.code, crate::errors::ErrorCode::InternalError);
+    }
 }
