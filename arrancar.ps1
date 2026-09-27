@@ -31,13 +31,24 @@ if (-not (Test-Path $motorDest)) {
   }
 }
 
+# El ayudante elevado de firewall se compila y se copia SIEMPRE, no solo si falta: antes
+# solo se copiaba la primera vez ("if not exists"), así que tras la primera ejecucion en
+# una maquina, ningun cambio posterior en helper/main.rs llegaba nunca a
+# resources\networkbench-firewall-helper.exe — el fichero que tauri.conf.json empaqueta y
+# que el cliente localiza en runtime (`FirewallHelperClient::get_helper_path`). El
+# resultado real, reproducido el 2026-09-27 (hallazgo del propietario en una maquina
+# distinta): la app ejecutaba con UAC un ayudante viejo que devolvia exito sin crear nada,
+# porque `pnpm tauri dev` solo reconstruye el binario principal (`NetworkBench`), no este
+# segundo `[[bin]]` del mismo paquete.
 $helperDest = "src-tauri\resources\networkbench-firewall-helper.exe"
-if (-not (Test-Path $helperDest)) {
-  New-Item -ItemType Directory -Path "src-tauri\resources" -Force | Out-Null
-  $helperDebug = "src-tauri\target\$triple\debug\networkbench-firewall-helper.exe"
-  if (Test-Path $helperDebug) {
-    Copy-Item $helperDebug $helperDest -Force
-  }
+New-Item -ItemType Directory -Path "src-tauri\resources" -Force | Out-Null
+Write-Host "Compilando el ayudante de firewall..." -ForegroundColor Cyan
+cargo build --manifest-path src-tauri\Cargo.toml --bin networkbench-firewall-helper
+$helperDebug = "src-tauri\target\$triple\debug\networkbench-firewall-helper.exe"
+if (Test-Path $helperDebug) {
+  Copy-Item $helperDebug $helperDest -Force
+} else {
+  Write-Host "AVISO: no se encontro el ayudante compilado en $helperDebug; el aviso de firewall no podra crear reglas." -ForegroundColor Yellow
 }
 
 function Get-ProcessTree($rootId) {
