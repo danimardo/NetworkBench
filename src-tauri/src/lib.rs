@@ -97,6 +97,7 @@ pub fn run() {
             ipc::consent::peers_pairing_incoming_list,
             ipc::consent::peers_pairing_incoming_respond,
             ipc::diagnostics::diagnostics_get_report,
+            ipc::diagnostics::diagnostics_log_frontend_event,
             ipc::firewall::firewall_inspect,
             ipc::firewall::firewall_apply,
             ipc::firewall::firewall_rules_status,

@@ -47,18 +47,30 @@ pub async fn atender_emparejamiento_entrante<S>(
 ) where
     S: AsyncRead + AsyncWrite + Unpin,
 {
+    tracing::info!(
+        pairing_id = %solicitud.id,
+        "Emparejamiento: PAIR_REQUEST recibida de {remote_addr} ({})",
+        hello.instance_id
+    );
+
     let (emparejamiento, verificacion) =
         match preparar_respuesta(&solicitud, &ctx.identity.fingerprint, huella) {
             Ok(v) => v,
             Err(e) => {
-                tracing::warn!("PAIR_REQUEST de {remote_addr} no utilizable: {e}");
+                tracing::warn!(
+                    pairing_id = %solicitud.id,
+                    "PAIR_REQUEST de {remote_addr} no utilizable: {e}"
+                );
                 return;
             }
         };
 
     // Un código o una huella que no encajan no llegan a la persona.
     if verificacion.is_err() {
-        tracing::warn!("PAIR_REQUEST de {remote_addr} con verificación fallida");
+        tracing::warn!(
+            pairing_id = %emparejamiento.id,
+            "PAIR_REQUEST de {remote_addr} con verificación fallida"
+        );
         let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, false).await;
         return;
     }
@@ -117,6 +129,21 @@ pub async fn atender_emparejamiento_entrante<S>(
     let decidido = tokio::time::timeout(ESPERA_DECISION_EMPAREJAMIENTO, esperar).await;
     ctx.emparejamientos.retirar(evento.pairing_id).await;
     let mut aceptado = matches!(decidido, Ok(Ok(true)));
+    match &decidido {
+        Err(_) => tracing::warn!(
+            pairing_id = %evento.pairing_id,
+            "Emparejamiento: sin decisión de la persona en {ESPERA_DECISION_EMPAREJAMIENTO:?}"
+        ),
+        Ok(Err(_)) => tracing::warn!(
+            pairing_id = %evento.pairing_id,
+            "Emparejamiento: el canal de espera de decisión se cerró sin respuesta"
+        ),
+        Ok(Ok(decision)) => tracing::info!(
+            pairing_id = %evento.pairing_id,
+            "Emparejamiento: la persona decidió {}",
+            if *decision { "aceptar" } else { "rechazar" }
+        ),
+    }
 
     if aceptado {
         let mut confiable = peer;
@@ -127,7 +154,10 @@ pub async fn atender_emparejamiento_entrante<S>(
             Err(_) => Err("La base de datos está bloqueada".to_string()),
         };
         if let Err(e) = guardado {
-            tracing::error!("No se pudo guardar el equipo emparejado: {e}");
+            tracing::error!(
+                pairing_id = %evento.pairing_id,
+                "No se pudo guardar el equipo emparejado: {e}"
+            );
             aceptado = false;
         } else {
             ctx.aviso.notify_one();

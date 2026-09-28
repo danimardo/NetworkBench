@@ -241,6 +241,14 @@ impl Descubrimiento {
         daemon
             .register(info)
             .map_err(|e| format!("No se pudo publicar en mDNS: {e}"))?;
+        // Hallazgo real (2026-09-28): sin esto, ni el propio anuncio ni ver/perder un
+        // equipo dejaban ningún rastro — para reconstruir una prueba entre dos máquinas a
+        // partir de sus logs hace falta saber, como mínimo, que cada una se anunció.
+        tracing::info!(
+            instance_id = %corto,
+            puerto = puerto_control,
+            "mDNS: anunciando este equipo ({fullname})"
+        );
 
         let receptor = daemon
             .browse(MDNS_SERVICE_TYPE)
@@ -266,13 +274,22 @@ impl Descubrimiento {
                                 // Uno mismo aparece en su propia navegación: no es un «otro equipo».
                                 Ok(e) if e.instance_id == mi_id => {}
                                 Ok(e) => {
+                                    // Nivel info, no debug: es el evento que responde a "¿llegó a
+                                    // verlo?" en una prueba entre dos máquinas, no un detalle interno.
+                                    tracing::info!(
+                                        instance_id = %e.instance_id,
+                                        direcciones = %e.addresses.join(","),
+                                        "mDNS: equipo visto ({}, {})",
+                                        e.display_name,
+                                        r.fullname
+                                    );
                                     if let Ok(mut m) = destino.lock() {
                                         m.insert(r.fullname.clone(), e);
                                     }
                                 }
                                 Err(motivo) => {
-                                    tracing::debug!(
-                                        "Anuncio mDNS descartado ({}): {motivo}",
+                                    tracing::warn!(
+                                        "mDNS: anuncio descartado ({}): {motivo}",
                                         r.fullname
                                     );
                                 }
@@ -280,7 +297,14 @@ impl Descubrimiento {
                         }
                         ServiceEvent::ServiceRemoved(_, nombre) => {
                             if let Ok(mut m) = destino.lock() {
-                                m.remove(&nombre);
+                                let existia = m.remove(&nombre);
+                                if let Some(e) = existia {
+                                    tracing::info!(
+                                        instance_id = %e.instance_id,
+                                        "mDNS: equipo perdido ({}, {nombre})",
+                                        e.display_name
+                                    );
+                                }
                             }
                         }
                         _ => {}

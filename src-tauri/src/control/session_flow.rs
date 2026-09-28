@@ -279,6 +279,11 @@ where
     })?;
     let nic = PreflightEvaluator::check_nic(objetivo);
     if nic.status == PreflightStatus::Failed {
+        tracing::warn!(
+            session_id = %session_id,
+            "Sesión: sin ruta local hacia {target_host} ({})",
+            direccion.como_str()
+        );
         return Err(Error::other(format!(
             "Sin ruta local hacia {target_host}: {}",
             nic.error
@@ -286,6 +291,14 @@ where
                 .unwrap_or_else(|| "sin más detalle".to_string())
         )));
     }
+    tracing::info!(
+        session_id = %session_id,
+        "Sesión: iniciando dirección {} hacia {target_host} ({:?}, puerto {}, {} flujo(s))",
+        direccion.como_str(),
+        plan.protocol,
+        plan.port,
+        plan.streams
+    );
 
     // 1. REQUEST / RESPONSE
     send_envelope(
@@ -316,6 +329,11 @@ where
     };
     if !respuesta.accepted {
         // El receptor rechazó: la dirección no se inició, no es un fallo de esta capa.
+        tracing::info!(
+            session_id = %session_id,
+            "Sesión: RESPONSE rechazó la dirección {}",
+            direccion.como_str()
+        );
         return Ok(DirectionResult::new_incomplete(direccion.como_str()));
     }
 
@@ -345,6 +363,11 @@ where
         }
     };
     if !listo.is_ready {
+        tracing::info!(
+            session_id = %session_id,
+            "Sesión: READY dijo que no está lista la dirección {}",
+            direccion.como_str()
+        );
         return Ok(DirectionResult::new_incomplete(direccion.como_str()));
     }
 
@@ -360,8 +383,18 @@ where
 
     let iniciado: ProtocolEnvelope<StartedPayload> = recv_envelope(stream).await?;
     if iniciado.msg_type != ProtocolMessageType::Started {
+        tracing::warn!(
+            session_id = %session_id,
+            "Sesión: se esperaba STARTED y llegó {:?}",
+            iniciado.msg_type
+        );
         return Err(protocolo_inesperado("STARTED", iniciado.msg_type));
     }
+    tracing::info!(
+        session_id = %session_id,
+        "Sesión: START negociado (rtt={rtt:?}) para {}, arrancando motor (emisor)",
+        direccion.como_str()
+    );
 
     // Arranca en el instante local negociado, no en cuanto llega STARTED: ese es
     // justamente el punto de G2 (constitución VII).
@@ -371,7 +404,19 @@ where
     let local = orquestador
         .ejecutar_mitad_local(plan, NtttcpRole::Sender, Some(target_host))
         .await
-        .map_err(motor_error_a_io)?;
+        .map_err(|e| {
+            tracing::warn!(
+                session_id = %session_id,
+                "Sesión: el motor (emisor) falló en la dirección {}: {e}",
+                direccion.como_str()
+            );
+            motor_error_a_io(e)
+        })?;
+    tracing::info!(
+        session_id = %session_id,
+        "Sesión: motor (emisor) completado para la dirección {}",
+        direccion.como_str()
+    );
 
     send_envelope(
         stream,
@@ -461,6 +506,14 @@ where
     } else {
         Direccion::Forward
     };
+    tracing::info!(
+        session_id = %session_id,
+        "Sesión: REQUEST recibida para la dirección {} ({:?}, puerto {}, {} flujo(s))",
+        direccion.como_str(),
+        plan.protocol,
+        plan.port,
+        plan.streams
+    );
 
     // El receptor revalida el plan por su cuenta: nunca confía en que el emisor lo
     // valide por él (FR-021). Un plan inválido no llega a construir ejecución.
@@ -475,6 +528,12 @@ where
         .and_then(|_| aceptar(&plan));
 
     if let Err(motivo) = decision {
+        tracing::info!(
+            session_id = %session_id,
+            "Sesión: RESPONSE rechaza la dirección {} ({})",
+            direccion.como_str(),
+            motivo.como_str()
+        );
         send_envelope(
             stream,
             &sobre(
@@ -546,9 +605,19 @@ where
         let inicio: ProtocolEnvelope<crate::model::protocol::StartPayload> =
             recv_envelope(stream).await?;
         if inicio.msg_type != ProtocolMessageType::Start {
+            tracing::warn!(
+                session_id = %session_id,
+                "Sesión: se esperaba START y llegó {:?}",
+                inicio.msg_type
+            );
             return Err(protocolo_inesperado("START", inicio.msg_type));
         }
         let recibido_en = std::time::Instant::now();
+        tracing::info!(
+            session_id = %session_id,
+            "Sesión: START recibido para {}, arrancando motor (receptor)",
+            direccion.como_str()
+        );
 
         send_envelope(
             stream,
@@ -577,9 +646,21 @@ where
         orquestador
             .ejecutar_mitad_local(&plan, NtttcpRole::Receiver, Some(interfaz_local))
             .await
-            .map_err(motor_error_a_io)
+            .map_err(|e| {
+                tracing::warn!(
+                    session_id = %session_id,
+                    "Sesión: el motor (receptor) falló en la dirección {}: {e}",
+                    direccion.como_str()
+                );
+                motor_error_a_io(e)
+            })
     };
     let (local, ()) = tokio::try_join!(motor, intercambio_de_mensajes)?;
+    tracing::info!(
+        session_id = %session_id,
+        "Sesión: motor (receptor) completado para la dirección {}",
+        direccion.como_str()
+    );
 
     let remoto: ProtocolEnvelope<EngineDonePayload> = recv_envelope(stream).await?;
     if remoto.msg_type != ProtocolMessageType::EngineDone {

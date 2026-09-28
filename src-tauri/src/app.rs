@@ -246,10 +246,12 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     let settings_path = app_dir.join("settings.json");
     let identity_dir = app_dir.join("identity");
 
-    crate::logging::init_tracing(&log_dir);
     let settings = Arc::new(SettingsStore::new(settings_path));
     // El nivel guardado en los ajustes manda desde el arranque; antes se fijaba en `Warn`
-    // y `settings.json` solo se guardaba, sin aplicarse nunca.
+    // y `settings.json` solo se guardaba, sin aplicarse nunca. Aplica también a `tracing`,
+    // no solo al registro JSON propio (hallazgo real, 2026-09-28): antes `init_tracing` no
+    // recibía ningún nivel y quedaba fijo en "warn" pasara lo que pasara en Ajustes.
+    crate::logging::init_tracing(&log_dir, settings.get().log_level);
     let _logger = init_logger(log_dir, settings.get().log_level);
     let database = Arc::new(Database::open(db_path)?);
     let tokens = Arc::new(OneTimeTokenStore::new());

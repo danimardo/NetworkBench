@@ -63,6 +63,12 @@ Estas no se delegan a un fichero aparte: se cumplen siempre.
 - **Evidencia.** No inventar rutas, comandos, versiones ni capacidades. Si algo solo puede
   inferirse, identifícalo como inferencia.
 - **Alcance.** No corregir problemas no relacionados ni ampliar el alcance de la tarea.
+- **Registros ante un problema.** Cuando el propietario cuente un fallo o un comportamiento
+  inesperado, contrasta su relato con los registros reales antes de diagnosticar o
+  responder — sin que haga falta pedirlo. Rutas: `%LOCALAPPDATA%\NetworkBench\logs\`
+  (aplicación) y `%ProgramData%\NetworkBench\logs\` (ayudante elevado de firewall). Si el
+  propietario te da una carpeta con registros de varias máquinas, léelos todos antes de
+  preguntar qué pasó.
 
 ## Estados de verificación
 

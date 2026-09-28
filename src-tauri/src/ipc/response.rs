@@ -17,7 +17,30 @@ impl<T> IpcResult<T> {
         Self::Success(value)
     }
 
+    /// Único punto por el que pasa **todo** error que ve la persona en la interfaz — de
+    /// cualquier comando, en cualquier módulo. Hallazgo real de la auditoría de logging
+    /// (2026-09-28): casi ningún `AppError` llegaba nunca a un fichero; se mostraba en
+    /// pantalla y desaparecía. Registrarlo aquí, una vez, evita tener que acordarse de
+    /// hacerlo en cada uno de los comandos que puedan fallar.
     pub fn err(error: AppError) -> Self {
+        let detalle = error.diagnostic_id.as_deref().unwrap_or("sin detalle");
+        match error.severity {
+            ErrorSeverity::Info => tracing::info!(
+                error_code = ?error.code,
+                "AppError ({}): {detalle}",
+                error.message_key
+            ),
+            ErrorSeverity::Warning => tracing::warn!(
+                error_code = ?error.code,
+                "AppError ({}): {detalle}",
+                error.message_key
+            ),
+            ErrorSeverity::Error | ErrorSeverity::Fatal => tracing::error!(
+                error_code = ?error.code,
+                "AppError ({}): {detalle}",
+                error.message_key
+            ),
+        }
         Self::Failure(error)
     }
 

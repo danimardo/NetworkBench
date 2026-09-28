@@ -171,20 +171,42 @@ impl ControlServer {
         // pero no se da por supuesto lo que se puede comprobar.
         let (_, conexion) = stream.get_ref();
         let fingerprint = peer_fingerprint(conexion.peer_certificates()).ok_or_else(|| {
+            tracing::warn!("Conexión entrante: {remote_addr} no presentó certificado");
             Error::new(
                 ErrorKind::InvalidData,
                 format!("El par {remote_addr} no presentó certificado"),
             )
         })?;
+        tracing::info!(
+            "Conexión entrante: TLS establecido con {remote_addr} (huella {}…)",
+            &fingerprint[..fingerprint.len().min(12)]
+        );
 
-        let remoto: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut stream).await?;
+        let remoto: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut stream)
+            .await
+            .inspect_err(|e| tracing::warn!("HELLO: error recibiendo de {remote_addr}: {e}"))?;
         if remoto.msg_type != ProtocolMessageType::Hello {
+            tracing::warn!(
+                "HELLO: {remote_addr} envió {:?} en vez de Hello",
+                remoto.msg_type
+            );
             return Err(Error::new(
                 ErrorKind::InvalidData,
                 format!("Se esperaba HELLO y llegó {:?}", remoto.msg_type),
             ));
         }
+        tracing::info!(
+            "HELLO recibido de {remote_addr}: protocolo v{} ({}, app {})",
+            remoto.payload.protocol_version,
+            remoto.payload.instance_id,
+            remoto.payload.app_version
+        );
         if remoto.payload.protocol_min > VERSION_PROTOCOLO {
+            tracing::warn!(
+                "HELLO: {remote_addr} exige protocolo mínimo {} y esta versión habla {}",
+                remoto.payload.protocol_min,
+                VERSION_PROTOCOLO
+            );
             return Err(Error::new(
                 ErrorKind::InvalidData,
                 format!(
@@ -202,7 +224,11 @@ impl ControlServer {
             in_reply_to: Some(remoto.id),
             payload: self.hello_local(),
         };
+        let mi_instance_id = respuesta.payload.instance_id;
         send_envelope(&mut stream, &respuesta).await?;
+        tracing::info!(
+            "HELLO enviado a {remote_addr}: protocolo v{VERSION_PROTOCOLO} ({mi_instance_id})"
+        );
 
         Ok(SaludoEntrante {
             fingerprint,

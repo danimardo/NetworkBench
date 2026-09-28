@@ -14,6 +14,34 @@ export class IpcError extends Error {
   }
 }
 
+/** `LogLevelName` no distingue "fatal"; se registra como error, el más grave que hay. */
+function nivelDeLog(severidad: AppError["severity"]): "info" | "warn" | "error" {
+  switch (severidad) {
+    case "info":
+      return "info";
+    case "warning":
+      return "warn";
+    default:
+      return "error";
+  }
+}
+
+/**
+ * Registra todo `AppError` que ve la persona en pantalla, del comando que sea. Hallazgo
+ * real de la auditoría de logging (2026-09-28): casi ninguno llegaba a un fichero — se
+ * mostraba en un aviso flotante y desaparecía sin dejar rastro.
+ */
+function registrarError(command: string, appError: AppError): void {
+  logger[nivelDeLog(appError.severity)]({
+    module: "transport",
+    eventCode: "IPC_ERROR",
+    message: `${command}: ${appError.messageKey}`,
+    errorCode: appError.code,
+    diagnosticId: appError.diagnosticId,
+    safeParams: { cmd: command },
+  });
+}
+
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
 
 let customInvoke: InvokeFn | null = null;
@@ -62,6 +90,7 @@ export async function invokeCommand<
         return result.value;
       } else {
         const validatedError = appErrorSchema.parse(result.error);
+        registrarError(command, validatedError);
         throw new IpcError(validatedError);
       }
     }
@@ -92,6 +121,7 @@ export async function invokeCommand<
       actions: ["retry", "copy_diagnostic"],
     };
 
+    registrarError(command, fallbackError);
     throw new IpcError(fallbackError);
   }
 }

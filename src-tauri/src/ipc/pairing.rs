@@ -70,6 +70,7 @@ pub async fn peers_pairing_start(
     let (peer, stream) = match conectar_y_saludar(&host, port, &state.identity).await {
         Ok(v) => v,
         Err(e) => {
+            tracing::warn!("Emparejamiento: no se pudo conectar con {host}:{port}: {e}");
             return Ok(IpcResult::err(AppError::new(
                 ErrorCode::ConnCannotReach,
                 ErrorSeverity::Error,
@@ -82,6 +83,10 @@ pub async fn peers_pairing_start(
         match EmparejamientoEnCurso::iniciar(&state.identity.fingerprint, &peer.fingerprint) {
             Ok(v) => v,
             Err(e) => {
+                tracing::warn!(
+                    "Emparejamiento: no se pudo iniciar con {}: {e}",
+                    peer.instance_id
+                );
                 return Ok(IpcResult::err(AppError::new(
                     ErrorCode::InternalError,
                     ErrorSeverity::Error,
@@ -89,6 +94,15 @@ pub async fn peers_pairing_start(
                 )));
             }
         };
+
+    // pairing_id es el identificador que reutiliza el otro extremo (hallazgo de la
+    // auditoría de 2026-09-28): correlaciona esta línea con las de PAIR_REQUEST/
+    // PAIR_RESULT en el log de la otra máquina.
+    tracing::info!(
+        pairing_id = %emparejamiento.id,
+        "Emparejamiento: iniciado con {} ({host}:{port})",
+        peer.instance_id
+    );
 
     let respuesta = PairingStarted {
         pairing_id: emparejamiento.id,
@@ -153,6 +167,10 @@ pub async fn peers_pairing_confirm(
 
             let db = state.database.connection().lock().unwrap();
             if let Err(e) = upsert_peer(&db, &confiable) {
+                tracing::error!(
+                    pairing_id = %pairing_id,
+                    "Emparejamiento: aceptado por las dos partes pero no se pudo guardar: {e}"
+                );
                 return Ok(IpcResult::err(AppError::new(
                     ErrorCode::InternalError,
                     ErrorSeverity::Error,
@@ -160,20 +178,34 @@ pub async fn peers_pairing_confirm(
                 )));
             }
             state.aviso_snapshot.notify_one();
+            tracing::info!(
+                pairing_id = %pairing_id,
+                "Emparejamiento: aceptado y guardado ({})",
+                confiable.instance_id
+            );
 
             Ok(IpcResult::ok(PairingOutcome {
                 accepted: true,
                 peer: Some(confiable),
             }))
         }
-        Ok(false) => Ok(IpcResult::ok(PairingOutcome {
-            accepted: false,
-            peer: None,
-        })),
-        Err(e) => Ok(IpcResult::err(AppError::new(
-            ErrorCode::PeerPairingMismatch,
-            ErrorSeverity::Error,
-            e.to_string(),
-        ))),
+        Ok(false) => {
+            tracing::info!(
+                pairing_id = %pairing_id,
+                "Emparejamiento: rechazado (local={accepted})"
+            );
+            Ok(IpcResult::ok(PairingOutcome {
+                accepted: false,
+                peer: None,
+            }))
+        }
+        Err(e) => {
+            tracing::warn!(pairing_id = %pairing_id, "Emparejamiento: fallo protocolar: {e}");
+            Ok(IpcResult::err(AppError::new(
+                ErrorCode::PeerPairingMismatch,
+                ErrorSeverity::Error,
+                e.to_string(),
+            )))
+        }
     }
 }

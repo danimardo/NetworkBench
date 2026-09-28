@@ -358,21 +358,34 @@ pub fn init_logger(log_dir: PathBuf, default_level: LogLevel) -> Arc<Logger> {
 }
 
 /// Escritor que duplica cada línea a stderr (para verla en vivo bajo `cargo run`/
-/// `pnpm tauri dev`) y a un fichero, sin depender de una librería de tracing aparte.
-struct EscritorDoble(fs::File);
+/// `pnpm tauri dev`) y, si se pudo abrir, a un fichero — sin depender de una librería de
+/// tracing aparte. `None` cuando no se pudo abrir el fichero: sigue escribiendo a stderr en
+/// vez de perder el subscriber entero.
+struct EscritorDoble(Option<fs::File>);
 
 impl Write for EscritorDoble {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let _ = std::io::stderr().write_all(buf);
-        self.0.write_all(buf)?;
+        if let Some(f) = &mut self.0 {
+            f.write_all(buf)?;
+        }
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
         let _ = std::io::stderr().flush();
-        self.0.flush()
+        if let Some(f) = &mut self.0 {
+            f.flush()?;
+        }
+        Ok(())
     }
 }
+
+/// El asa que permite cambiar el nivel de `tracing` en caliente (`set_tracing_level`),
+/// igual que `Logger::set_level` ya hacía para el registro JSON propio.
+static TRACING_RELOAD: OnceLock<
+    tracing_subscriber::reload::Handle<tracing_subscriber::EnvFilter, tracing_subscriber::Registry>,
+> = OnceLock::new();
 
 /// Instala el subscriber global de `tracing`.
 ///
@@ -385,31 +398,53 @@ impl Write for EscritorDoble {
 /// lo usaban. Escribe en `<log_dir>/tracing.log`, sin rotación propia todavía (a
 /// diferencia de `Logger`, que sí rota) — vigilar su tamaño si esto se deja mucho tiempo
 /// en producción es trabajo pendiente, no resuelto en esta pasada.
-pub fn init_tracing(log_dir: &Path) {
-    use tracing_subscriber::EnvFilter;
+///
+/// Segundo hallazgo real (2026-09-28, propietario haciendo pruebas entre varias
+/// máquinas): el filtro estaba fijo en `"warn"` salvo variable de entorno `RUST_LOG` —
+/// que nadie normal pone —, así que el selector "Debug" de Ajustes → Diagnóstico no
+/// activaba nunca las casi cuarenta llamadas `tracing::*` (descubrimiento, emparejamiento,
+/// sesión), donde vive la mayoría del detalle útil para reconstruir una prueba fallida.
+/// Ahora `initial_level` viene de los ajustes guardados, y `set_tracing_level` permite
+/// cambiarlo sin reiniciar, como ya hacía el logger JSON.
+pub fn init_tracing(log_dir: &Path, initial_level: LogLevel) {
+    use tracing_subscriber::{EnvFilter, Registry, prelude::*, reload};
 
     let _ = fs::create_dir_all(log_dir);
-    let filtro = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn"));
-    let ruta = log_dir.join("tracing.log");
+    let filtro_inicial = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(initial_level.as_str()));
+    let (filtro, asa) = reload::Layer::new(filtro_inicial);
+    let _ = TRACING_RELOAD.set(asa);
 
-    let resultado = match OpenOptions::new().create(true).append(true).open(&ruta) {
-        Ok(fichero) => tracing_subscriber::fmt()
-            .with_env_filter(filtro)
-            .with_writer(move || {
-                EscritorDoble(
-                    fichero
-                        .try_clone()
-                        .expect("clonar el descriptor de tracing.log"),
-                )
-            })
-            .try_init(),
+    let ruta = log_dir.join("tracing.log");
+    let fichero = match OpenOptions::new().create(true).append(true).open(&ruta) {
+        Ok(f) => Some(f),
         Err(e) => {
             eprintln!("No se pudo abrir {ruta:?} para tracing ({e}); solo saldrá por stderr");
-            tracing_subscriber::fmt().with_env_filter(filtro).try_init()
+            None
         }
     };
-    if let Err(e) = resultado {
+    let capa = tracing_subscriber::fmt::layer().with_writer(move || {
+        EscritorDoble(
+            fichero
+                .as_ref()
+                .map(|f| f.try_clone().expect("clonar el descriptor de tracing.log")),
+        )
+    });
+
+    if let Err(e) = Registry::default().with(filtro).with(capa).try_init() {
         eprintln!("No se pudo instalar el subscriber de tracing: {e}");
+    }
+}
+
+/// Cambia el nivel de `tracing` en caliente. Si `RUST_LOG` está en el entorno, manda ella
+/// siempre (depuración avanzada expresa) y esta llamada no tiene efecto — mismo criterio
+/// que `init_tracing` al decidir el filtro inicial.
+pub fn set_tracing_level(level: LogLevel) {
+    if std::env::var_os("RUST_LOG").is_some() {
+        return;
+    }
+    if let Some(asa) = TRACING_RELOAD.get() {
+        let _ = asa.modify(|filtro| *filtro = tracing_subscriber::EnvFilter::new(level.as_str()));
     }
 }
 

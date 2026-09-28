@@ -10,6 +10,7 @@
   import { setLocale, t } from "../lib/i18n";
   import { theme } from "../lib/design-system/theme.svelte";
   import { logger } from "../lib/logging";
+  import { installBackendLogBridge } from "../lib/logging/backend-bridge";
   import SettingsScreen from "../features/settings/SettingsScreen.svelte";
   import PeersScreen from "../features/peers/PeersScreen.svelte";
   import { PeersModel } from "../features/peers/model.svelte";
@@ -90,6 +91,7 @@
 
   onMount(() => {
     logger.installGlobalErrorCapture();
+    installBackendLogBridge();
     // El idioma se aplica en cuanto llega el snapshot, aunque sea tarde.
     const snapshotListo = snapshotStore.init().then(aplicarIdiomaGuardado);
     if (theme.mode === "system") {
