@@ -276,12 +276,19 @@ impl Descubrimiento {
                                 Ok(e) => {
                                     // Nivel info, no debug: es el evento que responde a "¿llegó a
                                     // verlo?" en una prueba entre dos máquinas, no un detalle interno.
+                                    // Las direcciones (IP:puerto) son el detalle de diagnóstico
+                                    // avanzado del principio XIII (enmienda 0.8.0): aparte, a debug.
                                     tracing::info!(
                                         instance_id = %e.instance_id,
-                                        direcciones = %e.addresses.join(","),
                                         "mDNS: equipo visto ({}, {})",
                                         e.display_name,
                                         r.fullname
+                                    );
+                                    tracing::debug!(
+                                        instance_id = %e.instance_id,
+                                        direcciones = %e.addresses.join(","),
+                                        "mDNS: direcciones de {}",
+                                        e.display_name
                                     );
                                     if let Ok(mut m) = destino.lock() {
                                         m.insert(r.fullname.clone(), e);

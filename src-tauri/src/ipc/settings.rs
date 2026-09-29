@@ -89,6 +89,10 @@ pub async fn settings_update(
                 logger.set_level(saved.log_level);
             }
             crate::logging::set_tracing_level(saved.log_level);
+            // El envío opt-in a OpenObserve también se aplica al instante, sin reiniciar.
+            crate::logging::openobserve::actualizar_config(
+                crate::logging::openobserve::OpenObserveConfig::from_preferences(&saved),
+            );
             state.aviso_snapshot.notify_one();
             Ok(IpcResult::ok(saved))
         }
@@ -216,6 +220,37 @@ pub fn settings_open_log_folder() -> IpcResult<()> {
         }
     }
     IpcResult::ok(())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenObserveTestInput {
+    pub url: String,
+    pub org: String,
+    pub stream: String,
+    pub token: String,
+}
+
+/// Prueba la config de OpenObserve tal como está en el formulario (antes incluso de
+/// guardarla): un solo evento, esperando la respuesta, para poder mostrar exactamente qué
+/// falló. Distinto del envío normal (`Logger::log`/`tracing`), que es mejor esfuerzo y
+/// nunca informa de errores.
+#[tauri::command]
+pub async fn settings_openobserve_test(input: OpenObserveTestInput) -> IpcResult<()> {
+    let cfg = crate::logging::openobserve::OpenObserveConfig {
+        enabled: true,
+        url: input.url,
+        org: input.org,
+        stream: input.stream,
+        token: input.token,
+    };
+    match crate::logging::openobserve::probar_conexion(&cfg).await {
+        Ok(()) => IpcResult::ok(()),
+        Err(mensaje) => IpcResult::err(
+            crate::errors::AppError::from_code(crate::errors::ErrorCode::InternalError)
+                .with_diagnostic_id(mensaje),
+        ),
+    }
 }
 
 #[tauri::command]

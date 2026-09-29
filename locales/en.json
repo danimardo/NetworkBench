@@ -228,6 +228,16 @@
     "openLogFolder": "Open log folder",
     "appLogDir": "Application log",
     "firewallHelperLogPath": "Firewall helper log",
+    "openObserve": {
+      "title": "Send diagnostics to OpenObserve",
+      "desc": "Optional forwarding of logs to your own OpenObserve server, in addition to the local files. Off by default.",
+      "url": "Server URL",
+      "org": "Organization",
+      "stream": "Stream",
+      "token": "Ingestion token",
+      "testBtn": "Test connection",
+      "testOk": "Connection successful: the server accepted the test event."
+    },
     "checkUpdatesBtn": "Check for updates",
     "upToDateMessage": "NetworkBench is up to date.",
     "updateAvailableTitle": "Update available",

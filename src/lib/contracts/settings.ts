@@ -24,6 +24,14 @@ export const PreferencesSchema = z.object({
   closeAction: z.enum(["ask", "minimize", "exit"]).default("ask"),
   mdnsEnabled: z.boolean().default(true),
   firewallAllowPublic: z.boolean().default(false),
+  /** Envío opt-in de diagnóstico a un servidor OpenObserve propio (constitución, enmienda
+   * 0.8.0 al principio IV). Apagado y vacío por defecto: enviar algo fuera de esta máquina
+   * es siempre una decisión explícita de la persona. */
+  openObserveEnabled: z.boolean().default(false),
+  openObserveUrl: z.string().default(""),
+  openObserveOrg: z.string().default(""),
+  openObserveStream: z.string().default(""),
+  openObserveToken: z.string().default(""),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;

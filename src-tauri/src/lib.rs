@@ -66,6 +66,10 @@ pub fn run() {
             );
             // Con el ajuste encendido (por defecto), la instancia se anuncia y busca a las demás.
             app_state.aplicar_descubrimiento(app_state.settings.get().mdns_enabled);
+            // El envío opt-in a OpenObserve ya tiene su config (`app::init` la cargó); aquí
+            // solo arranca la tarea de fondo que consume la cola, que necesita el runtime
+            // async de Tauri en marcha.
+            logging::openobserve::iniciar();
             // Icono de la bandeja (§5.2). Si no se pudiera crear, «minimizar» no oculta la
             // ventana sino que la minimiza a la barra de tareas, para no dejarla sin salida.
             match platform::tray::crear(app.handle(), &app_state.settings.get().locale) {
@@ -122,6 +126,7 @@ pub fn run() {
             ipc::settings::settings_about_info,
             ipc::settings::settings_diagnostic_paths,
             ipc::settings::settings_open_log_folder,
+            ipc::settings::settings_openobserve_test,
             ipc::cierre::app_close_apply,
             ipc::cierre::app_close_confirmed,
             ipc::updater::updater_check,

@@ -22,9 +22,10 @@
     error?: string;
     disabled?: boolean;
     readonly?: boolean;
-    type?: "text" | "search";
+    type?: "text" | "search" | "password";
     id?: string;
     oninput?: (value: string) => void;
+    onblur?: (value: string) => void;
   }
 
   let {
@@ -38,6 +39,7 @@
     type = "text",
     id = `nb-field-${Math.random().toString(36).slice(2, 9)}`,
     oninput,
+    onblur,
   }: Props = $props();
 
   let hasError = $derived(!!error);
@@ -57,6 +59,7 @@
       {readonly}
       bind:value
       oninput={(e) => oninput?.((e.target as HTMLInputElement).value)}
+      onblur={(e) => onblur?.((e.target as HTMLInputElement).value)}
       aria-invalid={hasError || undefined}
       aria-describedby={hint || error ? `${id}-desc` : undefined}
     />

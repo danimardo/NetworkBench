@@ -170,23 +170,25 @@ impl ControlServer {
         // conexión se corta: `client_auth_mandatory` debería haberlo impedido antes,
         // pero no se da por supuesto lo que se puede comprobar.
         let (_, conexion) = stream.get_ref();
+        // IP y huella son diagnóstico avanzado (principio XIII, enmienda 0.8.0): solo a
+        // debug, nunca en el nivel por defecto de producción.
         let fingerprint = peer_fingerprint(conexion.peer_certificates()).ok_or_else(|| {
-            tracing::warn!("Conexión entrante: {remote_addr} no presentó certificado");
+            tracing::debug!("Conexión entrante: {remote_addr} no presentó certificado");
             Error::new(
                 ErrorKind::InvalidData,
                 format!("El par {remote_addr} no presentó certificado"),
             )
         })?;
-        tracing::info!(
+        tracing::debug!(
             "Conexión entrante: TLS establecido con {remote_addr} (huella {}…)",
             &fingerprint[..fingerprint.len().min(12)]
         );
 
         let remoto: ProtocolEnvelope<HelloPayload> = recv_envelope(&mut stream)
             .await
-            .inspect_err(|e| tracing::warn!("HELLO: error recibiendo de {remote_addr}: {e}"))?;
+            .inspect_err(|e| tracing::debug!("HELLO: error recibiendo de {remote_addr}: {e}"))?;
         if remoto.msg_type != ProtocolMessageType::Hello {
-            tracing::warn!(
+            tracing::debug!(
                 "HELLO: {remote_addr} envió {:?} en vez de Hello",
                 remoto.msg_type
             );
@@ -195,18 +197,21 @@ impl ControlServer {
                 format!("Se esperaba HELLO y llegó {:?}", remoto.msg_type),
             ));
         }
+        // Hito sin IP a info; la IP aparte, a debug.
         tracing::info!(
-            "HELLO recibido de {remote_addr}: protocolo v{} ({}, app {})",
+            "HELLO recibido: protocolo v{} ({}, app {})",
             remoto.payload.protocol_version,
             remoto.payload.instance_id,
             remoto.payload.app_version
         );
+        tracing::debug!("HELLO recibido de {remote_addr}");
         if remoto.payload.protocol_min > VERSION_PROTOCOLO {
             tracing::warn!(
-                "HELLO: {remote_addr} exige protocolo mínimo {} y esta versión habla {}",
+                "HELLO: protocolo mínimo exigido {} incompatible con esta versión ({})",
                 remoto.payload.protocol_min,
                 VERSION_PROTOCOLO
             );
+            tracing::debug!("HELLO: incompatibilidad de protocolo con {remote_addr}");
             return Err(Error::new(
                 ErrorKind::InvalidData,
                 format!(
@@ -226,9 +231,8 @@ impl ControlServer {
         };
         let mi_instance_id = respuesta.payload.instance_id;
         send_envelope(&mut stream, &respuesta).await?;
-        tracing::info!(
-            "HELLO enviado a {remote_addr}: protocolo v{VERSION_PROTOCOLO} ({mi_instance_id})"
-        );
+        tracing::info!("HELLO enviado: protocolo v{VERSION_PROTOCOLO} ({mi_instance_id})");
+        tracing::debug!("HELLO enviado a {remote_addr}");
 
         Ok(SaludoEntrante {
             fingerprint,

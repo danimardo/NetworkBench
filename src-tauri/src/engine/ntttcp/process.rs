@@ -81,14 +81,20 @@ impl NtttcpProcess {
         // grave de todos — ni el comando exacto, ni sus argumentos, ni la salida del
         // proceso quedaban en ningún sitio. Un test que fallaba a mitad no dejaba forma
         // de reconstruir qué se había lanzado ni qué dijo ntttcp.exe por su cuenta.
-        tracing::info!(
+        //
+        // La línea de comandos completa (incluye la IP remota en los argumentos) es
+        // diagnóstico avanzado (principio XIII, enmienda 0.8.0): solo a debug. El hito
+        // "arrancando" sin el comando va a info.
+        tracing::info!("NTTTCP ({role:?}): arrancando");
+        tracing::debug!(
             "NTTTCP ({role:?}): lanzando {} {}",
             exe_path.display(),
             args.join(" ")
         );
 
         let child = cmd.spawn().inspect_err(|e| {
-            tracing::warn!("NTTTCP ({role:?}): no se pudo lanzar el proceso: {e}");
+            tracing::warn!("NTTTCP ({role:?}): no se pudo lanzar el proceso");
+            tracing::debug!("NTTTCP ({role:?}): no se pudo lanzar el proceso: {e}");
         })?;
 
         #[cfg(windows)]
@@ -134,6 +140,13 @@ impl NtttcpProcess {
             if !status.success() {
                 let _ = fs::remove_file(&self.xml_path);
                 tracing::warn!(
+                    "NTTTCP ({:?}): terminó con código {:?}",
+                    self.role,
+                    status.code()
+                );
+                // Comando completo y stdout/stderr (pueden citar la IP remota): diagnóstico
+                // avanzado (principio XIII, enmienda 0.8.0), solo a debug.
+                tracing::debug!(
                     "NTTTCP ({:?}): terminó con código {:?} — comando: {} {}\n--- stdout ---\n{}\n--- stderr ---\n{}",
                     self.role,
                     status.code(),
@@ -153,8 +166,9 @@ impl NtttcpProcess {
             let _ = fs::remove_file(&self.xml_path);
 
             parse_ntttcp_xml(&xml_content).map_err(|e| {
-                tracing::warn!(
-                    "NTTTCP ({:?}): el XML de resultado no se pudo interpretar: {e:?}\n--- stdout ---\n{}\n--- stderr ---\n{}",
+                tracing::warn!("NTTTCP ({:?}): el XML de resultado no se pudo interpretar: {e:?}", self.role);
+                tracing::debug!(
+                    "NTTTCP ({:?}): XML no interpretable — stdout/stderr:\n--- stdout ---\n{}\n--- stderr ---\n{}",
                     self.role,
                     recortar(&stdout),
                     recortar(&stderr)

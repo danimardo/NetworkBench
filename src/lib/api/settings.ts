@@ -46,3 +46,17 @@ export async function getDiagnosticPaths(): Promise<DiagnosticPaths> {
 export async function openLogFolder(): Promise<void> {
   await invokeCommand("settings_open_log_folder", {}, z.void().nullable());
 }
+
+export interface OpenObserveTestInput {
+  url: string;
+  org: string;
+  stream: string;
+  token: string;
+}
+
+/** Prueba la config de OpenObserve tal como está en el formulario, sin guardarla. Lanza
+ * `IpcError` con el mensaje exacto del backend (estado HTTP + cuerpo, o el error de red)
+ * cuando falla — el llamador lo traduce con `describirError` como cualquier otro error. */
+export async function testOpenObserve(input: OpenObserveTestInput): Promise<void> {
+  await invokeCommand("settings_openobserve_test", { input }, z.void().nullable());
+}

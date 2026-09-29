@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::SystemTime;
 
 pub mod diagnostics;
+pub mod openobserve;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -239,6 +240,26 @@ fn ymd_to_days(y: i64, m: u32, d: u32) -> i64 {
     era * 146097 + (doe as i64) - 719468
 }
 
+/// El JSON de un `LogEvent` tal como se manda a OpenObserve: igual que el que ya se escribe
+/// en `networkbench.log`, pero con `_timestamp` en RFC 3339 añadido — el campo que
+/// OpenObserve reconoce como hora del evento. `event.timestamp` es la hora legible de
+/// Madrid que ya usan los ficheros locales (`format_madrid_human`), no ese campo: sin
+/// `_timestamp`, OpenObserve le habría puesto la hora de ingesta, no la hora real del evento
+/// (hallazgo real del propietario revisando el JSON enviado, comparando con los eventos de
+/// `tracing` de `CapaOpenObserve`, que sí lo llevan). También lleva `instanceId`/`hostname`
+/// (`openobserve::con_identidad`): con varias máquinas escribiendo en el mismo stream, sin
+/// esto sus eventos serían indistinguibles entre sí. `None` solo si `LogEvent` no
+/// serializara a un objeto JSON, algo que no debería poder pasar dado su `#[derive]`.
+fn log_event_para_openobserve(event: &LogEvent) -> Option<serde_json::Value> {
+    let mut valor = serde_json::to_value(event).ok()?;
+    let objeto = valor.as_object_mut()?;
+    objeto.insert(
+        "_timestamp".to_string(),
+        serde_json::Value::String(format_rfc3339_utc(SystemTime::now())),
+    );
+    Some(openobserve::con_identidad(valor))
+}
+
 impl Logger {
     pub fn new(log_dir: PathBuf, level: LogLevel) -> Self {
         let _ = fs::create_dir_all(&log_dir);
@@ -288,6 +309,14 @@ impl Logger {
                 return;
             }
         };
+
+        // Mismo evento, hacia el envío opt-in a OpenObserve (no bloquea nunca: ver
+        // `openobserve::encolar`). El registro local de arriba no depende de esto.
+        if openobserve::activo()
+            && let Some(valor) = log_event_para_openobserve(&event)
+        {
+            openobserve::encolar(valor);
+        }
 
         // Escritura en archivo local con manejo seguro que nunca bloquea ni entra en pánico
         if let Ok(mut file) = OpenOptions::new()
@@ -431,7 +460,12 @@ pub fn init_tracing(log_dir: &Path, initial_level: LogLevel) {
         )
     });
 
-    if let Err(e) = Registry::default().with(filtro).with(capa).try_init() {
+    if let Err(e) = Registry::default()
+        .with(filtro)
+        .with(capa)
+        .with(openobserve::CapaOpenObserve)
+        .try_init()
+    {
         eprintln!("No se pudo instalar el subscriber de tracing: {e}");
     }
 }
@@ -468,5 +502,44 @@ pub fn log(level: LogLevel, module: &str, message: &str) {
             safe_params: HashMap::new(),
         };
         logger.log(event);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn el_json_para_openobserve_lleva_marca_de_tiempo_rfc3339_ademas_de_las_del_evento() {
+        let event = LogEvent {
+            schema_version: 1,
+            timestamp: format_madrid_human(SystemTime::now()),
+            level: LogLevel::Warn,
+            origin: LogOrigin::Backend,
+            module: "prueba".to_string(),
+            event_code: "APP_EVENT".to_string(),
+            message: "mensaje de prueba".to_string(),
+            error_code: None,
+            duration_ms: None,
+            diagnostic_id: None,
+            safe_params: HashMap::new(),
+        };
+
+        let valor = log_event_para_openobserve(&event).expect("debe serializar");
+        let objeto = valor.as_object().expect("debe ser un objeto JSON");
+
+        // El campo legible de Madrid sigue ahí, sin tocar: los ficheros locales lo siguen
+        // usando tal cual.
+        assert_eq!(objeto["timestamp"], event.timestamp);
+        assert_eq!(objeto["module"], "prueba");
+        assert_eq!(objeto["message"], "mensaje de prueba");
+
+        // El campo nuevo que reconoce OpenObserve: RFC 3339 en UTC, con milisegundos y "Z".
+        let marca = objeto["_timestamp"]
+            .as_str()
+            .expect("_timestamp debe ser texto");
+        assert_eq!(marca.len(), "2026-09-28T08:15:23.456Z".len());
+        assert!(marca.ends_with('Z'));
+        assert!(marca.contains('T'));
     }
 }

@@ -58,6 +58,22 @@ pub struct Preferences {
     /// (`Historias.md` §14.5). Apagado por defecto: la exposición mayor la decide la persona.
     #[serde(default)]
     pub firewall_allow_public: bool,
+    /// Envío opt-in de diagnóstico a un servidor OpenObserve propio (constitución, enmienda
+    /// 0.8.0 al principio IV). Apagado por defecto: enviar algo fuera de esta máquina es
+    /// siempre una decisión explícita de la persona, nunca automática.
+    #[serde(default)]
+    pub open_observe_enabled: bool,
+    #[serde(default)]
+    pub open_observe_url: String,
+    #[serde(default)]
+    pub open_observe_org: String,
+    #[serde(default)]
+    pub open_observe_stream: String,
+    /// El token de ingesta que genera OpenObserve (ya es un `Basic <base64>` completo, no
+    /// una contraseña que haya que combinar con nada). No es un secreto de la aplicación
+    /// —lo emite el servidor de la persona—, pero tampoco se registra nunca en ningún log.
+    #[serde(default)]
+    pub open_observe_token: String,
 }
 
 impl Default for Preferences {
@@ -75,6 +91,11 @@ impl Default for Preferences {
             close_action: CloseAction::Ask,
             mdns_enabled: true,
             firewall_allow_public: false,
+            open_observe_enabled: false,
+            open_observe_url: String::new(),
+            open_observe_org: String::new(),
+            open_observe_stream: String::new(),
+            open_observe_token: String::new(),
         }
     }
 }

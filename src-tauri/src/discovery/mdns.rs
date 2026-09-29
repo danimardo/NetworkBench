@@ -48,7 +48,9 @@ pub async fn conectar_y_saludar(
     let target_addr = *addrs
         .first()
         .ok_or_else(|| "No se encontró ninguna dirección IP para el host".to_string())?;
-    tracing::info!("Conexión saliente: intentando {target_addr} ({host}:{port})");
+    // IP:puerto es diagnóstico avanzado (principio XIII, enmienda 0.8.0): solo en
+    // Debug/Trace, nunca en el nivel por defecto de producción.
+    tracing::debug!("Conexión saliente: intentando {target_addr} ({host}:{port})");
 
     let connector = TlsConnector::from(
         client_config(local_identity).map_err(|e| format!("Error preparando TLS: {e}"))?,
@@ -57,11 +59,11 @@ pub async fn conectar_y_saludar(
     let tcp = match timeout(PLAZO_CONEXION, tokio::net::TcpStream::connect(target_addr)).await {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => {
-            tracing::warn!("Conexión saliente: TCP a {target_addr} falló: {e}");
+            tracing::debug!("Conexión saliente: TCP a {target_addr} falló: {e}");
             return Err(format!("No se pudo conectar a {target_addr}: {e}"));
         }
         Err(_) => {
-            tracing::warn!("Conexión saliente: TCP a {target_addr} agotó el plazo (5 s)");
+            tracing::debug!("Conexión saliente: TCP a {target_addr} agotó el plazo (5 s)");
             return Err("Tiempo de espera agotado al conectar al equipo remoto (5 s)".to_string());
         }
     };
@@ -70,11 +72,11 @@ pub async fn conectar_y_saludar(
     let mut stream = match timeout(PLAZO_CONEXION, connector.connect(sni, tcp)).await {
         Ok(Ok(s)) => s,
         Ok(Err(e)) => {
-            tracing::warn!("Conexión saliente: TLS con {target_addr} falló: {e}");
+            tracing::debug!("Conexión saliente: TLS con {target_addr} falló: {e}");
             return Err(format!("El canal seguro con {target_addr} falló: {e}"));
         }
         Err(_) => {
-            tracing::warn!("Conexión saliente: TLS con {target_addr} agotó el plazo (5 s)");
+            tracing::debug!("Conexión saliente: TLS con {target_addr} agotó el plazo (5 s)");
             return Err("Tiempo de espera agotado en el canal seguro (5 s)".to_string());
         }
     };
@@ -86,12 +88,13 @@ pub async fn conectar_y_saludar(
         match peer_fingerprint(conexion.peer_certificates()) {
             Some(f) => f,
             None => {
-                tracing::warn!("Conexión saliente: {target_addr} no presentó certificado");
+                tracing::debug!("Conexión saliente: {target_addr} no presentó certificado");
                 return Err(format!("El equipo {target_addr} no presentó certificado"));
             }
         }
     };
-    tracing::info!(
+    // Huella completa o abreviada: también diagnóstico avanzado (principio XIII).
+    tracing::debug!(
         "Conexión saliente: TLS establecido con {target_addr} (huella {}…)",
         &fingerprint[..fingerprint.len().min(12)]
     );
@@ -116,21 +119,23 @@ pub async fn conectar_y_saludar(
     send_envelope(&mut stream, &hello)
         .await
         .map_err(|e| format!("Error enviando HELLO: {e}"))?;
+    // Nivel info sin IP (el hito "HELLO enviado"), nivel debug aparte con la IP.
     tracing::info!(
-        "HELLO enviado a {target_addr}: protocolo v{} ({})",
+        "HELLO enviado: protocolo v{} ({})",
         VERSION_PROTOCOLO,
         local_identity.instance_id
     );
+    tracing::debug!("HELLO enviado a {target_addr}");
 
     let remote_hello: ProtocolEnvelope<HelloPayload> =
         match timeout(PLAZO_CONEXION, recv_envelope(&mut stream)).await {
             Ok(Ok(env)) => env,
             Ok(Err(e)) => {
-                tracing::warn!("HELLO: error recibiendo respuesta de {target_addr}: {e}");
+                tracing::debug!("HELLO: error recibiendo respuesta de {target_addr}: {e}");
                 return Err(format!("Error recibiendo HELLO: {e}"));
             }
             Err(_) => {
-                tracing::warn!("HELLO: {target_addr} no respondió en el plazo (5 s)");
+                tracing::debug!("HELLO: {target_addr} no respondió en el plazo (5 s)");
                 return Err(
                     "Tiempo de espera agotado esperando HELLO del equipo remoto".to_string()
                 );
@@ -138,7 +143,7 @@ pub async fn conectar_y_saludar(
         };
 
     if remote_hello.msg_type != ProtocolMessageType::Hello {
-        tracing::warn!(
+        tracing::debug!(
             "HELLO: {target_addr} respondió con {:?} en vez de Hello",
             remote_hello.msg_type
         );
@@ -148,11 +153,12 @@ pub async fn conectar_y_saludar(
         ));
     }
     tracing::info!(
-        "HELLO recibido de {target_addr}: protocolo v{} ({}, app {})",
+        "HELLO recibido: protocolo v{} ({}, app {})",
         remote_hello.payload.protocol_version,
         remote_hello.payload.instance_id,
         remote_hello.payload.app_version
     );
+    tracing::debug!("HELLO recibido de {target_addr}");
 
     // Texto remoto: normalizado, acotado y no ejecutable (FR-056).
     let clean_name = sanitize_display_name(&remote_hello.payload.display_name);

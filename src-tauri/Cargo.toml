@@ -57,6 +57,13 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
 csv = "1.4.0"
 unicode-normalization = "0.1.25"
+# Envío opt-in de diagnóstico a un servidor OpenObserve que la propia persona configura y
+# opera (constitución, enmienda 0.8.0 al principio IV: no es "telemetría" en el sentido
+# que prohíbe ese principio, precisamente por ser opt-in y hacia infraestructura propia,
+# no del fabricante). Los features por defecto de 0.13 ya usan rustls, no OpenSSL/native-tls
+# (`default-tls = ["rustls"]` en el Cargo.toml de la propia crate): no añade esa dependencia
+# nativa aparte, coherente con que el resto de la app ya usa `rustls` directamente.
+reqwest = { version = "0.13.5", features = ["json"] }
 
 [build-dependencies]
 tauri-build = { version = "2.6.3", features = [] }

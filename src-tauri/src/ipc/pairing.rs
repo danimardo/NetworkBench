@@ -70,7 +70,11 @@ pub async fn peers_pairing_start(
     let (peer, stream) = match conectar_y_saludar(&host, port, &state.identity).await {
         Ok(v) => v,
         Err(e) => {
-            tracing::warn!("Emparejamiento: no se pudo conectar con {host}:{port}: {e}");
+            // El detalle (host:puerto, dentro de `e`) es diagnóstico avanzado (principio
+            // XIII, enmienda 0.8.0): completo en el AppError que ve la persona y en el
+            // log a debug; el hito de fallo, a warn, sin repetirlo.
+            tracing::warn!("Emparejamiento: no se pudo conectar con el equipo");
+            tracing::debug!("Emparejamiento: no se pudo conectar con {host}:{port}: {e}");
             return Ok(IpcResult::err(AppError::new(
                 ErrorCode::ConnCannotReach,
                 ErrorSeverity::Error,
@@ -100,9 +104,10 @@ pub async fn peers_pairing_start(
     // PAIR_RESULT en el log de la otra máquina.
     tracing::info!(
         pairing_id = %emparejamiento.id,
-        "Emparejamiento: iniciado con {} ({host}:{port})",
+        "Emparejamiento: iniciado con {}",
         peer.instance_id
     );
+    tracing::debug!(pairing_id = %emparejamiento.id, "Emparejamiento: iniciado con {host}:{port}");
 
     let respuesta = PairingStarted {
         pairing_id: emparejamiento.id,

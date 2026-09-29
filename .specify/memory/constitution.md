@@ -1,6 +1,18 @@
 <!--
 Sync Impact Report — 2026-09-21
-Versión: 0.4.0 -> 0.5.0 -> 0.6.0 -> 0.7.0.
+Versión: 0.4.0 -> 0.5.0 -> 0.6.0 -> 0.7.0 -> 0.8.0.
+0.8.0 (2026-09-28, ratificado por el propietario): dos aclaraciones sobre logging,
+pedidas explícitamente por el propietario para poder reconstruir pruebas fallidas entre
+varias máquinas sin depender de que las describa de palabra.
+  (a) Principio IV — "sin telemetría ni analítica" se refiere a recogida automática hacia
+      terceros sin consentimiento explícito. Un reenvío de diagnóstico OPT-IN, apagado por
+      defecto, hacia un servidor que la propia persona usuaria configura y opera (no un
+      servicio del fabricante) queda fuera del alcance de esa prohibición.
+  (b) Principio XIII — excepción de diagnóstico avanzado: con el nivel Debug o Trace
+      activado explícitamente por la persona usuaria en Ajustes (nunca en el nivel por
+      defecto de producción), se permite registrar IP:puerto, huella de certificado
+      (completa o abreviada) y la línea de comandos del motor NTTTCP. Sigue prohibido
+      registrar secretos, tokens, contraseñas o claves privadas bajo cualquier nivel.
 0.7.0: principio VIII, umbrales de cobertura Q2 decididos (80 % por capa y métrica; 90 %
 en módulos críticos Rust).
 0.5.0: principio VI, accesibilidad básica desde H1 y revisión completa en H2 (decisión Q3).
@@ -105,6 +117,10 @@ La versión de la constitución es independiente de la versión de la aplicació
 - Funcionalidad disponible sin Internet. Sin cuentas, telemetría ni analítica.
   Actualizaciones desactivables, sin enviar identidad, resultados o redes.
   Documentar aparte las conexiones de actualización propias de WebView2 Evergreen.
+  "Telemetría ni analítica" se refiere a recogida automática hacia terceros sin
+  consentimiento explícito (enmienda 0.8.0): un reenvío de diagnóstico OPT-IN, apagado por
+  defecto, hacia un servidor que la propia persona configura y opera —no un servicio del
+  fabricante— queda fuera de esta prohibición.
 - Exportación informa del contenido y ofrece anonimización de campos, XML, stdout/stderr,
   comandos y nombres de archivo. Si un bloque crudo no se puede sanear con garantías,
   omitirlo y declarar la omisión. CSV escapa celdas y neutraliza fórmulas de texto no confiable.
@@ -433,9 +449,18 @@ La versión de la constitución es independiente de la versión de la aplicació
   miden con reloj monotónico; timestamps de equipos distintos no prueban orden causal.
 - Rust centraliza la escritura en la ruta y rotación del principio IV (10 archivos,
   50 MB totales). Frontend reenvía eventos saneados por un comando Tauri específico,
-  con tamaño y frecuencia acotados; backend vuelve a validar. No hay destinos remotos.
+  con tamaño y frecuencia acotados; backend vuelve a validar. Sin destino remoto por
+  defecto; un destino remoto OPT-IN (enmienda 0.8.0, ver principio IV) exige apagado por
+  defecto, configuración explícita en Ajustes y las mismas reglas de saneamiento que
+  cualquier otro sink — nunca un canal que las eluda.
   Capturar errores globales y promesas rechazadas mediante el wrapper, sin parchear
   indiscriminadamente console ni crear bucles al fallar el propio transporte de logging.
+- **Excepción de diagnóstico avanzado (enmienda 0.8.0):** con el nivel Debug o Trace
+  activado explícitamente por la persona usuaria en Ajustes —nunca en el nivel por
+  defecto de producción— se permite registrar IP:puerto, huella de certificado (completa
+  o abreviada) y la línea de comandos del motor NTTTCP, para poder reconstruir un fallo de
+  conexión entre equipos a partir de los logs. Sigue prohibido registrar secretos, tokens,
+  contraseñas o claves privadas bajo cualquier nivel: esta excepción no los alcanza.
 
 #### Coste, fallos y verificación
 

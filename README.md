@@ -34,6 +34,7 @@ NetworkBench combina un frontend fluido y accesible en Svelte 5 y TypeScript con
 ## Documentación
 
 - [Guía de Usuario](file:///docs/user/guide.md): Instrucciones de uso, emparejamiento, configuración de pruebas e interpretación de veredictos.
+- [Envío de diagnóstico a OpenObserve](file:///docs/user/openobserve.md): Configuración opcional en un servidor OpenObserve propio y formato exacto de los eventos enviados.
 - [Guía de Desarrollo](file:///docs/development/setup.md): Configuración del entorno, arquitectura del proyecto y comandos de verificación.
 - [Registro de Validación Empírica](file:///VALIDACION.md): Evidencias de pruebas de integración, arneses Windows y matriz V-01 a V-12.
 - [Historias y Requisitos del Producto](file:///Historias.md): Catálogo exhaustivo de requisitos y criterios de aceptación.

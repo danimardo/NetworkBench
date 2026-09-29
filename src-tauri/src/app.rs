@@ -260,6 +260,12 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         &identity_dir,
         &crate::identity::nombre_del_equipo(),
     )?);
+    // La misma identidad que ya usan los peers para reconocerse al emparejar, para que los
+    // eventos de OpenObserve de varias máquinas en el mismo stream se puedan distinguir.
+    crate::logging::openobserve::establecer_identidad(
+        identity.instance_id.to_string(),
+        identity.display_name.clone(),
+    );
     let aviso_snapshot = Arc::new(tokio::sync::Notify::new());
     let session_service = Arc::new(SessionService::con_aviso(Arc::clone(&aviso_snapshot)));
     let delete_tokens = Arc::new(crate::history::delete::DeleteTokenStore::new());
@@ -276,6 +282,12 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
     ))));
 
     let initial_prefs = settings.get();
+    // La config de OpenObserve manda desde el arranque, igual que el nivel de registro de
+    // arriba: la tarea de fondo que de verdad envía (`openobserve::iniciar`) arranca luego,
+    // en `.setup()` (necesita el runtime async de Tauri en marcha).
+    crate::logging::openobserve::actualizar_config(
+        crate::logging::openobserve::OpenObserveConfig::from_preferences(&initial_prefs),
+    );
     let snapshot = Arc::new(SnapshotManager::new(AppSnapshot {
         revision: 1,
         app_version: env!("CARGO_PKG_VERSION").to_string(),

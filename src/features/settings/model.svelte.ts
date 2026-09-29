@@ -15,6 +15,8 @@ import {
   getAboutInfo,
   getDiagnosticPaths,
   openLogFolder,
+  testOpenObserve,
+  type OpenObserveTestInput,
 } from "../../lib/api/settings";
 import { checkUpdate } from "../../lib/api/updater";
 import { IpcError } from "../../lib/api/transport";
@@ -43,6 +45,11 @@ export class SettingsModel {
   diagnosticPaths = $state<DiagnosticPaths | null>(null);
   updateStatus = $state<UpdateStatus | null>(null);
   isCheckingUpdate = $state(false);
+
+  isTestingOpenObserve = $state(false);
+  /** El texto exacto que devolvió el backend (estado HTTP + cuerpo, o el error de red), no
+   * la clave genérica traducida: el botón "Probar conexión" existe justo para eso. */
+  openObserveTestResult = $state<{ ok: boolean; message: string } | null>(null);
 
   private successTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -145,6 +152,21 @@ export class SettingsModel {
       await openLogFolder();
     } catch (e: unknown) {
       this.saveError = describirError(e);
+    }
+  }
+
+  async testOpenObserve(input: OpenObserveTestInput): Promise<void> {
+    this.isTestingOpenObserve = true;
+    this.openObserveTestResult = null;
+    try {
+      await testOpenObserve(input);
+      this.openObserveTestResult = { ok: true, message: t("settings.openObserve.testOk") };
+    } catch (e: unknown) {
+      const detalle =
+        e instanceof IpcError ? (e.appError.diagnosticId ?? describirError(e)) : describirError(e);
+      this.openObserveTestResult = { ok: false, message: detalle };
+    } finally {
+      this.isTestingOpenObserve = false;
     }
   }
 

@@ -228,6 +228,16 @@
     "openLogFolder": "Abrir carpeta de registros",
     "appLogDir": "Registro de la aplicación",
     "firewallHelperLogPath": "Registro del ayudante de firewall",
+    "openObserve": {
+      "title": "Enviar diagnóstico a OpenObserve",
+      "desc": "Reenvío opcional de los registros a un servidor OpenObserve propio, además de los ficheros locales. Apagado por defecto.",
+      "url": "URL del servidor",
+      "org": "Organización",
+      "stream": "Stream",
+      "token": "Token de ingesta",
+      "testBtn": "Probar conexión",
+      "testOk": "Conexión correcta: el servidor aceptó el evento de prueba."
+    },
     "checkUpdatesBtn": "Buscar actualizaciones",
     "upToDateMessage": "NetworkBench está actualizado a la versión más reciente.",
     "updateAvailableTitle": "Actualización disponible",

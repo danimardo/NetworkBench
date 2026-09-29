@@ -47,19 +47,23 @@ pub async fn atender_emparejamiento_entrante<S>(
 ) where
     S: AsyncRead + AsyncWrite + Unpin,
 {
+    // IP: diagnóstico avanzado (principio XIII, enmienda 0.8.0), aparte y a debug; el
+    // hito en sí (que llegó una PAIR_REQUEST) va a info sin ella.
     tracing::info!(
         pairing_id = %solicitud.id,
-        "Emparejamiento: PAIR_REQUEST recibida de {remote_addr} ({})",
+        "Emparejamiento: PAIR_REQUEST recibida ({})",
         hello.instance_id
     );
+    tracing::debug!(pairing_id = %solicitud.id, "PAIR_REQUEST recibida de {remote_addr}");
 
     let (emparejamiento, verificacion) =
         match preparar_respuesta(&solicitud, &ctx.identity.fingerprint, huella) {
             Ok(v) => v,
             Err(e) => {
-                tracing::warn!(
+                tracing::warn!(pairing_id = %solicitud.id, "PAIR_REQUEST no utilizable: {e}");
+                tracing::debug!(
                     pairing_id = %solicitud.id,
-                    "PAIR_REQUEST de {remote_addr} no utilizable: {e}"
+                    "PAIR_REQUEST no utilizable, de {remote_addr}"
                 );
                 return;
             }
@@ -69,7 +73,11 @@ pub async fn atender_emparejamiento_entrante<S>(
     if verificacion.is_err() {
         tracing::warn!(
             pairing_id = %emparejamiento.id,
-            "PAIR_REQUEST de {remote_addr} con verificación fallida"
+            "PAIR_REQUEST con verificación fallida"
+        );
+        tracing::debug!(
+            pairing_id = %emparejamiento.id,
+            "PAIR_REQUEST con verificación fallida, de {remote_addr}"
         );
         let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, false).await;
         return;
@@ -87,7 +95,8 @@ pub async fn atender_emparejamiento_entrante<S>(
     ) {
         Ok(p) => p,
         Err(e) => {
-            tracing::warn!("PAIR_REQUEST de {remote_addr} con datos de equipo no válidos: {e}");
+            tracing::warn!("PAIR_REQUEST con datos de equipo no válidos: {e}");
+            tracing::debug!("PAIR_REQUEST con datos de equipo no válidos, de {remote_addr}");
             let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, false).await;
             return;
         }
@@ -102,7 +111,8 @@ pub async fn atender_emparejamiento_entrante<S>(
         .iter()
         .any(|e| e.peer.fingerprint == peer.fingerprint)
     {
-        tracing::warn!("Emparejamiento de {remote_addr} rechazado: ya hay uno pendiente");
+        tracing::warn!("Emparejamiento rechazado: ya hay uno pendiente");
+        tracing::debug!("Emparejamiento de {remote_addr} rechazado: ya hay uno pendiente");
         let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, false).await;
         return;
     }

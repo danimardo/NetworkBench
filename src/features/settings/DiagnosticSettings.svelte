@@ -2,6 +2,8 @@
   import Card from "../../lib/components/Card.svelte";
   import Button from "../../lib/components/Button.svelte";
   import Segmented from "../../lib/components/Segmented.svelte";
+  import Switch from "../../lib/components/Switch.svelte";
+  import TextField from "../../lib/components/TextField.svelte";
   import { t } from "../../lib/i18n";
   import type { SettingsModel } from "./model.svelte";
 
@@ -12,6 +14,52 @@
   let { model }: Props = $props();
 
   type LogLevel = "warn" | "info" | "debug";
+
+  // Campos locales: el guardado es al salir del campo (como el puerto de control en
+  // NetworkSettings), no en cada pulsación. Se sincronizan cuando llegan los ajustes por
+  // primera vez, no en cada cambio posterior (para no pisar lo que la persona está
+  // escribiendo si `model.prefs` se refresca por otra vía).
+  let ooUrl = $state("");
+  let ooOrg = $state("");
+  let ooStream = $state("");
+  let ooToken = $state("");
+  let sincronizado = false;
+
+  $effect(() => {
+    if (model.prefs && !sincronizado) {
+      ooUrl = model.prefs.openObserveUrl;
+      ooOrg = model.prefs.openObserveOrg;
+      ooStream = model.prefs.openObserveStream;
+      ooToken = model.prefs.openObserveToken;
+      sincronizado = true;
+    }
+  });
+
+  function handleOpenObserveToggle(enabled: boolean) {
+    void model.update({ openObserveEnabled: enabled });
+  }
+
+  function guardarCamposOpenObserve() {
+    if (!model.prefs) return;
+    if (
+      ooUrl === model.prefs.openObserveUrl &&
+      ooOrg === model.prefs.openObserveOrg &&
+      ooStream === model.prefs.openObserveStream &&
+      ooToken === model.prefs.openObserveToken
+    ) {
+      return;
+    }
+    void model.update({
+      openObserveUrl: ooUrl,
+      openObserveOrg: ooOrg,
+      openObserveStream: ooStream,
+      openObserveToken: ooToken,
+    });
+  }
+
+  function probarOpenObserve() {
+    void model.testOpenObserve({ url: ooUrl, org: ooOrg, stream: ooStream, token: ooToken });
+  }
 
   // «Warn», «Info» y «Debug» son nombres de nivel, no texto de interfaz; solo el
   // «recomendado» se traduce.
@@ -129,6 +177,79 @@
             >
           </div>
         </div>
+      {/if}
+    </div>
+  </Card>
+
+  <!-- OpenObserve: reenvío opt-in de diagnóstico a un servidor propio (constitución,
+       enmienda 0.8.0). Apagado por defecto; los cuatro campos solo importan encendido. -->
+  <Card variant="default" enterIndex={3}>
+    <div class="p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="pr-4">
+          <h2 class="text-base font-semibold">{t("settings.openObserve.title")}</h2>
+          <p class="text-sm text-[var(--color-text-secondary)]">
+            {t("settings.openObserve.desc")}
+          </p>
+        </div>
+        <Switch
+          checked={model.prefs?.openObserveEnabled ?? false}
+          onchange={handleOpenObserveToggle}
+          disabled={!model.prefs}
+          label={t("settings.openObserve.title")}
+        />
+      </div>
+
+      {#if model.prefs?.openObserveEnabled}
+        <div class="grid gap-4 sm:grid-cols-2">
+          <TextField
+            label={t("settings.openObserve.url")}
+            bind:value={ooUrl}
+            placeholder="https://mi-openobserve.example"
+            onblur={guardarCamposOpenObserve}
+            id="oo-url"
+          />
+          <TextField
+            label={t("settings.openObserve.org")}
+            bind:value={ooOrg}
+            onblur={guardarCamposOpenObserve}
+            id="oo-org"
+          />
+          <TextField
+            label={t("settings.openObserve.stream")}
+            bind:value={ooStream}
+            onblur={guardarCamposOpenObserve}
+            id="oo-stream"
+          />
+          <TextField
+            label={t("settings.openObserve.token")}
+            type="password"
+            bind:value={ooToken}
+            onblur={guardarCamposOpenObserve}
+            id="oo-token"
+          />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            onclick={probarOpenObserve}
+            disabled={model.isTestingOpenObserve || !ooUrl || !ooOrg || !ooStream || !ooToken}
+          >
+            {model.isTestingOpenObserve ? t("common.checking") : t("settings.openObserve.testBtn")}
+          </Button>
+        </div>
+
+        {#if model.openObserveTestResult}
+          <div
+            class="rounded bg-[var(--surface-field)] p-3 text-xs"
+            class:text-[var(--color-success)]={model.openObserveTestResult.ok}
+            class:text-[var(--color-danger)]={!model.openObserveTestResult.ok}
+            role="status"
+          >
+            {model.openObserveTestResult.message}
+          </div>
+        {/if}
       {/if}
     </div>
   </Card>
