@@ -24,6 +24,18 @@ const POLL_MS = 2000;
 /** Sin ninguna respuesta mDNS pasado este tiempo, «Buscando» pasa a «Ninguno encontrado». */
 const SCAN_TIMEOUT_MS = 5000;
 const PAIRING_SECONDS = 60;
+/** «Comprobando…» se ve al menos este tiempo: una comprobación instantánea no debe parecer que no pasó nada. */
+const CHECK_MIN_VISIBLE_MS = 1000;
+/** Cada cuánto se pregunta el resultado mientras una comprobación manual sigue en curso. */
+const CHECK_POLL_MS = 250;
+/** Tope de espera: el intento de conexión del backend dura como mucho 1,5 s. */
+const CHECK_MAX_MS = 4000;
+
+export interface PeersModelOptions {
+  checkMinVisibleMs?: number;
+  checkPollMs?: number;
+  checkMaxMs?: number;
+}
 
 export interface PeerStatus {
   availability: "available" | "busy" | "checking" | "unreachable";
@@ -66,10 +78,22 @@ export class PeersModel {
   discovered = $state<DiscoveredPeer[]>([]);
   /** Huella → estado de la última comprobación de alcance de un equipo guardado. */
   reachability = $state<Record<string, "checking" | "reachable" | "unreachable">>({});
+  /** Huellas con una comprobación manual en curso: la tarjeta dice «Comprobando…» al instante. */
+  verifying = $state<Record<string, true>>({});
   scanning = $state(true);
   error = $state<string | null>(null);
   busy = $state(false);
   pairing = $state<PairingInProgress | null>(null);
+
+  private readonly checkMinVisibleMs: number;
+  private readonly checkPollMs: number;
+  private readonly checkMaxMs: number;
+
+  constructor(options: PeersModelOptions = {}) {
+    this.checkMinVisibleMs = options.checkMinVisibleMs ?? CHECK_MIN_VISIBLE_MS;
+    this.checkPollMs = options.checkPollMs ?? CHECK_POLL_MS;
+    this.checkMaxMs = options.checkMaxMs ?? CHECK_MAX_MS;
+  }
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private scanTimer: ReturnType<typeof setTimeout> | null = null;
@@ -115,6 +139,12 @@ export class PeersModel {
   });
 
   statusOf = (peer: Peer): PeerStatus => {
+    const base = this.baseStatusOf(peer);
+    // Una comprobación manual en curso manda sobre lo último que se supiera.
+    return this.verifying[peer.fingerprint] ? { ...base, availability: "checking" } : base;
+  };
+
+  private baseStatusOf(peer: Peer): PeerStatus {
     const d = this.discovered.find(
       (x) => x.fingerprintDeclarada.toLowerCase() === peer.fingerprint,
     );
@@ -137,7 +167,7 @@ export class PeersModel {
       availability: d.busy ? "busy" : "available",
       compatible: d.protocolVersion === PROTOCOL_VERSION,
     };
-  };
+  }
 
   start(): void {
     if (this.pollTimer) return;
@@ -161,12 +191,18 @@ export class PeersModel {
     this.scanTimer = setTimeout(() => {
       this.scanning = false;
     }, SCAN_TIMEOUT_MS);
+    const inicio = Date.now();
+    const guardados = this.known.map((k) => k.fingerprint);
+    this.markVerifying(guardados);
     try {
       await rescanPeers();
     } catch (err) {
       this.error = messageOf(err, "peers.errors.refresh");
     }
     await this.refresh();
+    // «Buscar de nuevo» ya reprograma la comprobación de los guardados en el backend: aquí
+    // solo se muestra. No se espera, para no retener el botón.
+    void this.awaitChecks(guardados, inicio);
   }
 
   stop(): void {
@@ -226,7 +262,48 @@ export class PeersModel {
   /** «Comprobar ahora»: sin equipo, vuelve a comprobar todos los guardados. */
   async checkNow(peer?: Peer): Promise<void> {
     if (peer && !this.isSaved(peer)) return;
-    await this.runAction(() => checkPeersNow(peer?.fingerprint));
+    const objetivos = (peer ? [peer.fingerprint] : this.known.map((k) => k.fingerprint)).filter(
+      (fp) => !this.verifying[fp],
+    );
+    if (objetivos.length === 0) return;
+    const inicio = Date.now();
+    this.error = null;
+    this.markVerifying(objetivos);
+    try {
+      await checkPeersNow(peer?.fingerprint);
+    } catch (err) {
+      this.error = messageOf(err, "peers.errors.action");
+    }
+    await this.awaitChecks(objetivos, inicio);
+  }
+
+  private markVerifying(fingerprints: string[]): void {
+    const siguiente = { ...this.verifying };
+    for (const fp of fingerprints) siguiente[fp] = true;
+    this.verifying = siguiente;
+  }
+
+  /**
+   * Mantiene «Comprobando…» hasta que el backend responda, y como mínimo
+   * `checkMinVisibleMs`; después deja ver el resultado real. Acotado por `checkMaxMs`:
+   * nunca se queda «comprobando» indefinidamente.
+   */
+  private async awaitChecks(fingerprints: string[], inicio: number): Promise<void> {
+    try {
+      const espera = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+      for (;;) {
+        await this.refresh();
+        const transcurrido = Date.now() - inicio;
+        const pendiente = fingerprints.some((fp) => this.reachability[fp] === "checking");
+        if (transcurrido >= this.checkMaxMs) break;
+        if (transcurrido >= this.checkMinVisibleMs && !pendiente) break;
+        await espera(this.checkPollMs);
+      }
+    } finally {
+      const siguiente = { ...this.verifying };
+      for (const fp of fingerprints) delete siguiente[fp];
+      this.verifying = siguiente;
+    }
   }
 
   async toggleFavorite(peer: Peer): Promise<void> {

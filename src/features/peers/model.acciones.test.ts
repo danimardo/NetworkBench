@@ -172,3 +172,98 @@ describe("PeersModel: acciones del menú contextual", () => {
     });
   });
 });
+
+describe("PeersModel: feedback de «Comprobar ahora»", () => {
+  const opciones = { checkMinVisibleMs: 60, checkPollMs: 5, checkMaxMs: 400 };
+  const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  /** El backend responde `estados` en orden en cada consulta de alcance; la última se repite. */
+  function simularAlcance(estados: string[]) {
+    let consultas = 0;
+    const llamadas: string[] = [];
+    setTransportMock(async (cmd) => {
+      llamadas.push(cmd);
+      if (cmd === "peers_list") return { ok: true, value: [guardado] };
+      if (cmd === "peers_discovered_list") return { ok: true, value: [] };
+      if (cmd === "peers_reachability_list") {
+        const estado = estados[Math.min(consultas++, estados.length - 1)];
+        return { ok: true, value: [{ fingerprint: guardado.fingerprint, estado }] };
+      }
+      return { ok: true, value: null };
+    });
+    return llamadas;
+  }
+
+  it("la tarjeta pasa a «comprobando» al instante y después muestra el resultado real", async () => {
+    // 1.ª consulta (refresco inicial): inalcanzable; el backend está «comprobando» dos
+    // consultas más y termina inalcanzable.
+    simularAlcance(["unreachable", "checking", "checking", "unreachable"]);
+    const model = new PeersModel(opciones);
+    await model.refresh();
+    expect(model.statusOf(model.peers[0]!).availability).toBe("unreachable");
+
+    const terminado = model.checkNow(model.peers[0]!);
+    expect(model.statusOf(model.peers[0]!).availability).toBe("checking");
+
+    await terminado;
+    expect(model.statusOf(model.peers[0]!).availability).toBe("unreachable");
+  });
+
+  it("aunque el resultado sea instantáneo, «comprobando» se ve un tiempo mínimo", async () => {
+    simularAlcance(["unreachable"]);
+    const model = new PeersModel(opciones);
+    await model.refresh();
+
+    const terminado = model.checkNow(model.peers[0]!);
+    await espera(25);
+    expect(model.statusOf(model.peers[0]!).availability).toBe("checking");
+
+    await terminado;
+    expect(model.statusOf(model.peers[0]!).availability).toBe("unreachable");
+  });
+
+  it("si el equipo vuelve, la tarjeta termina en «disponible»", async () => {
+    simularAlcance(["unreachable", "checking", "reachable"]);
+    const model = new PeersModel(opciones);
+    await model.refresh();
+
+    await model.checkNow(model.peers[0]!);
+
+    expect(model.statusOf(model.peers[0]!).availability).toBe("available");
+  });
+
+  it("nunca se queda «comprobando» indefinidamente aunque el backend no termine", async () => {
+    simularAlcance(["checking"]);
+    const model = new PeersModel({ ...opciones, checkMaxMs: 80 });
+    await model.refresh();
+
+    await model.checkNow(model.peers[0]!);
+
+    expect(model.verifying).toEqual({});
+  });
+
+  it("pulsar otra vez mientras se comprueba no lanza una segunda comprobación", async () => {
+    const llamadas = simularAlcance(["unreachable"]);
+    const model = new PeersModel(opciones);
+    await model.refresh();
+
+    const primera = model.checkNow(model.peers[0]!);
+    await model.checkNow(model.peers[0]!);
+    await primera;
+
+    expect(llamadas.filter((c) => c === "peers_check_now")).toHaveLength(1);
+  });
+
+  it("«Buscar de nuevo» también deja a los guardados en «comprobando» a la vista", async () => {
+    simularAlcance(["unreachable"]);
+    const model = new PeersModel(opciones);
+    await model.refresh();
+    model.scanning = false;
+
+    await model.rescan();
+
+    expect(model.statusOf(model.peers[0]!).availability).toBe("checking");
+    await espera(120);
+    expect(model.statusOf(model.peers[0]!).availability).toBe("unreachable");
+  });
+});

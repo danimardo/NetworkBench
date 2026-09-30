@@ -163,21 +163,21 @@ impl MonitorAlcance {
         v
     }
 
-    /// «Comprobar ahora» sobre un equipo: vuelve a «comprobando» y se sondea en la próxima
-    /// vuelta. `None` reprograma a todos sin borrar su estado (no hace parpadear la lista).
+    /// «Comprobar ahora»: vuelve a «comprobando» al equipo indicado (o a todos si es `None`) y
+    /// lo deja vencido para sondearlo en la próxima vuelta. El estado intermedio existe para
+    /// que la interfaz pueda distinguir «sigue en curso» de «ya terminó».
     pub fn forzar(&self, fingerprint: Option<&str>) {
         let ahora = Instant::now();
         {
             let mut entradas = self.entradas.lock().unwrap_or_else(|e| e.into_inner());
+            let mut reprogramar = |e: &mut Entrada| {
+                e.estado = Alcance::Comprobando;
+                e.fallos = 0;
+                e.proxima = ahora;
+            };
             match fingerprint {
-                Some(fp) => {
-                    if let Some(e) = entradas.get_mut(fp) {
-                        e.estado = Alcance::Comprobando;
-                        e.fallos = 0;
-                        e.proxima = ahora;
-                    }
-                }
-                None => entradas.values_mut().for_each(|e| e.proxima = ahora),
+                Some(fp) => entradas.get_mut(fp).into_iter().for_each(&mut reprogramar),
+                None => entradas.values_mut().for_each(&mut reprogramar),
             }
         }
         self.despertar.notify_one();
@@ -599,6 +599,26 @@ mod tests {
         })
         .await;
         assert_eq!(v, 4);
+    }
+
+    #[tokio::test]
+    async fn comprobar_a_todos_los_deja_en_comprobando_hasta_que_se_sondea() {
+        let m = MonitorAlcance::new();
+        let g = [
+            guardado(1, 'a', Some("192.168.1.50:7411")),
+            guardado(2, 'b', Some("192.168.1.51:7411")),
+        ];
+        let t0 = Instant::now();
+        m.ronda(t0, &g, &[], siempre(false)).await;
+
+        m.forzar(None);
+        assert_eq!(estado_de(&m, 'a'), Some(Alcance::Comprobando));
+        assert_eq!(estado_de(&m, 'b'), Some(Alcance::Comprobando));
+
+        m.ronda(t0 + Duration::from_secs(1), &g, &[], siempre(true))
+            .await;
+        assert_eq!(estado_de(&m, 'a'), Some(Alcance::Alcanzable));
+        assert_eq!(estado_de(&m, 'b'), Some(Alcance::Alcanzable));
     }
 
     #[tokio::test]
