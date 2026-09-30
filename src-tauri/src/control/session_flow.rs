@@ -1346,6 +1346,7 @@ mod reconciliacion_de_resultado {
             trust_state: TrustState::Trusted,
             auto_accept: false,
             last_seen: ahora_rfc3339(),
+            favorite: false,
             alias: None,
         }
     }

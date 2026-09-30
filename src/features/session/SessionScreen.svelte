@@ -133,7 +133,7 @@
     <div class="nb-session-peer-badge">
       <Icon name="desktop" size={16} />
       <span class="nb-session-peer-name">{peer.displayName}</span>
-      <span class="nb-session-peer-ip">({peer.addresses[0] ?? "127.0.0.1"})</span>
+      <span class="nb-session-peer-ip">({peer.addresses[0] ?? t("device.noAddress")})</span>
     </div>
 
     <!-- Botón Cancelar SIEMPRE visible durante la ejecución -->

@@ -59,6 +59,7 @@ fn test_peer_identity_changed_triggers_error() {
         trust_state: TrustState::Trusted,
         auto_accept: false,
         last_seen: "2026-09-22T06:00:00Z".to_string(),
+        favorite: false,
         alias: None,
     };
 

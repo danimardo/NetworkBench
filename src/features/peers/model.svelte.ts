@@ -1,9 +1,14 @@
 import {
+  checkPeersNow,
   confirmPairing as confirmPairingCommand,
+  forgetPeer,
   listDiscoveredPeers,
   listPeers,
+  listReachability,
   manualConnectPeer,
   rescanPeers,
+  setPeerFavorite,
+  setPeerTrust,
   startPairing,
   type DiscoveredPeer,
 } from "../../lib/api/peers";
@@ -21,7 +26,7 @@ const SCAN_TIMEOUT_MS = 5000;
 const PAIRING_SECONDS = 60;
 
 export interface PeerStatus {
-  availability: "available" | "busy";
+  availability: "available" | "busy" | "checking" | "unreachable";
   compatible: boolean;
 }
 
@@ -59,6 +64,8 @@ function messageOf(err: unknown, fallbackKey: string): string {
 export class PeersModel {
   known = $state<Peer[]>([]);
   discovered = $state<DiscoveredPeer[]>([]);
+  /** Huella → estado de la última comprobación de alcance de un equipo guardado. */
+  reachability = $state<Record<string, "checking" | "reachable" | "unreachable">>({});
   scanning = $state(true);
   error = $state<string | null>(null);
   busy = $state(false);
@@ -88,13 +95,22 @@ export class PeersModel {
         addresses: d.addresses,
         trustState: guardado?.trustState ?? "unknown",
         autoAccept: guardado?.autoAccept ?? false,
+        favorite: guardado?.favorite ?? false,
         lastSeen: now,
         alias: guardado?.alias ?? null,
       };
     });
 
     // Guardado y sin anuncio ahora: sigue siendo seleccionable, la conexión decide.
-    const guardados = this.known.filter((k) => !usadas.includes(k.fingerprint));
+    // Los inalcanzables al final: los que se pueden usar van primero (el orden previo se
+    // conserva dentro de cada grupo, `sort` es estable).
+    const guardados = this.known
+      .filter((k) => !usadas.includes(k.fingerprint))
+      .sort(
+        (a, b) =>
+          Number(this.reachability[a.fingerprint] === "unreachable") -
+          Number(this.reachability[b.fingerprint] === "unreachable"),
+      );
     return [...vistos, ...guardados];
   });
 
@@ -102,7 +118,21 @@ export class PeersModel {
     const d = this.discovered.find(
       (x) => x.fingerprintDeclarada.toLowerCase() === peer.fingerprint,
     );
-    if (!d) return { availability: "available", compatible: true };
+    if (!d) {
+      // Guardado y sin anuncio: lo dice la comprobación TCP. Sin dato aún, «comprobando»
+      // (nunca «disponible» por defecto: no se sabe). Uno no guardado siempre viene de mDNS.
+      const alcance = this.reachability[peer.fingerprint];
+      if (!this.isSaved(peer)) return { availability: "available", compatible: true };
+      return {
+        availability:
+          alcance === "reachable"
+            ? "available"
+            : alcance === "unreachable"
+              ? "unreachable"
+              : "checking",
+        compatible: true,
+      };
+    }
     return {
       availability: d.busy ? "busy" : "available",
       compatible: d.protocolVersion === PROTOCOL_VERSION,
@@ -149,9 +179,15 @@ export class PeersModel {
 
   async refresh(): Promise<void> {
     try {
-      const [known, discovered] = await Promise.all([listPeers(), listDiscoveredPeers()]);
+      const [known, discovered, alcance] = await Promise.all([
+        listPeers(),
+        listDiscoveredPeers(),
+        // Es una pista: si falla, no se pierde la lista de equipos, solo su estado.
+        listReachability().catch(() => []),
+      ]);
       this.known = known;
       this.discovered = discovered;
+      this.reachability = Object.fromEntries(alcance.map((r) => [r.fingerprint, r.estado]));
       if (discovered.length > 0) this.scanning = false;
     } catch (err) {
       this.error = messageOf(err, "peers.errors.refresh");
@@ -180,6 +216,44 @@ export class PeersModel {
     } finally {
       this.busy = false;
     }
+  }
+
+  /** ¿Hay un registro guardado de este equipo? Sin él no hay confianza que quitar ni nada que olvidar. */
+  isSaved(peer: Peer): boolean {
+    return this.known.some((k) => k.fingerprint === peer.fingerprint);
+  }
+
+  /** «Comprobar ahora»: sin equipo, vuelve a comprobar todos los guardados. */
+  async checkNow(peer?: Peer): Promise<void> {
+    if (peer && !this.isSaved(peer)) return;
+    await this.runAction(() => checkPeersNow(peer?.fingerprint));
+  }
+
+  async toggleFavorite(peer: Peer): Promise<void> {
+    if (!this.isSaved(peer)) return;
+    await this.runAction(() => setPeerFavorite(peer.fingerprint, !peer.favorite));
+  }
+
+  /** «Quitar confianza»: el equipo pasa a «conocido»; volver a medir exigirá emparejar. */
+  async revokeTrust(peer: Peer): Promise<void> {
+    if (!this.isSaved(peer)) return;
+    await this.runAction(() => setPeerTrust(peer.fingerprint, false, false));
+  }
+
+  /** «Eliminar equipo»: lo olvida solo en este equipo. Si sigue anunciándose reaparece como nuevo. */
+  async forget(peer: Peer): Promise<void> {
+    if (!this.isSaved(peer)) return;
+    await this.runAction(() => forgetPeer(peer.fingerprint));
+  }
+
+  private async runAction(action: () => Promise<void>): Promise<void> {
+    this.error = null;
+    try {
+      await action();
+    } catch (err) {
+      this.error = messageOf(err, "peers.errors.action");
+    }
+    await this.refresh();
   }
 
   /** ¿Se puede medir ya con este equipo, o hay que emparejarlo antes? */

@@ -342,7 +342,8 @@
       "pairStart": "Could not start pairing.",
       "pairRejected": "The other computer did not confirm the pairing.",
       "pairFailed": "Could not complete pairing.",
-      "pairExpired": "Pairing expired."
+      "pairExpired": "Pairing expired.",
+      "action": "The action on the device could not be completed."
     },
     "screen": {
       "title": "Available devices",
@@ -362,6 +363,18 @@
       "pairingExpires": "Expires in {seconds} s",
       "pairingConfirm": "Confirm code",
       "emptyTitle": "No devices detected"
+    },
+    "menu": {
+      "label": "Actions for {name}",
+      "favorite": "Mark as favorite",
+      "unfavorite": "Remove from favorites",
+      "copyIp": "Copy IP",
+      "revokeTrust": "Remove trust",
+      "forget": "Remove device",
+      "forgetTitle": "Remove {name}?",
+      "forgetDesc": "This device and its trust will be forgotten on this computer only. If it is still running on the network it will reappear as a new device. Measurement history is kept.",
+      "forgetConfirm": "Remove",
+      "checkNow": "Check now"
     }
   },
   "session": {
@@ -686,7 +699,10 @@
     "trusted": "Trusted",
     "known": "Known",
     "favorite": "Mark as favorite",
-    "unfavorite": "Remove from favorites"
+    "unfavorite": "Remove from favorites",
+    "noAddress": "Unknown address",
+    "checking": "Checking…",
+    "lastSeen": "Seen {when}"
   },
   "window": {
     "minimize": "Minimize",

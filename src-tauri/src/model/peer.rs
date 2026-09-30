@@ -23,6 +23,9 @@ pub struct Peer {
     pub trust_state: TrustState,
     pub auto_accept: bool,
     pub last_seen: String,
+    /// Marca local del usuario; no viaja al otro equipo.
+    #[serde(default)]
+    pub favorite: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alias: Option<String>,
 }
@@ -120,6 +123,7 @@ impl Peer {
             trust_state: TrustState::Unknown,
             auto_accept: false,
             last_seen: system_time_to_iso8601(SystemTime::now()),
+            favorite: false,
             alias: None,
         })
     }

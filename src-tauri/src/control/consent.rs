@@ -161,6 +161,7 @@ mod tests {
             trust_state: TrustState::Trusted,
             auto_accept: false,
             last_seen: String::new(),
+            favorite: false,
             alias: None,
         }
     }

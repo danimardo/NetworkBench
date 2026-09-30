@@ -8,7 +8,8 @@
     ],
     "trustState": "unknown",
     "autoAccept": false,
-    "lastSeen": "2026-09-25T10:00:00.000Z"
+    "lastSeen": "2026-09-25T10:00:00.000Z",
+    "favorite": false
   },
   {
     "instanceId": "00000000-0000-4000-8000-000000000101",
@@ -19,7 +20,8 @@
     ],
     "trustState": "known",
     "autoAccept": false,
-    "lastSeen": "2026-09-25T10:00:00.000Z"
+    "lastSeen": "2026-09-25T10:00:00.000Z",
+    "favorite": false
   },
   {
     "instanceId": "00000000-0000-4000-8000-000000000102",
@@ -30,7 +32,8 @@
     ],
     "trustState": "trusted",
     "autoAccept": false,
-    "lastSeen": "2026-09-25T10:00:00.000Z"
+    "lastSeen": "2026-09-25T10:00:00.000Z",
+    "favorite": false
   },
   {
     "instanceId": "00000000-0000-4000-8000-000000000103",
@@ -41,6 +44,7 @@
     ],
     "trustState": "trustedAutoAccept",
     "autoAccept": true,
-    "lastSeen": "2026-09-25T10:00:00.000Z"
+    "lastSeen": "2026-09-25T10:00:00.000Z",
+    "favorite": false
   }
 ]

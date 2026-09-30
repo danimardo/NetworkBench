@@ -7,6 +7,7 @@
   import VerificationCode from "../../lib/components/VerificationCode.svelte";
   import Icon from "../../lib/components/Icon.svelte";
   import Tooltip from "../../lib/components/Tooltip.svelte";
+  import ContextMenu, { type ContextMenuItem } from "../../lib/components/ContextMenu.svelte";
   import { t } from "../../lib/i18n";
   import type { Peer } from "../../lib/contracts/peer";
 
@@ -23,10 +24,19 @@
     pairingCode?: string;
     pairingSecondsLeft?: number;
     /** Disponibilidad y compatibilidad por equipo; sin ella todos se muestran disponibles. */
-    statusOf?: (peer: Peer) => { availability: "available" | "busy"; compatible: boolean };
+    statusOf?: (peer: Peer) => {
+      availability: "available" | "busy" | "checking" | "unreachable";
+      compatible: boolean;
+    };
     errorMessage?: string | null;
     onDismissError?: () => void;
     busy?: boolean;
+    /** ¿Hay un registro guardado del equipo? Sin él, confianza y eliminar no aplican. */
+    isSaved?: (peer: Peer) => boolean;
+    onToggleFavorite?: (peer: Peer) => void;
+    onRevokeTrust?: (peer: Peer) => void;
+    onForget?: (peer: Peer) => void;
+    onCheckNow?: (peer: Peer) => void;
   }
 
   let {
@@ -44,6 +54,11 @@
     errorMessage = null,
     onDismissError,
     busy = false,
+    isSaved = () => true,
+    onToggleFavorite,
+    onRevokeTrust,
+    onForget,
+    onCheckNow,
   }: Props = $props();
 
   let showManualModal = $state(false);
@@ -98,6 +113,113 @@
   function handleRescan() {
     if (isScanning) return;
     onRescan?.();
+  }
+
+  // Menú contextual (clic derecho, tecla de menú o Mayús+F10 sobre una tarjeta).
+  let menu = $state<{ peer: Peer; x: number; y: number } | null>(null);
+  let menuTrigger: HTMLElement | null = null;
+  let peerToForget = $state<Peer | null>(null);
+  let forgetTrigger: HTMLElement | null = null;
+
+  function openMenu(e: MouseEvent, peer: Peer) {
+    e.preventDefault();
+    const host = e.currentTarget as HTMLElement;
+    menuTrigger = (host.querySelector('[role="button"]') as HTMLElement | null) ?? host;
+    // Desde el teclado el evento no trae posición útil (0,0): se ancla a la tarjeta.
+    const desdeTeclado = e.clientX === 0 && e.clientY === 0;
+    const r = host.getBoundingClientRect();
+    menu = {
+      peer,
+      x: desdeTeclado ? r.left + 24 : e.clientX,
+      y: desdeTeclado ? r.top + r.height / 2 : e.clientY,
+    };
+  }
+
+  async function closeMenu() {
+    menu = null;
+    await tick();
+    menuTrigger?.focus();
+    menuTrigger = null;
+  }
+
+  function menuItems(peer: Peer): ContextMenuItem[] {
+    const guardado = isSaved(peer);
+    const confiable = peer.trustState === "trusted" || peer.trustState === "trustedAutoAccept";
+    return [
+      {
+        id: "favorite",
+        label: peer.favorite ? t("peers.menu.unfavorite") : t("peers.menu.favorite"),
+        icon: peer.favorite ? "star-outline" : "star",
+        disabled: !guardado,
+      },
+      { id: "copyIp", label: t("peers.menu.copyIp"), icon: "copy", disabled: !peer.addresses[0] },
+      {
+        id: "checkNow",
+        label: t("peers.menu.checkNow"),
+        icon: "refresh",
+        disabled: !guardado,
+      },
+      {
+        id: "revokeTrust",
+        label: t("peers.menu.revokeTrust"),
+        icon: "shield",
+        disabled: !guardado || !confiable,
+        separatorBefore: true,
+      },
+      {
+        id: "forget",
+        label: t("peers.menu.forget"),
+        icon: "trash",
+        danger: true,
+        disabled: !guardado,
+      },
+    ];
+  }
+
+  async function copiarIp(peer: Peer) {
+    const direccion = peer.addresses[0];
+    if (!direccion) return;
+    // Solo el host: el puerto de control no le sirve a quien pega la IP.
+    const host = direccion.startsWith("[")
+      ? direccion.slice(1, direccion.indexOf("]"))
+      : direccion.replace(/:\d+$/, "");
+    try {
+      await navigator.clipboard.writeText(host);
+    } catch {
+      // Sin permiso del portapapeles no hay nada útil que hacer: la IP sigue visible en la tarjeta.
+    }
+  }
+
+  async function onMenuSelect(id: string) {
+    const actual = menu?.peer;
+    if (!actual) return;
+    if (id === "forget") {
+      // La confirmación toma el relevo del foco: se cierra el menú sin devolverlo a la tarjeta.
+      forgetTrigger = menuTrigger;
+      menu = null;
+      menuTrigger = null;
+      peerToForget = actual;
+      return;
+    }
+    if (id === "favorite") onToggleFavorite?.(actual);
+    else if (id === "revokeTrust") onRevokeTrust?.(actual);
+    else if (id === "checkNow") onCheckNow?.(actual);
+    else if (id === "copyIp") await copiarIp(actual);
+    await closeMenu();
+  }
+
+  async function closeForget() {
+    peerToForget = null;
+    await tick();
+    forgetTrigger?.focus();
+    forgetTrigger = null;
+  }
+
+  function confirmForget() {
+    const peer = peerToForget;
+    if (peer) onForget?.(peer);
+    peerToForget = null;
+    forgetTrigger = null;
   }
 
   function mapTrust(peer: Peer) {
@@ -185,20 +307,58 @@
   {:else}
     <div class="nb-peers-grid" role="list">
       {#each peers as peer, i (peer.fingerprint)}
-        <div role="listitem" class="nb-enter" style:--nb-i={i}>
+        <div
+          role="listitem"
+          class="nb-enter"
+          style:--nb-i={i}
+          oncontextmenu={(e) => openMenu(e, peer)}
+        >
           <DeviceCard
             name={peer.displayName}
             alias={peer.alias ?? ""}
-            ip={peer.addresses[0] ?? "127.0.0.1"}
+            ip={peer.addresses[0] ?? ""}
             adapterType="ethernet"
             trust={mapTrust(peer)}
             availability={statusOf?.(peer).availability ?? "available"}
             compatible={statusOf?.(peer).compatible ?? true}
+            favorite={peer.favorite ?? false}
+            lastSeen={peer.lastSeen}
+            onToggleFavorite={() => onToggleFavorite?.(peer)}
             onclick={() => onSelectPeer?.(peer)}
           />
         </div>
       {/each}
     </div>
+  {/if}
+
+  {#if menu}
+    <ContextMenu
+      items={menuItems(menu.peer)}
+      x={menu.x}
+      y={menu.y}
+      label={t("peers.menu.label", { name: menu.peer.displayName })}
+      onSelect={(id) => void onMenuSelect(id)}
+      onClose={() => void closeMenu()}
+    />
+  {/if}
+
+  {#if peerToForget}
+    <Dialog
+      title={t("peers.menu.forgetTitle", { name: peerToForget.displayName })}
+      onClose={closeForget}
+    >
+      <div class="nb-manual-form">
+        <p class="nb-manual-desc">{t("peers.menu.forgetDesc")}</p>
+        <div class="nb-dialog-actions">
+          <Button variant="ghost" onclick={closeForget} data-testid="forget-cancel-btn">
+            {t("common.cancel")}
+          </Button>
+          <Button variant="primary" onclick={confirmForget} data-testid="forget-confirm-btn">
+            {t("peers.menu.forgetConfirm")}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   {/if}
 
   <!-- Diálogo de conexión manual -->

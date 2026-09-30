@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from "../i18n";
+  import { getLocale, t } from "../i18n";
   /**
    * Tarjeta de equipo — Inicio (§16.2), selector (§16.3), "Otros equipos" (§7.3).
    *
@@ -41,13 +41,14 @@
   import Tooltip from "./Tooltip.svelte";
   import type { IconName } from "./icons";
 
-  export type Availability = "available" | "busy" | "unreachable";
+  export type Availability = "available" | "busy" | "unreachable" | "checking";
   export type Trust = "unknown" | "known" | "trusted";
   export type AdapterType = "ethernet" | "wifi" | "other";
 
   interface Props {
     name: string;
-    ip: string;
+    /** Sin dirección conocida (equipo guardado que no se anuncia ahora): se dice, no se inventa. */
+    ip?: string;
     /** Alias local (§6.2): si existe se muestra como "alias (displayName)". */
     alias?: string;
     /**
@@ -69,13 +70,15 @@
     favorite?: boolean;
     /** Esta tarjeta es la elegida ahora mismo en una lista de selección. */
     selected?: boolean;
+    /** Última vez que se vio (ISO 8601). Solo se muestra cuando el equipo no es accesible. */
+    lastSeen?: string;
     onclick?: (e: MouseEvent) => void;
     onToggleFavorite?: (e: MouseEvent) => void;
   }
 
   let {
     name,
-    ip,
+    ip = "",
     alias = "",
     adapterType,
     linkSpeedMbps = 0,
@@ -84,6 +87,7 @@
     trust = "unknown",
     favorite = false,
     selected = false,
+    lastSeen = "",
     onclick,
     onToggleFavorite,
   }: Props = $props();
@@ -107,16 +111,36 @@
   // `$derived` y no una constante: una constante de módulo se evalúa una sola vez y las
   // etiquetas no seguirían al idioma.
   const AVAILABILITY_META = $derived<
-    Record<Availability, { tone: "success" | "warning" | "danger"; label: string; icon?: IconName }>
+    Record<
+      Availability,
+      { tone: "success" | "warning" | "danger" | "muted"; label: string; icon?: IconName }
+    >
   >({
     available: { tone: "success", label: t("device.available") },
     busy: { tone: "warning", label: t("device.busy") },
     unreachable: { tone: "danger", label: t("device.unreachable"), icon: "x-circle" },
+    checking: { tone: "muted", label: t("device.checking") },
   });
 
   // Un equipo ocupado, no accesible o incompatible no se puede elegir para
   // una prueba nueva (§5.5: `NB-PEER-003` si de todas formas se intentara).
-  let isSelectable = $derived(compatible && availability === "available");
+  // «Comprobando» sí se puede elegir: aún no se sabe que falle y, si falla, la sesión lo dirá.
+  let isSelectable = $derived(
+    compatible && (availability === "available" || availability === "checking"),
+  );
+  let isUnreachable = $derived(availability === "unreachable");
+
+  // «Visto hace 2 horas» / «Seen 2 hours ago». Con fecha ausente o ilegible no se muestra nada.
+  function haceCuanto(iso: string): string {
+    const ms = Date.parse(iso);
+    if (!iso || Number.isNaN(ms)) return "";
+    const seg = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    const rtf = new Intl.RelativeTimeFormat(getLocale(), { numeric: "auto" });
+    if (seg < 3600) return rtf.format(-Math.max(1, Math.round(seg / 60)), "minute");
+    if (seg < 86400) return rtf.format(-Math.round(seg / 3600), "hour");
+    return rtf.format(-Math.round(seg / 86400), "day");
+  }
+  let vistoHace = $derived(isUnreachable && lastSeen ? haceCuanto(lastSeen) : "");
   let cardVariant = $derived<"selected" | "default">(selected ? "selected" : "default");
   let statusMeta = $derived(
     !compatible
@@ -129,32 +153,33 @@
   );
 </script>
 
-<Card
-  variant={cardVariant}
-  disabled={!isSelectable}
-  onclick={onclick && isSelectable ? onclick : undefined}
->
-  <div class="nb-device-head">
-    <span class="nb-device-icon">
-      <Icon name="desktop" size={17} />
-    </span>
-    <div class="nb-device-id">
-      <div class="nb-device-name-row">
-        <!-- Auditoría v3 (A03): "consulta con nombre truncado" — el nombre
+<div class="nb-device-wrap" class:nb-device-dim={isUnreachable}>
+  <Card
+    variant={cardVariant}
+    disabled={!isSelectable}
+    onclick={onclick && isSelectable ? onclick : undefined}
+  >
+    <div class="nb-device-head">
+      <span class="nb-device-icon">
+        <Icon name="desktop" size={17} />
+      </span>
+      <div class="nb-device-id">
+        <div class="nb-device-name-row">
+          <!-- Auditoría v3 (A03): "consulta con nombre truncado" — el nombre
              ya se recorta con ellipsis cuando no cabe (`.nb-device-name`,
              text-overflow: ellipsis), pero no había forma de ver el
              nombre completo. `title` da el nombre completo (con el alias
              real detrás si lo hay) sin depender de Tooltip, que es
              overkill para un texto que ya lleva su propio recorte visual. -->
-        <span class="nb-device-name" title={alias ? `${alias} (${name})` : name}>
-          {#if alias}
-            {alias} <span class="nb-device-name-real">({name})</span>
-          {:else}
-            {name}
-          {/if}
-        </span>
-        {#if trust !== "unknown"}
-          <!-- C04 (auditoría v3, accesibilidad): el escudo distinguía
+          <span class="nb-device-name" title={alias ? `${alias} (${name})` : name}>
+            {#if alias}
+              {alias} <span class="nb-device-name-real">({name})</span>
+            {:else}
+              {name}
+            {/if}
+          </span>
+          {#if trust !== "unknown"}
+            <!-- C04 (auditoría v3, accesibilidad): el escudo distinguía
                "conocido" de "de confianza" SOLO por color (regla 6 del
                README — "icono/punto + texto, nunca solo color"). Se añade
                `nb-device-trust-badge`, un punto no-color visible únicamente
@@ -164,70 +189,93 @@
                Tooltip (que ahora se muestra al recibir el foco, no por
                `:focus-within` — ver Tooltip.svelte) tenga algo que
                enfocar. -->
-          <Tooltip text={trust === "trusted" ? t("device.trusted") : t("device.known")}>
-            {#snippet children(tooltipId)}
-              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-              <span
-                class="nb-device-trust"
-                class:nb-device-trust-full={trust === "trusted"}
-                tabindex="0"
-                role="img"
-                aria-label={trust === "trusted" ? t("device.trusted") : t("device.known")}
-                aria-describedby={tooltipId}
-              >
-                <Icon name="shield" size={12} />
-                {#if trust === "trusted"}
-                  <span class="nb-device-trust-badge" aria-hidden="true"></span>
-                {/if}
-              </span>
-            {/snippet}
-          </Tooltip>
+            <Tooltip text={trust === "trusted" ? t("device.trusted") : t("device.known")}>
+              {#snippet children(tooltipId)}
+                <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+                <span
+                  class="nb-device-trust"
+                  class:nb-device-trust-full={trust === "trusted"}
+                  tabindex="0"
+                  role="img"
+                  aria-label={trust === "trusted" ? t("device.trusted") : t("device.known")}
+                  aria-describedby={tooltipId}
+                >
+                  <Icon name="shield" size={12} />
+                  {#if trust === "trusted"}
+                    <span class="nb-device-trust-badge" aria-hidden="true"></span>
+                  {/if}
+                </span>
+              {/snippet}
+            </Tooltip>
+          {/if}
+          <button
+            type="button"
+            class="nb-device-fav"
+            class:nb-device-fav-on={favorite}
+            aria-pressed={favorite}
+            aria-label={favorite ? t("device.unfavorite") : t("device.favorite")}
+            onclick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite?.(e);
+            }}
+          >
+            <Icon name={favorite ? "star" : "star-outline"} size={13} />
+          </button>
+        </div>
+        <span class="nb-device-ip">{ip || t("device.noAddress")}</span>
+        {#if vistoHace}
+          <span class="nb-device-seen">{t("device.lastSeen", { when: vistoHace })}</span>
         {/if}
-        <button
-          type="button"
-          class="nb-device-fav"
-          class:nb-device-fav-on={favorite}
-          aria-pressed={favorite}
-          aria-label={favorite ? t("device.unfavorite") : t("device.favorite")}
-          onclick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite?.(e);
-          }}
-        >
-          <Icon name={favorite ? "star" : "star-outline"} size={13} />
-        </button>
       </div>
-      <span class="nb-device-ip">{ip}</span>
     </div>
-  </div>
 
-  <div class="nb-device-foot">
-    {#if linkSpeedMbps > 0 && compatible}
-      <span class="nb-device-link">
-        <Icon name={ADAPTER_ICON[adapterType]} size={12} />
-        {formatLinkSpeed(linkSpeedMbps)}
-      </span>
-    {:else}
-      <span></span>
-    {/if}
-
-    <span
-      class="nb-device-status"
-      class:nb-tone-success={statusMeta.tone === "success"}
-      class:nb-tone-warning={statusMeta.tone === "warning"}
-      class:nb-tone-danger={statusMeta.tone === "danger"}
-    >
-      {#if statusMeta.icon}
-        <Icon name={statusMeta.icon} size={12} />
+    <div class="nb-device-foot">
+      {#if linkSpeedMbps > 0 && compatible}
+        <span class="nb-device-link">
+          <Icon name={ADAPTER_ICON[adapterType]} size={12} />
+          {formatLinkSpeed(linkSpeedMbps)}
+        </span>
       {:else}
-        <span class="nb-device-status-dot" aria-hidden="true"></span>
+        <span></span>
       {/if}
-      {statusMeta.label}
-    </span>
-  </div>
-</Card>
+
+      <span
+        class="nb-device-status"
+        class:nb-tone-success={statusMeta.tone === "success"}
+        class:nb-tone-warning={statusMeta.tone === "warning"}
+        class:nb-tone-danger={statusMeta.tone === "danger"}
+        class:nb-tone-muted={statusMeta.tone === "muted"}
+      >
+        {#if statusMeta.icon}
+          <Icon name={statusMeta.icon} size={12} />
+        {:else}
+          <span class="nb-device-status-dot" aria-hidden="true"></span>
+        {/if}
+        {statusMeta.label}
+      </span>
+    </div>
+  </Card>
+</div>
 
 <style>
+  /* Inalcanzable: se atenúa el contenido (no el estado, que sigue legible al 100 %) y se
+     quita saturación. La atenuación es solo un refuerzo: el estado va también en texto e
+     icono («No accesible»), nunca solo en opacidad. */
+  .nb-device-dim :global(.nb-device-head),
+  .nb-device-dim :global(.nb-device-link) {
+    opacity: 0.55;
+    filter: saturate(0.4);
+  }
+
+  .nb-device-seen {
+    font-size: var(--font-size-2xs);
+    color: var(--color-text-muted);
+  }
+
+  .nb-tone-muted {
+    color: var(--color-text-secondary);
+  }
+
   .nb-device-head {
     display: flex;
     align-items: center;

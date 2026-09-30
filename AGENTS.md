@@ -68,7 +68,9 @@ Estas no se delegan a un fichero aparte: se cumplen siempre.
   responder — sin que haga falta pedirlo. Rutas: `%LOCALAPPDATA%\NetworkBench\logs\`
   (aplicación) y `%ProgramData%\NetworkBench\logs\` (ayudante elevado de firewall). Si el
   propietario te da una carpeta con registros de varias máquinas, léelos todos antes de
-  preguntar qué pasó.
+  preguntar qué pasó. Si el problema involucra a **dos equipos**, consulta además en
+  OpenObserve la traza de los dos antes de preguntar:
+  `.agents/rules/proyecto/pruebas-entre-equipos.md`.
 
 ## Estados de verificación
 

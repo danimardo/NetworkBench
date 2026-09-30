@@ -17,6 +17,7 @@ Las importaciones de abajo inlinean el contenido: lo que se lista aquí llega si
 @.agents/rules/universal/speckit.md
 @.agents/rules/proyecto/estado.md
 @.agents/rules/proyecto/versiones.md
+@.agents/rules/proyecto/pruebas-entre-equipos.md
 @.agents/rules/proyecto/diseno.md
 
 ## Específico de Claude Code

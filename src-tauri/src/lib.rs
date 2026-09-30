@@ -66,6 +66,10 @@ pub fn run() {
             );
             // Con el ajuste encendido (por defecto), la instancia se anuncia y busca a las demás.
             app_state.aplicar_descubrimiento(app_state.settings.get().mdns_enabled);
+            // Primera comprobación de los equipos guardados ya al arrancar, y luego periódica.
+            tauri::async_runtime::spawn(discovery::alcance::vigilar(
+                tauri::Manager::app_handle(app).clone(),
+            ));
             // El envío opt-in a OpenObserve ya tiene su config (`app::init` la cargó); aquí
             // solo arranca la tarea de fondo que consume la cola, que necesita el runtime
             // async de Tauri en marcha.
@@ -91,6 +95,10 @@ pub fn run() {
             ipc::peers::peers_rescan,
             ipc::peers::peers_manual_connect,
             ipc::peers::peers_set_trust,
+            ipc::peers::peers_set_favorite,
+            ipc::peers::peers_forget,
+            ipc::peers::peers_reachability_list,
+            ipc::peers::peers_check_now,
             ipc::pairing::peers_pairing_start,
             ipc::pairing::peers_pairing_confirm,
             ipc::session::session_start,

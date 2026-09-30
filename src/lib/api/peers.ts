@@ -36,6 +36,26 @@ export async function listDiscoveredPeers(): Promise<DiscoveredPeer[]> {
   return invokeCommand("peers_discovered_list", undefined, z.array(discoveredPeerSchema));
 }
 
+/**
+ * Si un equipo guardado está activo en la red, según la comprobación periódica del backend
+ * (conexión TCP al puerto de control). Es una pista para mostrar, no una prueba de
+ * identidad: esa la da el certificado TLS al conectar.
+ */
+export const reachabilitySchema = z.object({
+  fingerprint: z.string(),
+  estado: z.enum(["checking", "reachable", "unreachable"]),
+});
+export type Reachability = z.infer<typeof reachabilitySchema>;
+
+export async function listReachability(): Promise<Reachability[]> {
+  return invokeCommand("peers_reachability_list", undefined, z.array(reachabilitySchema));
+}
+
+/** «Comprobar ahora»: un equipo concreto o, sin huella, todos los guardados. */
+export async function checkPeersNow(fingerprint?: string): Promise<void> {
+  await invokeCommand("peers_check_now", { fingerprint: fingerprint ?? null }, z.void().nullable());
+}
+
 /** Reinicia el descubrimiento mDNS para volver a buscar equipos en la red. */
 export async function rescanPeers(): Promise<void> {
   await invokeCommand("peers_rescan", undefined, z.void().nullable());
@@ -74,6 +94,16 @@ export async function confirmPairing(
   accepted: boolean,
 ): Promise<PairingOutcome> {
   return invokeCommand("peers_pairing_confirm", { pairingId, accepted }, pairingOutcomeSchema);
+}
+
+/** Marca o desmarca un equipo guardado como favorito (preferencia local). */
+export async function setPeerFavorite(fingerprint: string, favorite: boolean): Promise<void> {
+  await invokeCommand("peers_set_favorite", { fingerprint, favorite }, z.void().nullable());
+}
+
+/** Olvida un equipo guardado (y su confianza) solo en este equipo. */
+export async function forgetPeer(fingerprint: string): Promise<void> {
+  await invokeCommand("peers_forget", { fingerprint }, z.void().nullable());
 }
 
 export async function setPeerTrust(

@@ -32,6 +32,7 @@ export const peerSchema = z.object({
   addresses: z.array(z.string().min(1)),
   trustState: trustStateSchema,
   autoAccept: z.boolean(),
+  favorite: z.boolean().optional(),
   lastSeen: z.string().datetime({ message: "lastSeen debe ser fecha UTC ISO 8601" }),
   alias: z.string().max(48).nullable().optional(),
 });

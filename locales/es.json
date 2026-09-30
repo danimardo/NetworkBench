@@ -342,7 +342,8 @@
       "pairStart": "No se pudo iniciar el emparejamiento.",
       "pairRejected": "El otro equipo no confirmó el emparejamiento.",
       "pairFailed": "No se pudo completar el emparejamiento.",
-      "pairExpired": "El emparejamiento caducó."
+      "pairExpired": "El emparejamiento caducó.",
+      "action": "No se pudo completar la acción sobre el equipo."
     },
     "screen": {
       "title": "Equipos disponibles",
@@ -362,6 +363,18 @@
       "pairingExpires": "Caduca en {seconds} s",
       "pairingConfirm": "Confirmar código",
       "emptyTitle": "No se han detectado equipos"
+    },
+    "menu": {
+      "label": "Acciones de {name}",
+      "favorite": "Marcar como favorito",
+      "unfavorite": "Quitar de favoritos",
+      "copyIp": "Copiar IP",
+      "revokeTrust": "Quitar marca de confianza",
+      "forget": "Eliminar equipo",
+      "forgetTitle": "¿Eliminar {name}?",
+      "forgetDesc": "Se olvidará este equipo y su confianza solo en este ordenador. Si sigue abierto en la red, volverá a aparecer como equipo nuevo. El historial de mediciones se conserva.",
+      "forgetConfirm": "Eliminar",
+      "checkNow": "Comprobar ahora"
     }
   },
   "session": {
@@ -686,7 +699,10 @@
     "trusted": "De confianza",
     "known": "Conocido",
     "favorite": "Marcar como favorito",
-    "unfavorite": "Quitar de favoritos"
+    "unfavorite": "Quitar de favoritos",
+    "noAddress": "Dirección desconocida",
+    "checking": "Comprobando…",
+    "lastSeen": "Visto {when}"
   },
   "window": {
     "minimize": "Minimizar",

@@ -147,6 +147,11 @@
               errorMessage={peersModel.error}
               onDismissError={() => peersModel.clearError()}
               busy={peersModel.busy}
+              isSaved={(peer) => peersModel.isSaved(peer)}
+              onToggleFavorite={(peer) => void peersModel.toggleFavorite(peer)}
+              onRevokeTrust={(peer) => void peersModel.revokeTrust(peer)}
+              onForget={(peer) => void peersModel.forget(peer)}
+              onCheckNow={(peer) => void peersModel.checkNow(peer)}
               onSelectPeer={(peer) => void handleSelectPeer(peer)}
               onManualConnect={(host, port) => void peersModel.manualConnect(host, port)}
               onRescan={() => void peersModel.rescan()}

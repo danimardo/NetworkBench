@@ -4,7 +4,7 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 pub const MIGRATIONS: &[Migration] = &[
     Migration {
@@ -62,6 +62,20 @@ pub const MIGRATIONS: &[Migration] = &[
 
         CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
         CREATE INDEX IF NOT EXISTS idx_sessions_protocol ON sessions(protocol);
+        "#,
+    },
+    Migration {
+        version: 3,
+        name: "003_peer_favorite",
+        sql: r#"
+        ALTER TABLE peers ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+        "#,
+    },
+    Migration {
+        version: 4,
+        name: "004_peer_last_address",
+        sql: r#"
+        ALTER TABLE peers ADD COLUMN last_address TEXT;
         "#,
     },
 ];

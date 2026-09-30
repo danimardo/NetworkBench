@@ -41,6 +41,8 @@ pub struct AppState {
     /// Se dispara cuando cambia algo que refleja el snapshot de la interfaz (T150):
     /// estado de la sesión, equipos guardados o ajustes. Lo escucha `ProyectorDeSnapshot`.
     pub aviso_snapshot: Arc<tokio::sync::Notify>,
+    /// Si los equipos guardados están activos en la red (comprobación periódica por TCP).
+    pub alcance: Arc<crate::discovery::MonitorAlcance>,
 }
 
 impl AppState {
@@ -321,6 +323,7 @@ pub fn init() -> Result<AppState, Box<dyn std::error::Error>> {
         descubrimiento: std::sync::Mutex::new(None),
         control: Arc::new(tokio::sync::Mutex::new(None)),
         aviso_snapshot,
+        alcance: Arc::new(crate::discovery::MonitorAlcance::new()),
     })
 }
 
