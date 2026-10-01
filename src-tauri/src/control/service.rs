@@ -682,7 +682,27 @@ async fn pedir_consentimiento(
         );
     }
 
+    tracing::info!(
+        request_id = %evento.request_id,
+        "Sesión: esperando a que la persona acepte o rechace la solicitud (hasta {:?})",
+        crate::control::consent::ESPERA_DECISION
+    );
     let decidido = tokio::time::timeout(crate::control::consent::ESPERA_DECISION, esperar).await;
+    match &decidido {
+        Err(_) => tracing::warn!(
+            request_id = %evento.request_id,
+            "Sesión: nadie respondió a la solicitud a tiempo; se rechaza"
+        ),
+        Ok(Ok(aceptada)) => tracing::info!(
+            request_id = %evento.request_id,
+            "Sesión: la persona {} la solicitud",
+            if *aceptada { "aceptó" } else { "rechazó" }
+        ),
+        Ok(Err(_)) => tracing::warn!(
+            request_id = %evento.request_id,
+            "Sesión: se cerró la espera de decisión sin respuesta"
+        ),
+    }
     // Por si la persona decide justo cuando el plazo expira: no dejar la solicitud
     // ofrecida en la interfaz después de haber seguido adelante sin ella.
     ctx.consentimiento.retirar(evento.request_id).await;
