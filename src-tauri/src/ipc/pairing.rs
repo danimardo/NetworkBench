@@ -15,7 +15,7 @@ use crate::control::pairing_flow::{
 };
 use crate::discovery::conectar_y_saludar;
 use crate::errors::{AppError, ErrorCode, ErrorSeverity};
-use crate::history::upsert_peer;
+use crate::history::guardar_emparejado;
 use crate::model::peer::{Peer, TrustState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -184,7 +184,7 @@ pub async fn peers_pairing_confirm(
             confiable.auto_accept = false;
 
             let db = state.database.connection().lock().unwrap();
-            if let Err(e) = upsert_peer(&db, &confiable) {
+            if let Err(e) = guardar_emparejado(&db, &confiable) {
                 tracing::error!(
                     pairing_id = %pairing_id,
                     "Emparejamiento: aceptado por las dos partes pero no se pudo guardar: {e}"

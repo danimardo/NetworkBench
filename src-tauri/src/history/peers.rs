@@ -35,6 +35,21 @@ pub fn upsert_peer(conn: &Connection, peer: &Peer) -> Result<()> {
     Ok(())
 }
 
+/// Guarda un equipo recién emparejado y le concede confianza **sin autoaceptación**.
+///
+/// `upsert_peer` no basta: por diseño no toca `is_trusted` ni `auto_accept` de un equipo que
+/// ya existe (para que un avistamiento o un resultado no rebajen la confianza). Pero eso
+/// también significa que emparejar un equipo ya conocido lo dejaba como estaba: el
+/// emparejamiento «salía bien» y la primera prueba se rechazaba por falta de confianza.
+pub fn guardar_emparejado(conn: &Connection, peer: &Peer) -> Result<()> {
+    upsert_peer(conn, peer)?;
+    conn.execute(
+        "UPDATE peers SET is_trusted = 1, auto_accept = 0 WHERE fingerprint = ?1",
+        params![peer.fingerprint.trim().to_lowercase()],
+    )?;
+    Ok(())
+}
+
 /// Un equipo guardado, con lo mínimo que necesita la comprobación de alcance.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PeerParaAlcance {
@@ -151,6 +166,28 @@ mod tests {
         .unwrap();
         p.trust_state = TrustState::Trusted;
         p
+    }
+
+    #[test]
+    fn emparejar_un_equipo_ya_conocido_le_concede_confianza() {
+        let c = bd();
+        let mut conocido = equipo(None);
+        conocido.trust_state = TrustState::Known;
+        upsert_peer(&c, &conocido).unwrap();
+        assert_eq!(
+            get_peer_by_fingerprint(&c, &"a".repeat(64))
+                .unwrap()
+                .unwrap()
+                .trust_state,
+            TrustState::Known
+        );
+
+        guardar_emparejado(&c, &equipo(None)).unwrap();
+
+        let leido = get_peer_by_fingerprint(&c, &"a".repeat(64))
+            .unwrap()
+            .unwrap();
+        assert_eq!(leido.trust_state, TrustState::Trusted);
     }
 
     #[test]

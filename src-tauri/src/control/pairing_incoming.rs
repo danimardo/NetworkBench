@@ -22,7 +22,7 @@ use crate::control::pairing_flow::{
 };
 use crate::control::service::{ContextoSesion, normalizar_ip};
 use crate::discovery::CONTROL_PORT_DEFAULT;
-use crate::history::upsert_peer;
+use crate::history::guardar_emparejado;
 use crate::model::peer::{Peer, TrustState};
 use crate::model::protocol::{HelloPayload, PairRequestPayload, ProtocolEnvelope};
 use crate::netinfo::resolve::sanitize_display_name;
@@ -174,7 +174,7 @@ pub async fn atender_emparejamiento_entrante<S>(
         confiable.trust_state = TrustState::Trusted;
         confiable.auto_accept = false;
         let guardado = match ctx.database.connection().lock() {
-            Ok(db) => upsert_peer(&db, &confiable).map_err(|e| e.to_string()),
+            Ok(db) => guardar_emparejado(&db, &confiable).map_err(|e| e.to_string()),
             Err(_) => Err("La base de datos está bloqueada".to_string()),
         };
         if let Err(e) = guardado {
