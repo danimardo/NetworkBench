@@ -463,7 +463,20 @@ impl SessionService {
             Some(p) if p.trust_state == TrustState::Trusted => {
                 pedir_consentimiento(&ctx, p, plan.clone()).await
             }
-            _ => Err(MotivoRechazo::RechazadoPorElUsuario),
+            otro => {
+                // Sin esto el log solo dice «rejectedByUser» y no se distingue un rechazo de
+                // la persona de «este equipo no te tiene como de confianza».
+                match otro {
+                    Some(p) => tracing::warn!(
+                        "Sesión: solicitud rechazada sin preguntar: el equipo está guardado como {:?}, no como de confianza",
+                        p.trust_state
+                    ),
+                    None => tracing::warn!(
+                        "Sesión: solicitud rechazada sin preguntar: el equipo no está emparejado aquí"
+                    ),
+                }
+                Err(MotivoRechazo::RechazadoPorElUsuario)
+            }
         };
 
         // La reserva de la sesión única es lo último que se comprueba y lo que la
