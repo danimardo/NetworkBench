@@ -87,22 +87,22 @@ fn a_io(e: PairingError) -> Error {
     Error::new(clase, texto)
 }
 
-/// Lado que inicia: envía la solicitud y espera la decisión del otro usuario.
+/// Plazo que el que responde da al iniciador para su confirmación final, una vez que su
+/// persona ya dijo que sí. Es una respuesta automática, no una decisión humana.
+const PLAZO_CONFIRMACION_FINAL: Duration = Duration::from_secs(10);
+
+/// Lado que inicia, primera fase: envía el `PAIR_REQUEST` **en cuanto hay conexión**.
 ///
-/// `decision_local` es lo que la persona de este lado respondió tras comparar. Si aquí
-/// se rechaza, no se envía nada que pueda interpretarse como aceptación.
-pub async fn solicitar_emparejamiento<S>(
+/// Así el otro equipo enseña su código a la vez que este. Si la solicitud esperase a que
+/// la persona de aquí confirme, el otro lado solo vería el código después de decidir
+/// este, y habría cerrado el socket por inactividad mucho antes.
+pub async fn enviar_solicitud<S>(
     stream: &mut S,
     emparejamiento: &EmparejamientoEnCurso,
-    decision_local: bool,
-) -> Result<bool>
+) -> Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
-    if !decision_local {
-        return Ok(false);
-    }
-
     let solicitud = ProtocolEnvelope {
         msg_type: ProtocolMessageType::PairRequest,
         id: emparejamiento.id,
@@ -113,7 +113,23 @@ where
             pairing_code: emparejamiento.codigo.clone(),
         },
     };
-    send_envelope(stream, &solicitud).await?;
+    send_envelope(stream, &solicitud).await
+}
+
+/// Lado que inicia, segunda fase: con la decisión de la persona local, espera la del otro.
+///
+/// Si la decisión local es «no», no se envía nada: se devuelve `false` y quien llama suelta
+/// la conexión, que el otro extremo interpreta como rechazo. Con «sí», se espera el
+/// `PAIR_RESULT` remoto y, si también es sí, se envía una **confirmación final**: el otro
+/// extremo no guarda la confianza hasta recibirla, de modo que nadie queda emparejado
+/// «a medias».
+pub async fn completar_emparejamiento<S>(stream: &mut S, decision_local: bool) -> Result<bool>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    if !decision_local {
+        return Ok(false);
+    }
 
     let respuesta: ProtocolEnvelope<PairResultPayload> =
         timeout(PLAZO_DECISION, recv_envelope(stream))
@@ -132,7 +148,60 @@ where
         ));
     }
 
+    if respuesta.payload.accepted {
+        let confirmacion = ProtocolEnvelope {
+            msg_type: ProtocolMessageType::PairResult,
+            id: Uuid::new_v4(),
+            session_id: None,
+            ts: ahora_rfc3339(),
+            in_reply_to: Some(respuesta.id),
+            payload: PairResultPayload {
+                accepted: true,
+                reason: None,
+            },
+        };
+        send_envelope(stream, &confirmacion).await?;
+    }
+
     Ok(respuesta.payload.accepted)
+}
+
+/// Lado que inicia, las dos fases seguidas. Si la decisión local es «no», no se envía
+/// nada que pueda interpretarse como aceptación.
+pub async fn solicitar_emparejamiento<S>(
+    stream: &mut S,
+    emparejamiento: &EmparejamientoEnCurso,
+    decision_local: bool,
+) -> Result<bool>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    if !decision_local {
+        return Ok(false);
+    }
+    enviar_solicitud(stream, emparejamiento).await?;
+    completar_emparejamiento(stream, true).await
+}
+
+/// Lado que responde, última fase: espera la confirmación final del iniciador.
+///
+/// `true` solo si llega un `PAIR_RESULT` aceptado. Un cierre de conexión, un plazo vencido
+/// o cualquier otra cosa es «no»: quien inició se echó atrás o no llegó a confirmar.
+pub async fn esperar_confirmacion_final<S>(stream: &mut S) -> bool
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    match timeout(
+        PLAZO_CONFIRMACION_FINAL,
+        recv_envelope::<_, PairResultPayload>(stream),
+    )
+    .await
+    {
+        Ok(Ok(sobre)) => {
+            sobre.msg_type == ProtocolMessageType::PairResult && sobre.payload.accepted
+        }
+        _ => false,
+    }
 }
 
 /// Lado que responde: recibe la solicitud, la verifica y contesta con la decisión local.
@@ -170,7 +239,8 @@ where
     contestar_emparejamiento(stream, solicitud.id, &verificacion, aceptado).await?;
 
     verificacion?;
-    Ok((aceptado, emparejamiento))
+    let confirmado = aceptado && esperar_confirmacion_final(stream).await;
+    Ok((confirmado, emparejamiento))
 }
 
 /// Primera fase del lado que responde, separada de la decisión para poder esperar a una

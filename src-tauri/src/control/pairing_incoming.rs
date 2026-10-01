@@ -17,7 +17,9 @@
 //! confiar en un equipo no es delegarle el consentimiento de cada prueba.
 
 use crate::control::consent::EmparejamientoEntranteEvento;
-use crate::control::pairing_flow::{contestar_emparejamiento, preparar_respuesta};
+use crate::control::pairing_flow::{
+    contestar_emparejamiento, esperar_confirmacion_final, preparar_respuesta,
+};
 use crate::control::service::{ContextoSesion, normalizar_ip};
 use crate::discovery::CONTROL_PORT_DEFAULT;
 use crate::history::upsert_peer;
@@ -155,6 +157,18 @@ pub async fn atender_emparejamiento_entrante<S>(
         ),
     }
 
+    // Se contesta primero y se guarda después: la confianza solo se concede cuando el
+    // iniciador confirma que su persona también dijo que sí. Sin esa confirmación, quien
+    // se echó atrás quedaría emparejado en este lado y no en el suyo.
+    let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, aceptado).await;
+    if aceptado && !esperar_confirmacion_final(stream).await {
+        tracing::info!(
+            pairing_id = %evento.pairing_id,
+            "Emparejamiento: el otro equipo no confirmó; no se guarda"
+        );
+        aceptado = false;
+    }
+
     if aceptado {
         let mut confiable = peer;
         confiable.trust_state = TrustState::Trusted;
@@ -166,13 +180,10 @@ pub async fn atender_emparejamiento_entrante<S>(
         if let Err(e) = guardado {
             tracing::error!(
                 pairing_id = %evento.pairing_id,
-                "No se pudo guardar el equipo emparejado: {e}"
+                "No se pudo guardar el equipo emparejado (el otro equipo ya lo guardó): {e}"
             );
-            aceptado = false;
         } else {
             ctx.aviso.notify_one();
         }
     }
-
-    let _ = contestar_emparejamiento(stream, solicitud.id, &verificacion, aceptado).await;
 }

@@ -654,6 +654,11 @@ async fn t182_un_emparejamiento_entrante_aceptado_guarda_confianza_sin_autoacept
         "se avisó a la interfaz"
     );
 
+    // B guarda tras recibir la confirmación final de A, un instante después.
+    let inicio = std::time::Instant::now();
+    while peer_guardado(&b, &a).is_none() && inicio.elapsed() < Duration::from_secs(5) {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
     let guardado = peer_guardado(&b, &a).expect("B debe haber guardado a A");
     assert_eq!(guardado.trust_state, TrustState::Trusted);
     assert!(
@@ -681,6 +686,35 @@ async fn t182_un_emparejamiento_entrante_rechazado_no_guarda_nada() {
     decision.await.unwrap();
     assert!(!aceptado);
     assert!(peer_guardado(&b, &a).is_none(), "un no no deja confianza");
+}
+
+/// El código se enseña en el otro equipo en cuanto se conecta, sin esperar a que la persona
+/// local confirme; y si esta se echa atrás después, el otro lado no guarda nada.
+#[tokio::test]
+async fn t182_si_el_iniciador_se_echa_atras_el_otro_lado_no_guarda_confianza() {
+    let a = nodo("A", false).await;
+    let b = nodo("B", false).await;
+
+    let (emp, mut stream) = emparejar_desde(&a, &b).await;
+    networkbench_lib::control::pairing_flow::enviar_solicitud(&mut stream, &emp)
+        .await
+        .expect("enviar");
+
+    // B ya ve el código aunque A todavía no haya decidido nada.
+    let inicio = std::time::Instant::now();
+    while b.ctx.emparejamientos.listar().await.is_empty() {
+        assert!(inicio.elapsed() < Duration::from_secs(5));
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    decidir_primer_emparejamiento(&b, true).await;
+
+    // A cancela: suelta la conexión sin confirmar.
+    drop(stream);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        peer_guardado(&b, &a).is_none(),
+        "sin confirmación final no hay confianza"
+    );
 }
 
 /// Un código que no cuadra no llega a la persona: se contesta `verificationFailed` sin

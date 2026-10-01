@@ -10,7 +10,9 @@
 
 use super::response::IpcResult;
 use crate::app::AppState;
-use crate::control::pairing_flow::{EmparejamientoEnCurso, solicitar_emparejamiento};
+use crate::control::pairing_flow::{
+    EmparejamientoEnCurso, completar_emparejamiento, enviar_solicitud,
+};
 use crate::discovery::conectar_y_saludar;
 use crate::errors::{AppError, ErrorCode, ErrorSeverity};
 use crate::history::upsert_peer;
@@ -28,7 +30,6 @@ use uuid::Uuid;
 const CADUCIDAD: Duration = Duration::from_secs(90);
 
 struct EnCurso {
-    emparejamiento: EmparejamientoEnCurso,
     stream: TlsStream<TcpStream>,
     peer: Peer,
     creado: Instant,
@@ -67,7 +68,7 @@ pub async fn peers_pairing_start(
     port: u16,
     state: State<'_, AppState>,
 ) -> Result<IpcResult<PairingStarted>, String> {
-    let (peer, stream) = match conectar_y_saludar(&host, port, &state.identity).await {
+    let (peer, mut stream) = match conectar_y_saludar(&host, port, &state.identity).await {
         Ok(v) => v,
         Err(e) => {
             // El detalle (host:puerto, dentro de `e`) es diagnóstico avanzado (principio
@@ -109,6 +110,20 @@ pub async fn peers_pairing_start(
     );
     tracing::debug!(pairing_id = %emparejamiento.id, "Emparejamiento: iniciado con {host}:{port}");
 
+    // El otro equipo enseña su código en cuanto recibe esto: los dos lo ven a la vez.
+    if let Err(e) = enviar_solicitud(&mut stream, &emparejamiento).await {
+        tracing::warn!(
+            pairing_id = %emparejamiento.id,
+            "Emparejamiento: no se pudo enviar la solicitud al otro equipo"
+        );
+        tracing::debug!(pairing_id = %emparejamiento.id, "PAIR_REQUEST a {host}:{port}: {e}");
+        return Ok(IpcResult::err(AppError::new(
+            ErrorCode::ConnCannotReach,
+            ErrorSeverity::Error,
+            e.to_string(),
+        )));
+    }
+
     let respuesta = PairingStarted {
         pairing_id: emparejamiento.id,
         verification_code: emparejamiento.codigo.clone(),
@@ -120,7 +135,6 @@ pub async fn peers_pairing_start(
     activos.insert(
         emparejamiento.id,
         EnCurso {
-            emparejamiento,
             stream,
             peer,
             creado: Instant::now(),
@@ -157,8 +171,7 @@ pub async fn peers_pairing_confirm(
         }
     };
 
-    let resultado =
-        solicitar_emparejamiento(&mut en_curso.stream, &en_curso.emparejamiento, accepted).await;
+    let resultado = completar_emparejamiento(&mut en_curso.stream, accepted).await;
 
     match resultado {
         Ok(true) => {
