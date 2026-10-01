@@ -57,6 +57,10 @@ impl NtttcpProcess {
         target_host: Option<&str>,
         temp_dir: &Path,
     ) -> Result<Self> {
+        // ntttcp.exe no crea la carpeta del XML: si no existe aborta al arrancar con
+        // «fopen XML File, GetLastError: 3» (código 9) antes de medir nada. En una
+        // instalación limpia `tmp` no existe hasta que alguien la crea.
+        fs::create_dir_all(temp_dir)?;
         let xml_path = temp_dir.join(format!("ntttcp_{}.xml", Uuid::new_v4()));
 
         let args = build_ntttcp_args(role, plan, target_host, &xml_path).map_err(|e| {
